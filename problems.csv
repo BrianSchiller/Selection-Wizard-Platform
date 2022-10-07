@@ -1,0 +1,2 @@
+ID,name,implementation,scientific reference,continuous,number of variables,evaluation budget,number of objectives
+1,BBOB-F1-1,https://github.com/numbbo/coco/blob/1c998ab1b41ef96eb194b7c94b7760649b74fd7f/code-experiments/src/f_sphere.c,,true,2,100,1

@@ -1,0 +1,2 @@
+ID,name,implementation,scientific reference,deterministic,parameter values,continuous,number of variables,evaluation budget,number of objectives
+1,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
