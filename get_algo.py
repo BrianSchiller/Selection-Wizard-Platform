@@ -2,20 +2,23 @@
 """Module to retrieve the optimisers recommended by NGOpt."""
 
 from enum import Enum
+from typing import Union
 
 import nevergrad as ng
+from nevergrad.optimization.base import Optimizer
 from nevergrad.optimization.optimizerlib import NGOpt
+from nevergrad.optimization.optimizerlib import ConfPortfolio
 from nevergrad.parametrization.data import Array
 
 
 class NGOptVersion(str, Enum):
     """Enum with different NGOpt versions."""
 
-    NGOpt39 = 'NGOpt39'
-    NGOpt21 = 'NGOpt21'
     NGOpt8 = 'NGOpt8'
-    NGOpt36 = 'NGOpt36'
     NGOpt15 = 'NGOpt15'
+    NGOpt21 = 'NGOpt21'
+    NGOpt36 = 'NGOpt36'
+    NGOpt39 = 'NGOpt39'
 
 
 def square(x: float) -> float:
@@ -32,20 +35,14 @@ def get_optimiser(params: Array, budget: int, workers: int,
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
             budget=eval_budget,
             num_workers=n_workers)
-    elif ngopt == NGOptVersion.NGOpt21:
-        optimiser = ng.optimizers.NGOpt21(
-            parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
-            budget=eval_budget,
-            num_workers=n_workers)
-    elif ngopt == NGOptVersion.NGOpt8:
-        optimiser = ng.optimizers.NGOpt8(
-            parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
-            budget=eval_budget,
-            num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt36:
         optimiser = ng.optimizers.NGOpt36(
+            parametrization=(
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+            budget=eval_budget,
+            num_workers=n_workers)
+    elif ngopt == NGOptVersion.NGOpt21:
+        optimiser = ng.optimizers.NGOpt21(
             parametrization=(
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
             budget=eval_budget,
@@ -56,8 +53,48 @@ def get_optimiser(params: Array, budget: int, workers: int,
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
             budget=eval_budget,
             num_workers=n_workers)
+    elif ngopt == NGOptVersion.NGOpt8:
+        optimiser = ng.optimizers.NGOpt8(
+            parametrization=(
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+            budget=eval_budget,
+            num_workers=n_workers)
 
     return optimiser
+
+
+def short_name(algorithm: Optimizer) -> Union[Optimizer, str]:
+    """Return a short name for algorithms with many details."""
+    if type(algorithm) is ConfPortfolio:
+        algorithm = 'ConfPortfolio'
+
+    return algorithm
+
+
+def get_algorithm_for_ngopt(algorithm: Optimizer) -> Optimizer:
+    """Get the recommended algorithm if it is currently an NGOpt version."""
+    # For some reason type() does not work on NGOpt classes
+    if algorithm is ng.optimization.optimizerlib.NGOpt36:
+        optimiser = get_optimiser(
+            params, eval_budget, n_workers, NGOptVersion.NGOpt36)
+        algorithm = optimiser._select_optimizer_cls()
+
+    if algorithm is ng.optimization.optimizerlib.NGOpt21:
+        optimiser = get_optimiser(
+            params, eval_budget, n_workers, NGOptVersion.NGOpt21)
+        algorithm = optimiser._select_optimizer_cls()
+
+    if algorithm is ng.optimization.optimizerlib.NGOpt15:
+        optimiser = get_optimiser(
+            params, eval_budget, n_workers, NGOptVersion.NGOpt15)
+        algorithm = optimiser._select_optimizer_cls()
+
+    if algorithm is ng.optimization.optimizerlib.NGOpt8:
+        optimiser = get_optimiser(
+            params, eval_budget, n_workers, NGOptVersion.NGOpt8)
+        algorithm = optimiser._select_optimizer_cls()
+
+    return algorithm
 
 
 # Tracking variables
@@ -88,48 +125,8 @@ for n_dimensions in range(n_dims_min, n_dims_max):
         optimiser = get_optimiser(
             params, eval_budget, n_workers, NGOptVersion.NGOpt39)
         algorithm = optimiser._select_optimizer_cls()
-
-        # For some reason type() does not work here...
-        if algorithm is ng.optimization.optimizerlib.NGOpt21:
-            optimiser = get_optimiser(
-                params, eval_budget, n_workers, NGOptVersion.NGOpt21)
-            algorithm = optimiser._select_optimizer_cls()
-
-        if type(algorithm) is ng.optimization.optimizerlib.ConfPortfolio:
-            algorithm = 'ConfPortfolio'
-
-        # For some reason type() does not work here...
-        if algorithm is ng.optimization.optimizerlib.NGOpt8:
-            optimiser = get_optimiser(
-                params, eval_budget, n_workers, NGOptVersion.NGOpt8)
-            algorithm = optimiser._select_optimizer_cls()
-
-        if type(algorithm) is ng.optimization.optimizerlib.ConfPortfolio:
-            algorithm = 'ConfPortfolio'
-
-        # For some reason type() does not work here...
-        if algorithm is ng.optimization.optimizerlib.NGOpt36:
-            optimiser = get_optimiser(
-                params, eval_budget, n_workers, NGOptVersion.NGOpt36)
-            algorithm = optimiser._select_optimizer_cls()
-
-        if type(algorithm) is ng.optimization.optimizerlib.ConfPortfolio:
-            algorithm = 'ConfPortfolio'
-
-        # For some reason type() does not work here...
-        if algorithm is ng.optimization.optimizerlib.NGOpt15:
-            optimiser = get_optimiser(
-                params, eval_budget, n_workers, NGOptVersion.NGOpt15)
-            algorithm = optimiser._select_optimizer_cls()
-
-        if type(algorithm) is ng.optimization.optimizerlib.ConfPortfolio:
-            algorithm = 'ConfPortfolio'
-
-        # TODO: Consider whether to in- or exclude ParametrizedMetaModel
-        # results
-        # TODO: Somehow loop over at least a subset of options? Or is it
-        # sufficient to always check in order NGOpt large to small, then other
-        # options?
+        algorithm = get_algorithm_for_ngopt(algorithm)
+        algorithm = short_name(algorithm)
 
         if str(algorithm) != latest_algortihm:
             print(algorithm, n_dimensions, eval_budget)
