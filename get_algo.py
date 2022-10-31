@@ -119,8 +119,8 @@ print('fully_continuous', optimiser.fully_continuous)
 print('fully_bounded', ng.parametrization.parameter.helpers.Normalizer(
     optimiser.parametrization).fully_bounded)
 
-for n_dimensions in range(n_dims_min, n_dims_max):
-    for eval_budget in range(eval_budget_min, eval_budget_max):
+for n_dimensions in range(n_dims_min, n_dims_max + 1):
+    for eval_budget in range(eval_budget_min, eval_budget_max + 1):
         params = ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)
         optimiser = get_optimiser(
             params, eval_budget, n_workers, NGOptVersion.NGOpt39)
