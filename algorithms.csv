@@ -1,2 +1,7 @@
 ID,name,implementation,scientific reference,deterministic,parameter values,continuous,number of variables,evaluation budget,number of objectives
 1,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
+2,Cobyla,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
+3,MetaModel - learn-on-k-best,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
+4,CMA,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
+5,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
+6,MetaModelOnePlusOne,NGOpt39,https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py,,false,,true,,,,
