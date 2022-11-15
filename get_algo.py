@@ -119,6 +119,8 @@ print('fully_continuous', optimiser.fully_continuous)
 print('fully_bounded', ng.parametrization.parameter.helpers.Normalizer(
     optimiser.parametrization).fully_bounded)
 
+print('Algorithm, dimensionality, evaluation budget')
+
 for n_dimensions in range(n_dims_min, n_dims_max + 1):
     for eval_budget in range(eval_budget_min, eval_budget_max + 1):
         params = ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)
@@ -126,7 +128,7 @@ for n_dimensions in range(n_dims_min, n_dims_max + 1):
             params, eval_budget, n_workers, NGOptVersion.NGOpt39)
         algorithm = optimiser._select_optimizer_cls()
         algorithm = get_algorithm_for_ngopt(algorithm)
-        algorithm = short_name(algorithm)
+#        algorithm = short_name(algorithm)
 
         if str(algorithm) != latest_algortihm:
             print(algorithm, n_dimensions, eval_budget)
