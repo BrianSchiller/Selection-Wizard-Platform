@@ -5,6 +5,7 @@ statistics = True
 
 multiline-quotes = """
 docstring-quotes = """
+inline-quotes = "
 
 # Cyclomatic complexity desactivated
 max-complexity = 15 
@@ -12,8 +13,13 @@ max-complexity = 15
 # Ignore the unused import in __init__.py
 per-file-ignores = __init__.py:F401
 
+docstring-style=google
+
 # Ignore docstring double quote error
 ignore = W503  # Will soon be an anti-pattern: https://www.flake8rules.com/rules/W503.html
+
+# Also report % or .format strings
+fstring-ignore-format=True
 
 exclude =
     venv/,

@@ -14,11 +14,11 @@ from nevergrad.parametrization.data import Array
 class NGOptVersion(str, Enum):
     """Enum with different NGOpt versions."""
 
-    NGOpt8 = 'NGOpt8'
-    NGOpt15 = 'NGOpt15'
-    NGOpt21 = 'NGOpt21'
-    NGOpt36 = 'NGOpt36'
-    NGOpt39 = 'NGOpt39'
+    NGOpt8 = "NGOpt8"
+    NGOpt15 = "NGOpt15"
+    NGOpt21 = "NGOpt21"
+    NGOpt36 = "NGOpt36"
+    NGOpt39 = "NGOpt39"
 
 
 def square(x: float) -> float:
@@ -66,7 +66,7 @@ def get_optimiser(params: Array, budget: int, workers: int,
 def short_name(algorithm: Optimizer) -> Union[Optimizer, str]:
     """Return a short name for algorithms with many details."""
     if type(algorithm) is ConfPortfolio:
-        algorithm = 'ConfPortfolio'
+        algorithm = "ConfPortfolio"
 
     return algorithm
 
@@ -98,7 +98,7 @@ def get_algorithm_for_ngopt(algorithm: Optimizer) -> Optimizer:
 
 
 # Tracking variables
-latest_algortihm = ''
+latest_algortihm = ""
 
 # Fixed properties
 n_workers = 1
@@ -114,12 +114,12 @@ optimiser = ng.optimizers.NGOpt39(
     parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(-1, 5),
     budget=eval_budget_min,
     num_workers=n_workers)
-print('has_noise', optimiser.has_noise)
-print('fully_continuous', optimiser.fully_continuous)
-print('fully_bounded', ng.parametrization.parameter.helpers.Normalizer(
+print("has_noise", optimiser.has_noise)
+print("fully_continuous", optimiser.fully_continuous)
+print("fully_bounded", ng.parametrization.parameter.helpers.Normalizer(
     optimiser.parametrization).fully_bounded)
 
-print('Algorithm, dimensionality, evaluation budget')
+print("Algorithm, dimensionality, evaluation budget")
 
 for n_dimensions in range(n_dims_min, n_dims_max + 1):
     for eval_budget in range(eval_budget_min, eval_budget_max + 1):
