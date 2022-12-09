@@ -8,7 +8,7 @@ flake8-quotes==3.3.1
 joblib==1.2.0
 mccabe==0.7.0
 nevergrad==0.5.0
-numpy==1.23.4
+numpy==1.23.5
 pep8-naming==0.13.2
 pycodestyle==2.9.1
 pydocstyle==6.1.1
@@ -20,3 +20,4 @@ threadpoolctl==3.1.0
 typing-extensions==4.4.0
 flake8-use-fstring==1.4
 flake8-use-pathlib==0.3.0
+ioh==0.3.5

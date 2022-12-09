@@ -21,5 +21,8 @@ ignore = W503  # Will soon be an anti-pattern: https://www.flake8rules.com/rules
 # Also report % or .format strings
 fstring-ignore-format=True
 
+# Enforce correct indentation of hanging brackets
+hang-closing = True
+
 exclude =
     venv/,
