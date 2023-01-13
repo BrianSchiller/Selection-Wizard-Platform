@@ -94,7 +94,7 @@ for algname in algs_considered:
         problem_type="BBOB",
         # Set paralellization level here if desired, or use this within your
         # own parallelization
-        njobs=1, output_directory="OUTPUT_HERE",
+        njobs=1, output_directory="OUTPUT",
         # Logging specifications
         logged=True, folder_name=f"{algname_short}",
         algorithm_name=f"{algname_short}",
