@@ -1,20 +1,22 @@
 import ioh
+import argparse
+from typing import Union
 
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
 from nevergrad.optimization.optimizerlib import MetaModel  # noqa: F401
 from nevergrad.optimization.optimizerlib import CMA  # noqa: F401
-from nevergrad.optimization.optimizerlib import ParametrizedMetaModel  # noqa: F401
+from nevergrad.optimization.optimizerlib import ParametrizedMetaModel  # noqa: F401, E501
 from nevergrad.optimization.optimizerlib import CmaFmin2  # noqa: F401
-from nevergrad.optimization.optimizerlib import ChainMetaModelPowell  # noqa: F401
-from nevergrad.optimization.optimizerlib import MetaModelOnePlusOne  # noqa: F401
+from nevergrad.optimization.optimizerlib import ChainMetaModelPowell  # noqa: F401, E501
+from nevergrad.optimization.optimizerlib import MetaModelOnePlusOne  # noqa: F401, E501
 from nevergrad.optimization.optimizerlib import ConfPortfolio  # noqa: F401
 from nevergrad.optimization.optimizerlib import Rescaled  # noqa: F401
 from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
 
 # 6 algorithms
 # 33 ConfPortfolios
-algs_considered = [
+ALGS_CONSIDERED = [
     "CMA",
     "ChainMetaModelPowell",
     "Cobyla",
@@ -58,47 +60,107 @@ algs_considered = [
 
 
 class NGEvaluator:
-    def __init__(self, optimizer) -> None:
+    def __init__(self, optimizer, eval_budget: int) -> None:
         self.alg = optimizer
+        self.eval_budget = eval_budget
 
     def __call__(self, func) -> None:
         parametrization = ng.p.Array(
             shape=(func.meta_data.n_variables,)).set_bounds(-5, 5)
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
-            budget=int(10))
+            budget=self.eval_budget)
         optimizer.minimize(func)
 
 
-for algname in algs_considered:
-    algname_short = algname
+def run_algos(algorithms: list[str], problems: list[Union[int, str]],
+              eval_budget: int,
+              dimensionalities: list[int], n_repetitions: int,
+              instances: list[int] = None) -> None:
+    for algname in algorithms:
+        algname_short = algname
 
-    if algname.startswith("ConfPortfolio"):
-        SCL09 = "scale=0.9"
-        SCL13 = "scale=1.3"
-        scnd_scale = "NA"
-        if SCL09 in algname:
-            scnd_scale = SCL09
-        elif SCL13 in algname:
-            scnd_scale = SCL13
-        n_scaled = algname.count("Rescaled")
-        n_ngopt = algname.count("NGOpt14")
-        algname_short = f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}"
+        if algname.startswith("ConfPortfolio"):
+            scl09 = "scale=0.9"
+            scl13 = "scale=1.3"
+            scnd_scale = "NA"
+            if scl09 in algname:
+                scnd_scale = scl09
+            elif scl13 in algname:
+                scnd_scale = scl13
+            n_ngopt = algname.count("NGOpt14")
+            algname_short = (
+                f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
 
-    # Set the optimization algorithm
-    exp = ioh.Experiment(
-        algorithm=NGEvaluator(algname),
-        # Problem definitions. I use function name here, but could also use
-        # the ID (25 in this case)
-        fids=range(1, 2), iids=range(1, 2), dims=[5], reps=2,
-        problem_type="BBOB",
-        # Set paralellization level here if desired, or use this within your
-        # own parallelization
-        njobs=1, output_directory="OUTPUT",
-        # Logging specifications
-        logged=True, folder_name=f"{algname_short}",
-        algorithm_name=f"{algname_short}",
-        store_positions=False,
-        # Only keep data as a single zip-file
-        merge_output=True, zip_output=True, remove_data=True)
-    exp()
+        # Set the optimization algorithm
+        exp = ioh.Experiment(
+            algorithm=NGEvaluator(algname, eval_budget),
+            # Problem definitions. I use function name here, but could also use
+            # the ID (25 in this case)
+            fids=problems, iids=instances, dims=dimensionalities,
+            reps=n_repetitions,
+            problem_type="BBOB",
+            # Set paralellization level here if desired, or use this within
+            # your own parallelization
+            njobs=1, output_directory="OUTPUT",
+            # Logging specifications
+            logged=True, folder_name=f"{algname_short}",
+            algorithm_name=f"{algname_short}",
+            store_positions=False,
+            # Only keep data as a single zip-file
+            merge_output=True, zip_output=True, remove_data=True)
+        exp()
+
+    return
+
+
+if __name__ == "__main__":
+    DEFAULT_EVAL_BUDGET = 10000
+    DEFAULT_N_REPETITIONS = 25
+    DEFAULT_DIMS = [4, 5]
+    DEFAULT_PROBLEMS = list(range(1, 3))
+    DEFAULT_INSTANCES = [1]
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        "--algorithm",
+        default=argparse.SUPPRESS,
+        type=str,
+        help="Algorithm to run.")
+    parser.add_argument(
+        "--eval-budget",
+        default=DEFAULT_EVAL_BUDGET,
+        type=int,
+        help="Budget in function evaluations.")
+    parser.add_argument(
+        "--n-repetitions",
+        default=DEFAULT_N_REPETITIONS,
+        type=int,
+        help=("Number of repetitions for an algorithm-problem-dimension "
+              "combination."))
+    parser.add_argument(
+        "--dimensionalities",
+        default=DEFAULT_DIMS,
+        nargs="+",
+        type=int,
+        help=("List of variable space dimensionalities to consider for the "
+              "problem."))
+    parser.add_argument(
+        "--problems",
+        default=DEFAULT_PROBLEMS,
+        nargs="+",
+        type=Union[int, str],
+        help="List of BBOB problems.")
+    parser.add_argument(
+        "--intances",
+        default=DEFAULT_INSTANCES,
+        nargs="+",
+        type=int,
+        help="List of BBOB problem instances.")
+
+    args = parser.parse_args()
+
+    run_algos(args.algorithms, args.problems, args.eval_budget,
+              args.dimensionalities,
+              args.n_repetitions, args.instances)
