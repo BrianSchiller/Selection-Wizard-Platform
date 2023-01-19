@@ -1,0 +1,12 @@
+name: env
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - python=3.9
+    - pip
+    - pip:
+        - --editable .
+#        - ioh==0.3.5
+#        - nevergrad==0.5.0
+        - -r requirements.txt
