@@ -11,17 +11,17 @@
 # -N job name
 
 #PBS -q beta
-#PBS -l select=1:ncpus=2
-#PBS -l walltime=0:01:00
-#PBS -N testjob
+#PBS -l select=1:ncpus=1
+#PBS -l walltime=8:00:00
+#PBS -N ar4opt
 
 # Job array from 0 to 1, in steps of 1
-#PBS -J 0-1:1
+#PBS -J 0-15912:1
 
 # Load modules
 #. /etc/profile.d/modules.sh
 module purge
-module load python/3.10
+module load python/3.9
 module load conda3-2020.02
 source activate env
 
@@ -32,7 +32,7 @@ mkdir -p $OUTPUT
 
 # Prepare scratch directory space
 SCRATCH=/scratchbeta/$USER/test_scratch_space
-PROJECT='test'
+PROJECT='ar4opt'
 mkdir -p $SCRATCH/$PROJECT
 
 cd $SCRATCH/$PROJECT
@@ -46,12 +46,7 @@ cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 # Execute
 cd $PBS_ARRAY_INDEX
 
-if [ $PBS_ARRAY_INDEX -eq 0 ];
-then
-    python3 ioh_ng_real.py CMA 1> test.out 2> test.err
-else
-    python3 ioh_ng_real.py Cobyla 1> test.out 2> test.err
-fi
+python3 ioh_ng_real.py --pbs-index $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 

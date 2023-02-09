@@ -1,6 +1,7 @@
 import ioh
 import argparse
 from typing import Union
+import math
 
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
@@ -57,10 +58,14 @@ ALGS_CONSIDERED = [
     "ConfPortfolio(optimizers=[Rescaled(base_optimizer=NGOpt14, scale=1.0), Rescaled(base_optimizer=NGOpt14, scale=1.3)], warmup_ratio=0.5)",  # noqa: E501
     "ConfPortfolio(optimizers=[Rescaled(base_optimizer=NGOpt14, scale=1.0)], warmup_ratio=0.5)",  # noqa: E501
     ]
+DIMS_CONSIDERED = [2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80,
+                   90, 100]
+PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+                    18, 19, 20, 21, 22, 23, 24]
 
 
 class NGEvaluator:
-    def __init__(self, optimizer, eval_budget: int) -> None:
+    def __init__(self, optimizer: str, eval_budget: int) -> None:
         self.alg = optimizer
         self.eval_budget = eval_budget
 
@@ -92,6 +97,8 @@ def run_algos(algorithms: list[str], problems: list[Union[int, str]],
             algname_short = (
                 f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
 
+        out_dir = f"{algname_short}_D{dimensionalities[0]}_P{problems[0]}"
+
         # Set the optimization algorithm
         exp = ioh.Experiment(
             algorithm=NGEvaluator(algname, eval_budget),
@@ -102,7 +109,7 @@ def run_algos(algorithms: list[str], problems: list[Union[int, str]],
             problem_type="BBOB",
             # Set paralellization level here if desired, or use this within
             # your own parallelization
-            njobs=1, output_directory="OUTPUT",
+            njobs=1, output_directory=out_dir,
             # Logging specifications
             logged=True, folder_name=f"{algname_short}",
             algorithm_name=f"{algname_short}",
@@ -112,6 +119,23 @@ def run_algos(algorithms: list[str], problems: list[Union[int, str]],
         exp()
 
     return
+
+
+def pbs_index_to_args(index: int) -> (str, int, int):
+    """Convert a PBS index to algorithm, dimension, and problem combination."""
+    n_algos = len(ALGS_CONSIDERED)
+    n_dims = len(DIMS_CONSIDERED)
+    n_probs = len(PROBS_CONSIDERED)
+
+    algo_id = index % n_algos
+    dims_id = math.floor(index / n_algos) % n_dims
+    prob_id = math.floor(index / n_algos / n_dims) % n_probs
+
+    algorithm = ALGS_CONSIDERED[algo_id]
+    dimensionality = DIMS_CONSIDERED[dims_id]
+    problem = PROBS_CONSIDERED[prob_id]
+
+    return algorithm, dimensionality, problem
 
 
 if __name__ == "__main__":
@@ -158,9 +182,19 @@ if __name__ == "__main__":
         nargs="+",
         type=int,
         help="List of BBOB problem instances.")
+    parser.add_argument(
+        "--pbs-index",
+        type=int,
+        help="PBS index to convert to algorithm, dimension, and problem IDs.")
 
     args = parser.parse_args()
 
-    run_algos(args.algorithms, args.problems, args.eval_budget,
-              args.dimensionalities,
-              args.n_repetitions, args.instances)
+    if args.pbs_index is not None:
+        algorithm, dimensionality, problem = pbs_index_to_args(args.pbs_index)
+        run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
+                  [dimensionality],
+                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    else:
+        run_algos(args.algorithms, args.problems, args.eval_budget,
+                  args.dimensionalities,
+                  args.n_repetitions, args.instances)
