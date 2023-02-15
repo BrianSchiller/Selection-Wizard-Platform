@@ -1,6 +1,5 @@
 import ioh
 import argparse
-from typing import Union
 import math
 
 import nevergrad as ng
@@ -65,23 +64,38 @@ PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 
 
 class NGEvaluator:
+    algorithm_seed = 1
+
     def __init__(self, optimizer: str, eval_budget: int) -> None:
         self.alg = optimizer
         self.eval_budget = eval_budget
 
-    def __call__(self, func) -> None:
+    def __call__(self, func, seed: int = None) -> None:
         parametrization = ng.p.Array(
             shape=(func.meta_data.n_variables,)).set_bounds(-5, 5)
+        if seed is not None:
+            self.algorithm_seed = seed
+            parametrization.random_state.seed(seed)
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
             budget=self.eval_budget)
         optimizer.minimize(func)
 
 
-def run_algos(algorithms: list[str], problems: list[Union[int, str]],
+def run_algos(algorithms: list[str],
+              problems: list[int],
               eval_budget: int,
-              dimensionalities: list[int], n_repetitions: int,
-              instances: list[int] = None) -> None:
+              dimensionalities: list[int],
+              n_repetitions: int,
+              instances: list[int] = None,
+              use_seed: bool = False) -> None:
+    """Run the given algorithms on the given problem set.
+
+    Args:
+        use_seed: If True, use the repetition number as seed.
+    """
+    problem_type = "BBOB"
+
     for algname in algorithms:
         algname_short = algname
 
@@ -99,24 +113,41 @@ def run_algos(algorithms: list[str], problems: list[Union[int, str]],
 
         out_dir = f"{algname_short}_D{dimensionalities[0]}_P{problems[0]}"
 
-        # Set the optimization algorithm
-        exp = ioh.Experiment(
-            algorithm=NGEvaluator(algname, eval_budget),
-            # Problem definitions. I use function name here, but could also use
-            # the ID (25 in this case)
-            fids=problems, iids=instances, dims=dimensionalities,
-            reps=n_repetitions,
-            problem_type="BBOB",
-            # Set paralellization level here if desired, or use this within
-            # your own parallelization
-            njobs=1, output_directory=out_dir,
-            # Logging specifications
-            logged=True, folder_name=f"{algname_short}",
-            algorithm_name=f"{algname_short}",
-            store_positions=False,
-            # Only keep data as a single zip-file
-            merge_output=True, zip_output=True, remove_data=True)
-        exp()
+        if use_seed:
+            algorithm = NGEvaluator(algname, eval_budget)
+            logger = ioh.logger.Analyzer(folder_name=algname_short, algorithm_name=algname_short)
+            logger.add_run_attributes(algorithm, "algorithm_seed")
+
+            for problem in problems:
+                for dimension in dimensionalities:
+                    for instance in instances:
+                        function = ioh.get_problem(problem, instance=instance,
+                                                   dimension=dimension,
+                                                   problem_type=problem_type)
+                        function.attach_logger(logger)
+                        for seed in range(1, n_repetitions + 1):
+                            algorithm(function, seed)
+                            function.reset()
+            logger.close()
+        else:
+            # Set the optimization algorithm
+            exp = ioh.Experiment(
+                algorithm=NGEvaluator(algname, eval_budget),
+                # Problem definitions. I use function name here, but could also use
+                # the ID (25 in this case)
+                fids=problems, iids=instances, dims=dimensionalities,
+                reps=n_repetitions,
+                problem_type=problem_type,
+                # Set paralellization level here if desired, or use this within
+                # your own parallelization
+                njobs=1, output_directory=out_dir,
+                # Logging specifications
+                logged=True, folder_name=f"{algname_short}",
+                algorithm_name=f"{algname_short}",
+                store_positions=False,
+                # Only keep data as a single zip-file
+                merge_output=True, zip_output=True, remove_data=True)
+            exp()
 
     return
 
@@ -148,10 +179,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        "--algorithm",
+        "--algorithms",
         default=argparse.SUPPRESS,
+        nargs="+",
         type=str,
-        help="Algorithm to run.")
+        help="Algorithms to run.")
     parser.add_argument(
         "--eval-budget",
         default=DEFAULT_EVAL_BUDGET,
@@ -174,10 +206,10 @@ if __name__ == "__main__":
         "--problems",
         default=DEFAULT_PROBLEMS,
         nargs="+",
-        type=Union[int, str],
+        type=int,
         help="List of BBOB problems.")
     parser.add_argument(
-        "--intances",
+        "--instances",
         default=DEFAULT_INSTANCES,
         nargs="+",
         type=int,
@@ -186,6 +218,10 @@ if __name__ == "__main__":
         "--pbs-index",
         type=int,
         help="PBS index to convert to algorithm, dimension, and problem IDs.")
+    parser.add_argument(
+        "--use-seed",
+        action="store_true",
+        help="Set to use the repetition number as algorithm seed.")
 
     args = parser.parse_args()
 
@@ -193,8 +229,9 @@ if __name__ == "__main__":
         algorithm, dimensionality, problem = pbs_index_to_args(args.pbs_index)
         run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
                   [dimensionality],
-                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, args.use_seed)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,
-                  args.n_repetitions, args.instances)
+                  args.n_repetitions, args.instances,
+                  args.use_seed)
