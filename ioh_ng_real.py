@@ -1,6 +1,7 @@
 import ioh
 import argparse
 import math
+import sys
 
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
@@ -64,7 +65,10 @@ PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 
 
 class NGEvaluator:
+    """Algorithm wrapper to use nevergrad algorithms with IOHprofiler."""
+
     algorithm_seed = 1
+    run_success = -1  # "UNKNOWN"
 
     def __init__(self, optimizer: str, eval_budget: int) -> None:
         self.alg = optimizer
@@ -79,7 +83,13 @@ class NGEvaluator:
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
             budget=self.eval_budget)
-        optimizer.minimize(func)
+        try:
+            optimizer.minimize(func)
+            self.run_success = 1  # "SUCCESS"
+        except OverflowError as err:
+            print(f"OverflowError, run CRASHED with message: {err}",
+                  file=sys.stderr)
+            self.run_success = 0  # "CRASHED"
 
 
 def run_algos(algorithms: list[str],
@@ -115,8 +125,10 @@ def run_algos(algorithms: list[str],
 
         if use_seed:
             algorithm = NGEvaluator(algname, eval_budget)
-            logger = ioh.logger.Analyzer(folder_name=algname_short, algorithm_name=algname_short)
-            logger.add_run_attributes(algorithm, "algorithm_seed")
+            logger = ioh.logger.Analyzer(folder_name=algname_short,
+                                         algorithm_name=algname_short)
+            logger.add_run_attributes(algorithm,
+                                      ["algorithm_seed", "run_success"])
 
             for problem in problems:
                 for dimension in dimensionalities:
@@ -133,8 +145,8 @@ def run_algos(algorithms: list[str],
             # Set the optimization algorithm
             exp = ioh.Experiment(
                 algorithm=NGEvaluator(algname, eval_budget),
-                # Problem definitions. I use function name here, but could also use
-                # the ID (25 in this case)
+                # Problem definitions. I use function name here, but could also
+                # use the ID (25 in this case)
                 fids=problems, iids=instances, dims=dimensionalities,
                 reps=n_repetitions,
                 problem_type=problem_type,
