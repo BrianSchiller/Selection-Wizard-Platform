@@ -165,7 +165,10 @@ def run_algos(algorithms: list[str],
 
 
 def pbs_index_to_args(index: int) -> (str, int, int):
-    """Convert a PBS index to algorithm, dimension, and problem combination."""
+    """Convert a PBS index to algorithm, dimension, and problem combination.
+
+    Assumes job IDs in [0,15912).
+    """
     n_algos = len(ALGS_CONSIDERED)
     n_dims = len(DIMS_CONSIDERED)
     n_probs = len(PROBS_CONSIDERED)
@@ -179,6 +182,28 @@ def pbs_index_to_args(index: int) -> (str, int, int):
     problem = PROBS_CONSIDERED[prob_id]
 
     return algorithm, dimensionality, problem
+
+
+def pbs_index_to_args_all_dims(index: int) -> (str, int):
+    """Convert a PBS index to algorithm and problem combination.
+
+    Args:
+        index: The index of the PBS job to run. This should be in [0,936).
+
+    Returns:
+        A str with the algorithm name.
+        An int with the problem ID.
+    """
+    n_algos = len(ALGS_CONSIDERED)
+    n_probs = len(PROBS_CONSIDERED)
+
+    algo_id = index % n_algos
+    prob_id = math.floor(index / n_algos) % n_probs
+
+    algorithm = ALGS_CONSIDERED[algo_id]
+    problem = PROBS_CONSIDERED[prob_id]
+
+    return algorithm, problem
 
 
 if __name__ == "__main__":
@@ -229,6 +254,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pbs-index",
         type=int,
+        help=("PBS index to convert to algorithm and problem IDs. Each of them"
+              " is executed for all dimensions."))
+    parser.add_argument(
+        "--pbs-index-all-dims",
+        type=int,
         help="PBS index to convert to algorithm, dimension, and problem IDs.")
     parser.add_argument(
         "--use-seed",
@@ -241,6 +271,12 @@ if __name__ == "__main__":
         algorithm, dimensionality, problem = pbs_index_to_args(args.pbs_index)
         run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
                   [dimensionality],
+                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, args.use_seed)
+    elif args.pbs_index_all_dims is not None:
+        algorithm, problem = (
+            pbs_index_to_args_all_dims(args.pbs_index_all_dims))
+        run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
+                  DIMS_CONSIDERED,
                   DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, args.use_seed)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,

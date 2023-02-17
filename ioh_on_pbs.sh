@@ -12,11 +12,14 @@
 
 #PBS -q beta
 #PBS -l select=1:ncpus=1
-#PBS -l walltime=8:00:00
+#PBS -l walltime=36:00:00
 #PBS -N ar4opt
 
 # Job array from 0 to 1, in steps of 1
-#PBS -J 0-15912:1
+# For MeSU-Beta
+# First 0-467
+# Second 468-935
+#PBS -J 0-935:1
 
 # Load modules
 #. /etc/profile.d/modules.sh
@@ -32,7 +35,7 @@ mkdir -p $OUTPUT
 
 # Prepare scratch directory space
 SCRATCH=/scratchbeta/$USER/test_scratch_space
-PROJECT='ar4opt'
+PROJECT='ar4opt_seed'
 mkdir -p $SCRATCH/$PROJECT
 
 cd $SCRATCH/$PROJECT
@@ -46,7 +49,7 @@ cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 # Execute
 cd $PBS_ARRAY_INDEX
 
-python3 ioh_ng_real.py --pbs-index $PBS_ARRAY_INDEX 1> test.out 2> test.err
+python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX --use-seed 1> test.out 2> test.err
 
 cd ..
 
