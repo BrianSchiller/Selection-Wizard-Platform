@@ -1,2 +1,5 @@
 venv/
 OUTPUT/
+data/
+data_seeds/
+*.pdf
