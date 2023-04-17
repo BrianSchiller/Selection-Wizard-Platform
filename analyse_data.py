@@ -86,7 +86,26 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
 
 
 def read_ioh_dat(result_path: Path) -> pd.DataFrame:
-    """Read a .dat result file from experiment with IOH."""
+    """Read a .dat result file from experiment with IOH.
+
+    These files contain blocks of data representing one run each of the form:
+      evaluations raw_y
+      1 1.0022434918
+      ...
+      10000 0.0000000000
+    The first line indicates the start of a new run, and which data columsn are
+    included. Following this, each line represents data from one evaluation.
+    evaluations indicates the evaluation number.
+    raw_y indicates the best value so far, except for the last line. The last
+    line holds the value of the last evaluation, even if it is not the best so
+    far.
+
+    Args:
+        result_path: Path pointing to an IOH data file.
+    Returns:
+        pandas DataFrame with performance data. Columns are evaluations,
+          rows are different runs, column names are evaluation numbers.
+    """
     with result_path.open("r") as result_file:
         lines = result_file.readlines()
         run_id = 0
@@ -119,7 +138,13 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
                 # Element 0 is the evaluation number
                 if run_eval[0] == eval_ids[idx]:
                     # Element 1 is the performance value
-                    runs_full[run_id][idx] = run_eval[1]
+                    if (idx == len(eval_ids) - 1
+                       and run_eval[1] > runs_full[run_id][idx - 1]):
+                        # If it is the last index, and the performance is
+                        # larger than before, use the last best-so-far value.
+                        runs_full[run_id][idx] = runs_full[run_id][idx - 1]
+                    else:
+                        runs_full[run_id][idx] = run_eval[1]
                 elif run_eval[0] < eval_ids[idx]:
                     # If it does not exist the value is the same as the
                     # previous evaluation.
