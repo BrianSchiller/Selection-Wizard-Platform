@@ -29,6 +29,7 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
         metadata = json.load(metadata_file)
     algo_name = metadata["algorithm"]["name"]
     func_name = metadata["function_name"]
+    func_id = metadata["function_id"]
 
     for scenario in metadata["scenarios"]:
         if scenario["dimension"] == dims:
@@ -40,25 +41,28 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
     return (algo_name, func_name, data_path)
 
 
-def read_ioh_results():
+def read_ioh_results() -> None:
     """Read a specified set of result files form experiments with IOH."""
     runs = []
     algo_names = []
-    dims = 2
+    func_names = []
+    dims = 100
+    problem_names = ["f1_Sphere", "f3_Rastrigin"]
 
-    for algo_id in range(0, 6):
-        algo_dir = const.ALGS_CONSIDERED[algo_id]
+    for problem_name in problem_names:
+        for algo_id in range(0, 6):
+            algo_dir = const.ALGS_CONSIDERED[algo_id]
+    
+            json_path = Path(
+                f"data_seeds_organised/{problem_name}/{algo_dir}/"
+                f"IOHprofiler_{problem_name}.json")
+            (algo_name, func_name, data_path) = read_ioh_json(json_path, dims)
+            runs.append(read_ioh_dat(data_path))
+            algo_names.append(algo_name)
 
-        json_path = Path(
-            f"data_seeds_organised/f1_Sphere/{algo_dir}/"
-             "IOHprofiler_f1_Sphere.json")
-        (algo_name, func_name, data_path) = read_ioh_json(json_path, dims)
-        result_path = Path(f"data_seeds_organised/f1_Sphere/{algo_dir}/"
-                           f"data_f1_Sphere/IOHprofiler_f1_DIM{dims}.dat")
-        runs.append(read_ioh_dat(data_path))
-        algo_names.append(algo_name)
+        func_names.append(func_name)
 
-    plot_median(runs, algo_names, func_name)
+    plot_median(runs, algo_names, func_names)
 
     return
 
@@ -143,7 +147,7 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
 
 def plot_median(algo_runs: list[pd.DataFrame],
                 algo_names: list[str],
-                func_name: str) -> None:
+                func_names: list[str]) -> None:
     """Plot the median performance over time.
 
     Args:
@@ -151,20 +155,25 @@ def plot_median(algo_runs: list[pd.DataFrame],
           algorithm. Columns are evaluations, rows are different runs, column
           names are evaluation numbers.
         algo_names: List of algorithm names.
-        func_name: Name of the function.
+        func_names: List of function names.
     """
-    fig = plt.figure()
-    plt.title(f"Median performance on {func_name}")
-    plt.xlabel("Evaluations")
-    plt.ylabel("Performance (best-so-far)")
+    fig, axs = plt.subplots(2, 1, layout="constrained")
+    fig.suptitle("Median performance")
 
-    for runs, algo_name in zip(algo_runs, algo_names):
-        medians = runs.median(axis=0)
-        eval_ids = runs.columns.values.tolist()
-        plt.plot(eval_ids, medians, label=algo_name)
+    for ax, func_name in zip(axs.flat, func_names):
+        ax.set(xlabel="Evaluations",
+               ylabel="Performance (best-so-far)")
+    
+        for runs, algo_name in zip(algo_runs, algo_names):
+            medians = runs.median(axis=0)
+            eval_ids = runs.columns.values.tolist()
+            ax.plot(eval_ids, medians, label="_nolegend_" if func_name != func_names[0] else algo_name)
 
-    plt.legend()
-    plt.show()
+        ax.set_title(f"{func_name}")
+        ax.label_outer()
+
+    fig.legend(loc="outside upper right")
+    fig.show()
     fig.savefig("plot.pdf")
 
     return
