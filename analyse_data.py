@@ -44,7 +44,7 @@ def read_ioh_results():
     """Read a specified set of result files form experiments with IOH."""
     runs = []
     algo_names = []
-    dims = 100
+    dims = 2
 
     for algo_id in range(0, 6):
         algo_dir = const.ALGS_CONSIDERED[algo_id]
@@ -57,7 +57,6 @@ def read_ioh_results():
                            f"data_f1_Sphere/IOHprofiler_f1_DIM{dims}.dat")
         runs.append(read_ioh_dat(data_path))
         algo_names.append(algo_name)
-#        runs = read_ioh_dat(data_path)
 
     plot_median(runs, algo_names, func_name)
 
@@ -112,25 +111,30 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
     runs_full = np.zeros((len(runs), len(eval_ids)))
 
     for run_id in range(0, len(runs)):
+        range_start = 0
+
         for run_eval in runs[run_id]:
-            for idx in range(0, len(eval_ids)):
+            for idx in range(range_start, len(eval_ids)):
                 # Element 0 is the evaluation number
                 if run_eval[0] == eval_ids[idx]:
+                    # If it is the last index, and the performance is
+                    # larger than before, use the last best-so-far value.
                     # Element 1 is the performance value
                     if (idx == len(eval_ids) - 1
                        and run_eval[1] > runs_full[run_id][idx - 1]):
-                        # If it is the last index, and the performance is
-                        # larger than before, use the last best-so-far value.
                         runs_full[run_id][idx] = runs_full[run_id][idx - 1]
                     else:
                         runs_full[run_id][idx] = run_eval[1]
-                elif run_eval[0] < eval_ids[idx]:
+                        range_start = idx + 1
+                        break
+                else:
                     # If it does not exist the value is the same as the
                     # previous evaluation.
                     # All runs should have a value for the first evaluation,
                     # so this block should not be reached without a previous
-                    # value existing (i.e., idx-1 should always be safe).
+                    # value existing (i.e., idx - 1 should always be safe).
                     runs_full[run_id][idx] = runs_full[run_id][idx - 1]
+                    range_start = idx + 1
 
     all_runs = pd.DataFrame(runs_full, columns=eval_ids)
 
