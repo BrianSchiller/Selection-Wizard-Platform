@@ -2,4 +2,6 @@ venv/
 OUTPUT/
 data/
 data_seeds/
+data_seeds_reorg/
+data_seeds_organised/
 *.pdf
