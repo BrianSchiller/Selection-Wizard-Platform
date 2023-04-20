@@ -29,7 +29,6 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
         metadata = json.load(metadata_file)
     algo_name = metadata["algorithm"]["name"]
     func_name = metadata["function_name"]
-    func_id = metadata["function_id"]
 
     for scenario in metadata["scenarios"]:
         if scenario["dimension"] == dims:
@@ -52,7 +51,6 @@ def read_ioh_results() -> None:
     for problem_name in problem_names:
         for algo_id in range(0, 6):
             algo_dir = const.ALGS_CONSIDERED[algo_id]
-    
             json_path = Path(
                 f"data_seeds_organised/{problem_name}/{algo_dir}/"
                 f"IOHprofiler_{problem_name}.json")
@@ -163,11 +161,12 @@ def plot_median(algo_runs: list[pd.DataFrame],
     for ax, func_name in zip(axs.flat, func_names):
         ax.set(xlabel="Evaluations",
                ylabel="Performance (best-so-far)")
-    
+
         for runs, algo_name in zip(algo_runs, algo_names):
             medians = runs.median(axis=0)
             eval_ids = runs.columns.values.tolist()
-            ax.plot(eval_ids, medians, label="_nolegend_" if func_name != func_names[0] else algo_name)
+            lbl = "_nolegend_" if func_name != func_names[0] else algo_name
+            ax.plot(eval_ids, medians, label=lbl)
 
         ax.set_title(f"{func_name}")
         ax.label_outer()
@@ -196,12 +195,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     read_ioh_results()
-    #json_path = Path(
-    #    "data_seeds_organised/f1_Sphere/ChainMetaModelPowell/"
-    #    "IOHprofiler_f1_Sphere.json")
-    #dims = 2
-    #(algo_name, func_name, data_path) = read_ioh_json(json_path, dims)
-    #result_path = Path("data_seeds_organised/f1_Sphere/ChainMetaModelPowell/"
-    #                   "data_f1_Sphere/IOHprofiler_f1_DIM2.dat")
-    #runs = read_ioh_dat(data_path)
-    #plot_median(runs, algo_name, func_name)

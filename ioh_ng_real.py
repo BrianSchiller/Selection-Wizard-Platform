@@ -1,3 +1,5 @@
+"""Module to run Nevergrad algorithm implementations with IOH profiler."""
+from __future__ import annotations
 import ioh
 import argparse
 import math
@@ -70,11 +72,15 @@ class NGEvaluator:
     algorithm_seed = 1
     run_success = -1  # "UNKNOWN"
 
-    def __init__(self, optimizer: str, eval_budget: int) -> None:
+    def __init__(self: NGEvaluator, optimizer: str, eval_budget: int) -> None:
+        """Initialise the NGEvaluator."""
         self.alg = optimizer
         self.eval_budget = eval_budget
 
-    def __call__(self, func, seed: int = None) -> None:
+    def __call__(self: NGEvaluator,
+                 func: ioh.iohcpp.problem.RealSingleObjective,
+                 seed: int = None) -> None:
+        """Run the NGEvaluator on the given problem."""
         parametrization = ng.p.Array(
             shape=(func.meta_data.n_variables,)).set_bounds(-5, 5)
         if seed is not None:
