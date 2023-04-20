@@ -42,13 +42,15 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
 
 def read_ioh_results() -> None:
     """Read a specified set of result files form experiments with IOH."""
-    runs = []
+    prob_runs = []
     algo_names = []
     func_names = []
     dims = 100
     problem_names = ["f1_Sphere", "f3_Rastrigin"]
 
     for problem_name in problem_names:
+        runs = []
+
         for algo_id in range(0, 6):
             algo_dir = const.ALGS_CONSIDERED[algo_id]
             json_path = Path(
@@ -58,9 +60,11 @@ def read_ioh_results() -> None:
             runs.append(read_ioh_dat(data_path))
             algo_names.append(algo_name)
 
+        prob_runs.append(runs)
         func_names.append(func_name)
 
-    plot_median(runs, algo_names, func_names)
+    algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
+    plot_median(prob_runs, algo_names, func_names)
 
     return
 
@@ -143,25 +147,27 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
     return all_runs
 
 
-def plot_median(algo_runs: list[pd.DataFrame],
+def plot_median(func_algo_runs: list[list[pd.DataFrame]],
                 algo_names: list[str],
                 func_names: list[str]) -> None:
     """Plot the median performance over time.
 
     Args:
-        algo_runs: list of pandas DataFrame with performance data per
-          algorithm. Columns are evaluations, rows are different runs, column
-          names are evaluation numbers.
+        func_algo_runs: list of functions containing a list of pandas DataFrame
+          with performance data per algorithm. Columns are evaluations, rows
+          are different runs, column names are evaluation numbers.
         algo_names: List of algorithm names.
         func_names: List of function names.
     """
     fig, axs = plt.subplots(2, 1, layout="constrained")
     fig.suptitle("Median performance")
 
-    for ax, func_name in zip(axs.flat, func_names):
+    # Draw a subplot for each problem
+    for ax, func_name, algo_runs in zip(axs.flat, func_names, func_algo_runs):
         ax.set(xlabel="Evaluations",
                ylabel="Performance (best-so-far)")
 
+        # Draw a curve for each algorithm
         for runs, algo_name in zip(algo_runs, algo_names):
             medians = runs.median(axis=0)
             eval_ids = runs.columns.values.tolist()
@@ -171,7 +177,7 @@ def plot_median(algo_runs: list[pd.DataFrame],
         ax.set_title(f"{func_name}")
         ax.label_outer()
 
-    fig.legend(loc="outside upper right")
+    fig.legend(loc="outside lower center")
     fig.show()
     fig.savefig("plot.pdf")
 
