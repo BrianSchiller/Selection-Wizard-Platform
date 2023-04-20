@@ -182,13 +182,13 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
             eval_ids = runs.columns.values.tolist()
             lbl = "_nolegend_" if func_name != func_names[0] else algo_name
             ax.plot(eval_ids, medians, label=lbl)
-            ax.set_yscale("symlog")
+            ax.set_yscale("symlog", linthresh=0.1)
 
         ax.set_title(f"{func_name}")
 
     fig.legend(loc="outside lower center")
     fig.show()
-    fig.savefig("plot.pdf")
+    fig.savefig(f"plot_D{dims}.pdf")
 
     return
 
