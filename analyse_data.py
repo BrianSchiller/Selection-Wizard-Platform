@@ -28,14 +28,19 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
     with metadata_path.open() as metadata_file:
         metadata = json.load(metadata_file)
     algo_name = metadata["algorithm"]["name"]
-    func_name = metadata["function_name"]
+    func_id = metadata["function_id"]
+    func_name = f"f{func_id}_{metadata['function_name']}"
 
     for scenario in metadata["scenarios"]:
         if scenario["dimension"] == dims:
             data_path = Path(scenario["path"])
             break
 
-    data_path = metadata_path.parent / data_path
+    try:
+        data_path = metadata_path.parent / data_path
+    except UnboundLocalError:
+        print(f"No data found for function {func_name} with algorithm "
+              f"{algo_name}")
 
     return (algo_name, func_name, data_path)
 
@@ -45,10 +50,9 @@ def read_ioh_results() -> None:
     prob_runs = []
     algo_names = []
     func_names = []
-    dims = 100
-    problem_names = ["f1_Sphere", "f3_Rastrigin"]
+    dims = 2
 
-    for problem_name in problem_names:
+    for problem_name in const.PROB_NAMES:
         runs = []
 
         for algo_id in range(0, 6):
@@ -64,7 +68,7 @@ def read_ioh_results() -> None:
         func_names.append(func_name)
 
     algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
-    plot_median(prob_runs, algo_names, func_names)
+    plot_median(prob_runs, algo_names, func_names, dims)
 
     return
 
@@ -149,7 +153,8 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
 
 def plot_median(func_algo_runs: list[list[pd.DataFrame]],
                 algo_names: list[str],
-                func_names: list[str]) -> None:
+                func_names: list[str],
+                dims: int) -> None:
     """Plot the median performance over time.
 
     Args:
@@ -158,9 +163,13 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
           are different runs, column names are evaluation numbers.
         algo_names: List of algorithm names.
         func_names: List of function names.
+        dims: int indicating the number of variable space dimensions.
     """
-    fig, axs = plt.subplots(2, 1, layout="constrained")
-    fig.suptitle("Median performance")
+    # TODO: Make subplot dimenions depend on the number of functions
+    # TODO: How to split the functions over columns/rows?
+    fig, axs = plt.subplots(6, 4, layout="constrained",
+                            figsize=(12, 20), dpi=80)
+    fig.suptitle(f"Median symlog performance for {dims} dimensions.")
 
     # Draw a subplot for each problem
     for ax, func_name, algo_runs in zip(axs.flat, func_names, func_algo_runs):
@@ -173,9 +182,9 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
             eval_ids = runs.columns.values.tolist()
             lbl = "_nolegend_" if func_name != func_names[0] else algo_name
             ax.plot(eval_ids, medians, label=lbl)
+            ax.set_yscale("symlog")
 
         ax.set_title(f"{func_name}")
-        ax.label_outer()
 
     fig.legend(loc="outside lower center")
     fig.show()
