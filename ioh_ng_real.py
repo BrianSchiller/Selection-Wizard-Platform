@@ -4,6 +4,7 @@ import ioh
 import argparse
 import math
 import sys
+import numpy as np
 
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
@@ -93,7 +94,13 @@ class NGEvaluator:
             optimizer.minimize(func)
             self.run_success = 1  # "SUCCESS"
         except OverflowError as err:
-            print(f"OverflowError, run CRASHED with message: {err}",
+            print(f"OverflowError, run of {self.alg} with seed "
+                  f"{self.algorithm_seed} CRASHED with message: {err}",
+                  file=sys.stderr)
+            self.run_success = 0  # "CRASHED"
+        except np.linalg.LinAlgError as err:
+            print(f"LinAlgError, run of {self.alg} with seed "
+                  f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
             self.run_success = 0  # "CRASHED"
 
