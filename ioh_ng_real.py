@@ -74,14 +74,24 @@ class NGEvaluator:
     run_success = -1  # "UNKNOWN"
 
     def __init__(self: NGEvaluator, optimizer: str, eval_budget: int) -> None:
-        """Initialise the NGEvaluator."""
+        """Initialise the NGEvaluator.
+
+        Args:
+            optimizer: str with the algorithm name.
+            eval_budget: int with the evaluation budget.
+        """
         self.alg = optimizer
         self.eval_budget = eval_budget
 
     def __call__(self: NGEvaluator,
                  func: ioh.iohcpp.problem.RealSingleObjective,
                  seed: int = None) -> None:
-        """Run the NGEvaluator on the given problem."""
+        """Run the NGEvaluator on the given problem.
+
+        Args:
+            func: IOH function to run the algorithm on.
+            seed: int to seed the algorithm random state.
+        """
         parametrization = ng.p.Array(
             shape=(func.meta_data.n_variables,)).set_bounds(-5, 5)
         if seed is not None:
@@ -115,6 +125,13 @@ def run_algos(algorithms: list[str],
     """Run the given algorithms on the given problem set.
 
     Args:
+        algorithms: list of names of algorithm to run.
+        problems: list of problem IDs (int) to run the algorithms on.
+        eval_budget: int with the evaluation budget per run.
+        dimensionalities: list of dimensionalities (int) to run per problem.
+        n_repetitions: int for the number of repetitions (runs) to do per case.
+            A case is an algorithm-problem-instance-dimensionality combination.
+        instances: list of instance IDs (int) to run per problem.
         use_seed: If True, use the repetition number as seed.
     """
     problem_type = "BBOB"
@@ -180,7 +197,13 @@ def run_algos(algorithms: list[str],
 def pbs_index_to_args(index: int) -> (str, int, int):
     """Convert a PBS index to algorithm, dimension, and problem combination.
 
-    Assumes job IDs in [0,15912).
+    Args:
+        index: The index of the PBS job to run. This should be in [0,15912).
+
+    Returns:
+        A str with the algorithm name.
+        An int with the dimensionality.
+        An int with the problem ID.
     """
     n_algos = len(ALGS_CONSIDERED)
     n_dims = len(DIMS_CONSIDERED)
