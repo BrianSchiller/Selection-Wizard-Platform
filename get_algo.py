@@ -21,11 +21,6 @@ class NGOptVersion(str, Enum):
     NGOpt39 = "NGOpt39"
 
 
-def square(x: float) -> float:
-    """Test objective function."""
-    return sum((x - 0.5) ** 2)
-
-
 def get_optimiser(params: Array, budget: int, workers: int,
                   ngopt: NGOptVersion) -> NGOpt:
     """Return an optimiser based on the properties and NGOpt version."""
