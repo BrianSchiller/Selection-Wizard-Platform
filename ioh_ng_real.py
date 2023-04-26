@@ -113,6 +113,11 @@ class NGEvaluator:
                   f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
             self.run_success = 0  # "CRASHED"
+        except Exception as err:
+            print(f"Unknown error, run of {self.alg} with seed "
+                  f"{self.algorithm_seed} CRASHED with message: {err}",
+                  file=sys.stderr)
+            self.run_success = 0  # "CRASHED"
 
 
 def run_algos(algorithms: list[str],
