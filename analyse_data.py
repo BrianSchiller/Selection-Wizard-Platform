@@ -11,7 +11,8 @@ import json
 import constants as const
 
 
-def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
+def read_ioh_json(metadata_path: Path, dims: int) -> (
+        str, str, Path, list[int]):
     """Read a .json metadata file from experiment with IOH.
 
     Args:
@@ -23,10 +24,15 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
         str algorithm name.
         str function name.
         Path to the data file or empty Path if no file is found.
+        list of usually ints showing the success/failure status of runs for
+          this dimensionality. 1 indicates a successful run, 0 a crashed run,
+          -1 a missing run. Other values than these mean something is likely
+          to be wrong, e.g., a crash that was not detected during execution can
+          have a value like 4.6355715189945e-310. An empty list is returned if
+          no file is found.
     """
     expected_runs = 25
 
-    # TODO: Check scenarios.runs.run_success -- How to pass on/use this info?
     with metadata_path.open() as metadata_file:
         metadata = json.load(metadata_file)
     algo_name = metadata["algorithm"]["name"]
@@ -37,21 +43,30 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
         if scenario["dimension"] == dims:
             data_path = Path(scenario["path"])
 
-            if len(scenario["runs"]) != expected_runs:
-                print(f"Found {len(scenario['runs'])} runs instead of "
-                      f"{expected_runs} for function {func_name} with "
+            # Record per run whether it was successful
+            run_success = [-1] * expected_runs
+            for run, idx in zip(scenario["runs"], range(0, expected_runs)):
+                run_success[idx] = run["run_success"]
+            n_success = sum(run_suc for run_suc in run_success if run_suc == 1)
+
+            if n_success != expected_runs:
+                print(f"Found {n_success} successful runs out of "
+                      f"{len(scenario['runs'])} instead of "
+                      f"{expected_runs} runs for function {func_name} with "
                       f"algorithm {algo_name} and dimensionality {dims}.")
 
             break
 
+    # Check whether a path to the data was identified
     try:
         data_path = metadata_path.parent / data_path
     except UnboundLocalError:
         print(f"No data found for function {func_name} with algorithm "
               f"{algo_name} and dimensionality {dims}.")
         data_path = Path()
+        run_success = list()
 
-    return (algo_name, func_name, data_path)
+    return (algo_name, func_name, data_path, run_success)
 
 
 def read_ioh_results() -> None:
@@ -59,7 +74,7 @@ def read_ioh_results() -> None:
     prob_runs = []
     algo_names = []
     func_names = []
-    dims = 20
+    dims = 15
 
     for problem_name in const.PROB_NAMES:
         runs = []
@@ -69,7 +84,8 @@ def read_ioh_results() -> None:
             json_path = Path(
                 f"data_seeds_organised/{problem_name}/{algo_dir}/"
                 f"IOHprofiler_{problem_name}.json")
-            (algo_name, func_name, data_path) = read_ioh_json(json_path, dims)
+            (algo_name, func_name, data_path, _) = read_ioh_json(
+                json_path, dims)
 
             # Handle missing data files
             if data_path.is_file():
@@ -89,6 +105,26 @@ def read_ioh_results() -> None:
     return
 
 
+def check_run_is_valid(eval_number: int, expected_evals: int,
+                       run_id: int) -> bool:
+    """Check whether run has the right number of evaluations.
+
+    Args:
+        eval_number: int with the last evaluation number of the run.
+        expected_evals: int with the expected number of evaluations in the run.
+        run_id: int with the ID of the current run.
+    Returns:
+        bool True if eval_number and expected_evals match, False otherwise.
+    """
+    if eval_number == expected_evals:
+        return True
+    else:
+        print(f"Run with ID {run_id} is partial with only "
+              f"{eval_number} evaluations instead of "
+              f"{expected_evals}.")
+        return False
+
+
 def read_ioh_dat(result_path: Path) -> pd.DataFrame:
     """Read a .dat result file with runs from an experiment with IOH.
 
@@ -97,7 +133,7 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
       1 1.0022434918
       ...
       10000 0.0000000000
-    The first line indicates the start of a new run, and which data columsn are
+    The first line indicates the start of a new run, and which data columns are
     included. Following this, each line represents data from one evaluation.
     evaluations indicates the evaluation number.
     raw_y indicates the best value so far, except for the last line. The last
@@ -110,18 +146,26 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
         pandas DataFrame with performance data. Columns are evaluations,
           rows are different runs, column names are evaluation numbers.
     """
+    expected_evals = 10000
+
     with result_path.open("r") as result_file:
         lines = result_file.readlines()
         run_id = 0
         runs = []
         eval_ids = []
         run = []
+        eval_ids_run = []
+        eval_number = 0
 
         for line in lines:
             if line.startswith("e"):  # For 'evaluations'
                 if run_id != 0:
-                    runs.append(run)
+                    # Confirm run is complete before adding it
+                    if check_run_is_valid(eval_number, expected_evals, run_id):
+                        runs.append(run)
+                        eval_ids.extend(eval_ids_run)
                 run = []
+                eval_ids_run = []
                 run_id = run_id + 1
             else:
                 words = line.split()
@@ -130,8 +174,11 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
                 run.append([eval_number, performance])
 
                 if eval_number not in eval_ids:
-                    eval_ids.append(eval_number)
-        runs.append(run)
+                    eval_ids_run.append(eval_number)
+        # Confirm run is complete before adding it
+        if check_run_is_valid(eval_number, expected_evals, run_id):
+            runs.append(run)
+            eval_ids.extend(eval_ids_run)
 
     eval_ids.sort()
     runs_full = np.zeros((len(runs), len(eval_ids)))
