@@ -22,8 +22,10 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
     Returns:
         str algorithm name.
         str function name.
-        Path to the data file.
+        Path to the data file or empty Path if no file is found.
     """
+    expected_runs = 25
+
     # TODO: Check scenarios.runs.run_success -- How to pass on/use this info?
     with metadata_path.open() as metadata_file:
         metadata = json.load(metadata_file)
@@ -34,6 +36,12 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
     for scenario in metadata["scenarios"]:
         if scenario["dimension"] == dims:
             data_path = Path(scenario["path"])
+
+            if len(scenario["runs"]) != expected_runs:
+                print(f"Found {len(scenario['runs'])} runs instead of "
+                      f"{expected_runs} for function {func_name} with "
+                      f"algorithm {algo_name} and dimensionality {dims}.")
+
             break
 
     try:
@@ -51,7 +59,7 @@ def read_ioh_results() -> None:
     prob_runs = []
     algo_names = []
     func_names = []
-    dims = 25
+    dims = 20
 
     for problem_name in const.PROB_NAMES:
         runs = []
