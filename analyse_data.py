@@ -40,7 +40,8 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (str, str, Path):
         data_path = metadata_path.parent / data_path
     except UnboundLocalError:
         print(f"No data found for function {func_name} with algorithm "
-              f"{algo_name}")
+              f"{algo_name} and dimensionality {dims}.")
+        data_path = Path()
 
     return (algo_name, func_name, data_path)
 
@@ -50,7 +51,7 @@ def read_ioh_results() -> None:
     prob_runs = []
     algo_names = []
     func_names = []
-    dims = 2
+    dims = 25
 
     for problem_name in const.PROB_NAMES:
         runs = []
@@ -61,7 +62,14 @@ def read_ioh_results() -> None:
                 f"data_seeds_organised/{problem_name}/{algo_dir}/"
                 f"IOHprofiler_{problem_name}.json")
             (algo_name, func_name, data_path) = read_ioh_json(json_path, dims)
-            runs.append(read_ioh_dat(data_path))
+
+            # Handle missing data files
+            if data_path.is_file():
+                runs.append(read_ioh_dat(data_path))
+            else:
+                # Filler to avoid mismatch in number of elements
+                runs.append(pd.DataFrame())
+
             algo_names.append(algo_name)
 
         prob_runs.append(runs)
@@ -74,7 +82,7 @@ def read_ioh_results() -> None:
 
 
 def read_ioh_dat(result_path: Path) -> pd.DataFrame:
-    """Read a .dat result file from experiment with IOH.
+    """Read a .dat result file with runs from an experiment with IOH.
 
     These files contain blocks of data representing one run each of the form:
       evaluations raw_y
