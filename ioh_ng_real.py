@@ -88,6 +88,13 @@ class NGEvaluator:
                  seed: int = None) -> None:
         """Run the NGEvaluator on the given problem.
 
+        Sets run_success in IOH json output per run with status codes:
+            -1  UNKNOWN
+             1  SUCCESS
+             0  CRASHED due to OverflowError
+            -2  CRASHED due to np.linalg.LinAlgError
+            -3  CRASHED due to other Exception
+
         Args:
             func: IOH function to run the algorithm on.
             seed: int to seed the algorithm random state.
@@ -107,17 +114,17 @@ class NGEvaluator:
             print(f"OverflowError, run of {self.alg} with seed "
                   f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
-            self.run_success = 0  # "CRASHED"
+            self.run_success = 0  # "CRASHED" OverflowError
         except np.linalg.LinAlgError as err:
             print(f"LinAlgError, run of {self.alg} with seed "
                   f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
-            self.run_success = 0  # "CRASHED"
+            self.run_success = -2  # "CRASHED" np.linalg.LinAlgError
         except Exception as err:
             print(f"Unknown error, run of {self.alg} with seed "
                   f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
-            self.run_success = 0  # "CRASHED"
+            self.run_success = -3  # "CRASHED" other Exception
 
 
 def run_algos(algorithms: list[str],
