@@ -168,32 +168,6 @@ def run_algos(algorithms: list[str],
     return
 
 
-def pbs_index_to_args(index: int) -> (str, int, int):
-    """Convert a PBS index to algorithm, dimension, and problem combination.
-
-    Args:
-        index: The index of the PBS job to run. This should be in [0,15912).
-
-    Returns:
-        A str with the algorithm name.
-        An int with the dimensionality.
-        An int with the problem ID.
-    """
-    n_algos = len(const.ALGS_CONSIDERED)
-    n_dims = len(const.DIMS_CONSIDERED)
-    n_probs = len(const.PROBS_CONSIDERED)
-
-    algo_id = index % n_algos
-    dims_id = math.floor(index / n_algos) % n_dims
-    prob_id = math.floor(index / n_algos / n_dims) % n_probs
-
-    algorithm = const.ALGS_CONSIDERED[algo_id]
-    dimensionality = const.DIMS_CONSIDERED[dims_id]
-    problem = const.PROBS_CONSIDERED[prob_id]
-
-    return algorithm, dimensionality, problem
-
-
 def pbs_index_to_args_all_dims(index: int) -> (str, int):
     """Convert a PBS index to algorithm and problem combination.
 
@@ -262,11 +236,6 @@ if __name__ == "__main__":
         type=int,
         help="List of BBOB problem instances.")
     parser.add_argument(
-        "--pbs-index",
-        type=int,
-        help=("PBS index to convert to algorithm and problem IDs. Each of them"
-              " is executed for all dimensions."))
-    parser.add_argument(
         "--pbs-index-all-dims",
         type=int,
         help="PBS index to convert to algorithm, dimension, and problem IDs.")
@@ -277,12 +246,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.pbs_index is not None:
-        algorithm, dimensionality, problem = pbs_index_to_args(args.pbs_index)
-        run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
-                  [dimensionality],
-                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, args.use_seed)
-    elif args.pbs_index_all_dims is not None:
+    if args.pbs_index_all_dims is not None:
         algorithm, problem = (
             pbs_index_to_args_all_dims(args.pbs_index_all_dims))
         run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
