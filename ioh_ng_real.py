@@ -4,6 +4,7 @@ import ioh
 import argparse
 import math
 import sys
+
 import numpy as np
 
 import nevergrad as ng
@@ -53,14 +54,21 @@ class NGEvaluator:
             func: IOH function to run the algorithm on.
             seed: int to seed the algorithm random state.
         """
-        parametrization = ng.p.Array(
-            shape=(func.meta_data.n_variables,)).set_bounds(-5, 5)
+        lower_bound = -5
+        upper_bound = 5
+        parametrization = ng.p.Array(shape=(func.meta_data.n_variables,))
+
         if seed is not None:
             self.algorithm_seed = seed
-            parametrization.random_state.seed(seed)
+            np.random.seed(self.algorithm_seed)
+            parametrization = ng.p.Array(init=np.random.uniform(
+                lower_bound, upper_bound, (func.meta_data.n_variables,)))
+
+        parametrization.set_bounds(lower_bound, upper_bound)
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
             budget=self.eval_budget)
+
         try:
             optimizer.minimize(func)
             self.run_success = 1  # "SUCCESS"
@@ -211,8 +219,8 @@ def pbs_index_to_args_all_dims(index: int) -> (str, int):
 if __name__ == "__main__":
     DEFAULT_EVAL_BUDGET = 10000
     DEFAULT_N_REPETITIONS = 25
-    DEFAULT_DIMS = [4, 5]
-    DEFAULT_PROBLEMS = list(range(1, 3))
+    DEFAULT_DIMS = [2]
+    DEFAULT_PROBLEMS = list(range(1, 2))
     DEFAULT_INSTANCES = [1]
 
     parser = argparse.ArgumentParser(
