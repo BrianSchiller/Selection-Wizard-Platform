@@ -40,7 +40,7 @@ class NGEvaluator:
 
     def __call__(self: NGEvaluator,
                  func: ioh.iohcpp.problem.RealSingleObjective,
-                 seed: int = None) -> None:
+                 seed: int) -> None:
         """Run the NGEvaluator on the given problem.
 
         Sets run_success in IOH json output per run with status codes:
@@ -56,14 +56,10 @@ class NGEvaluator:
         """
         lower_bound = -5
         upper_bound = 5
-        parametrization = ng.p.Array(shape=(func.meta_data.n_variables,))
-
-        if seed is not None:
-            self.algorithm_seed = seed
-            np.random.seed(self.algorithm_seed)
-            parametrization = ng.p.Array(init=np.random.uniform(
-                lower_bound, upper_bound, (func.meta_data.n_variables,)))
-
+        self.algorithm_seed = seed
+        np.random.seed(self.algorithm_seed)
+        parametrization = ng.p.Array(init=np.random.uniform(
+            lower_bound, upper_bound, (func.meta_data.n_variables,)))
         parametrization.set_bounds(lower_bound, upper_bound)
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
@@ -94,8 +90,7 @@ def run_algos(algorithms: list[str],
               eval_budget: int,
               dimensionalities: list[int],
               n_repetitions: int,
-              instances: list[int] = None,
-              use_seed: bool = False) -> None:
+              instances: list[int] = None) -> None:
     """Run the given algorithms on the given problem set.
 
     Args:
@@ -105,8 +100,8 @@ def run_algos(algorithms: list[str],
         dimensionalities: list of dimensionalities (int) to run per problem.
         n_repetitions: int for the number of repetitions (runs) to do per case.
             A case is an algorithm-problem-instance-dimensionality combination.
+            The repetition number is also used as seed for the run.
         instances: list of instance IDs (int) to run per problem.
-        use_seed: If True, use the repetition number as seed.
     """
     problem_type = "BBOB"
 
@@ -125,45 +120,23 @@ def run_algos(algorithms: list[str],
             algname_short = (
                 f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
 
-        out_dir = f"{algname_short}_D{dimensionalities[0]}_P{problems[0]}"
+        algorithm = NGEvaluator(algname, eval_budget)
+        logger = ioh.logger.Analyzer(folder_name=algname_short,
+                                     algorithm_name=algname_short)
+        logger.add_run_attributes(algorithm,
+                                  ["algorithm_seed", "run_success"])
 
-        if use_seed:
-            algorithm = NGEvaluator(algname, eval_budget)
-            logger = ioh.logger.Analyzer(folder_name=algname_short,
-                                         algorithm_name=algname_short)
-            logger.add_run_attributes(algorithm,
-                                      ["algorithm_seed", "run_success"])
-
-            for problem in problems:
-                for dimension in dimensionalities:
-                    for instance in instances:
-                        function = ioh.get_problem(problem, instance=instance,
-                                                   dimension=dimension,
-                                                   problem_type=problem_type)
-                        function.attach_logger(logger)
-                        for seed in range(1, n_repetitions + 1):
-                            algorithm(function, seed)
-                            function.reset()
-            logger.close()
-        else:
-            # Set the optimization algorithm
-            exp = ioh.Experiment(
-                algorithm=NGEvaluator(algname, eval_budget),
-                # Problem definitions. I use function name here, but could also
-                # use the ID (25 in this case)
-                fids=problems, iids=instances, dims=dimensionalities,
-                reps=n_repetitions,
-                problem_type=problem_type,
-                # Set paralellization level here if desired, or use this within
-                # your own parallelization
-                njobs=1, output_directory=out_dir,
-                # Logging specifications
-                logged=True, folder_name=f"{algname_short}",
-                algorithm_name=f"{algname_short}",
-                store_positions=False,
-                # Only keep data as a single zip-file
-                merge_output=True, zip_output=True, remove_data=True)
-            exp()
+        for problem in problems:
+            for dimension in dimensionalities:
+                for instance in instances:
+                    function = ioh.get_problem(problem, instance=instance,
+                                               dimension=dimension,
+                                               problem_type=problem_type)
+                    function.attach_logger(logger)
+                    for seed in range(1, n_repetitions + 1):
+                        algorithm(function, seed)
+                        function.reset()
+        logger.close()
 
     return
 
@@ -239,10 +212,6 @@ if __name__ == "__main__":
         "--pbs-index-all-dims",
         type=int,
         help="PBS index to convert to algorithm, dimension, and problem IDs.")
-    parser.add_argument(
-        "--use-seed",
-        action="store_true",
-        help="Set to use the repetition number as algorithm seed.")
 
     args = parser.parse_args()
 
@@ -251,9 +220,8 @@ if __name__ == "__main__":
             pbs_index_to_args_all_dims(args.pbs_index_all_dims))
         run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
                   const.DIMS_CONSIDERED,
-                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, args.use_seed)
+                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,
-                  args.n_repetitions, args.instances,
-                  args.use_seed)
+                  args.n_repetitions, args.instances)
