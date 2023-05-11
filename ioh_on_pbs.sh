@@ -26,7 +26,7 @@
 module purge
 module load python/3.9
 module load conda3-2020.02
-source activate env
+source activate ar4opt
 
 # Move to working direcotry
 cd $PBS_O_WORKDIR

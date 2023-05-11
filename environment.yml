@@ -1,4 +1,4 @@
-name: env
+name: ar4opt
 channels:
     - conda-forge
     - defaults
