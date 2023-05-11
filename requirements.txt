@@ -12,7 +12,7 @@ numpy==1.24.3
 pep8-naming==0.13.3
 pycodestyle==2.10
 pydocstyle==6.3.0
-pyflakes==2.5.0
+pyflakes==3.0.1
 scikit-learn==1.2.2
 scipy==1.10.1
 snowballstemmer==2.2.0
