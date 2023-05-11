@@ -103,7 +103,7 @@ def run_algos(algorithms: list[str],
             The repetition number is also used as seed for the run.
         instances: list of instance IDs (int) to run per problem.
     """
-    problem_type = "BBOB"
+    problem_class = ioh.ProblemClass.REAL
 
     for algname in algorithms:
         algname_short = algname
@@ -131,7 +131,7 @@ def run_algos(algorithms: list[str],
                 for instance in instances:
                     function = ioh.get_problem(problem, instance=instance,
                                                dimension=dimension,
-                                               problem_type=problem_type)
+                                               problem_class=problem_class)
                     function.attach_logger(logger)
                     for seed in range(1, n_repetitions + 1):
                         algorithm(function, seed)
