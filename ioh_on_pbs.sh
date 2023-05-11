@@ -45,11 +45,12 @@ mkdir $PBS_ARRAY_INDEX
 
 # Copy input files to scratch
 cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
+cp $PBS_O_WORKDIR/constants.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 
 # Execute
 cd $PBS_ARRAY_INDEX
 
-python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX --use-seed 1> test.out 2> test.err
+python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 
