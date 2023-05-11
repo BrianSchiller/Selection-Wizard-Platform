@@ -24,7 +24,7 @@
 # Load modules
 #. /etc/profile.d/modules.sh
 module purge
-module load python/3.9
+module load python/3.10
 module load conda3-2020.02
 source activate ar4opt
 
