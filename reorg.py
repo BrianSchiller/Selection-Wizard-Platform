@@ -12,11 +12,12 @@ if __name__ == "__main__":
     pbs_dirs = [child for child in this_dir.iterdir() if child.is_dir()]
     pbs_dirs.sort()
 
-    # Get directories that need to be moved
+    # Get directories that need to be moved excluding __pycache__
     algo_dirs = []
 
     for child in pbs_dirs:
-        algo_paths = [subd for subd in child.iterdir() if subd.is_dir()]
+        algo_paths = [subd for subd in child.iterdir()
+                      if subd.is_dir() and not str(subd.name).startswith("__")]
 
         for sub_child in algo_paths:
             algo_dirs.append(sub_child)
