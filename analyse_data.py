@@ -69,12 +69,22 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (
     return (algo_name, func_name, data_path, run_success)
 
 
-def read_ioh_results() -> None:
-    """Read a specified set of result files form experiments with IOH."""
+def read_ioh_results(data_dir: Path) -> None:
+    """Read a specified set of result files form experiments with IOH.
+
+    Args:
+        data_dir: Path to the data directory.
+            This directory should have subdirectories per problem, which in
+            turn should have subdirectories per algorithm, which should be
+            organised in IOH format. E.g. for directory data, algorithm CMA,
+            and problem f1_Sphere it should look like:
+            data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
+            data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+    """
     prob_runs = []
     algo_names = []
     func_names = []
-    dims = 15
+    dims = 2
 
     for problem_name in const.PROB_NAMES:
         runs = []
@@ -82,7 +92,7 @@ def read_ioh_results() -> None:
         for algo_id in range(0, 6):
             algo_dir = const.ALGS_CONSIDERED[algo_id]
             json_path = Path(
-                f"data_seeds_organised/{problem_name}/{algo_dir}/"
+                f"{data_dir}/{problem_name}/{algo_dir}/"
                 f"IOHprofiler_{problem_name}.json")
             (algo_name, func_name, data_path, _) = read_ioh_json(
                 json_path, dims)
@@ -266,10 +276,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        "--infile",
+        "data_dir",
         default=argparse.SUPPRESS,
         type=Path,
-        help="File to read.")
+        help="Directory to analyse.")
     args = parser.parse_args()
 
-    read_ioh_results()
+    read_ioh_results(args.data_dir)
