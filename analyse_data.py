@@ -238,7 +238,7 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
         func_names: List of function names.
         dims: int indicating the number of variable space dimensions.
     """
-    # TODO: Make subplot dimenions depend on the number of functions
+    # TODO: Make subplot dimensions depend on the number of functions
     # TODO: How to split the functions over columns/rows?
     fig, axs = plt.subplots(6, 4, layout="constrained",
                             figsize=(12, 20), dpi=80)
@@ -261,7 +261,10 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
 
     fig.legend(loc="outside lower center")
     fig.show()
-    fig.savefig(f"plots/convergence/plot_D{dims}.pdf")
+    out_path = f"plots/convergence/plot_D{dims}.pdf"
+    fig.savefig(out_path)
+    print(
+        f"Median convergence plot for {dims} dimensions saved to: {out_path}")
 
     return
 
