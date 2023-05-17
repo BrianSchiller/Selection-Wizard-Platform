@@ -251,7 +251,7 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
 
     fig.legend(loc="outside lower center")
     fig.show()
-    fig.savefig(f"plot_D{dims}.pdf")
+    fig.savefig(f"plots/convergence/plot_D{dims}.pdf")
 
     return
 

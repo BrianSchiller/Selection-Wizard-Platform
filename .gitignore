@@ -5,7 +5,6 @@ data_seeds/
 data_seeds2/
 data_seeds_organised/
 data_seeds2_organised/
-*.pdf
 *.swp
 *.zip
 plotly*/
