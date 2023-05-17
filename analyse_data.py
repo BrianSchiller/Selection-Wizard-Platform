@@ -11,7 +11,7 @@ import json
 import constants as const
 
 
-def read_ioh_json(metadata_path: Path, dims: int) -> (
+def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
         str, str, Path, list[int]):
     """Read a .json metadata file from experiment with IOH.
 
@@ -19,6 +19,7 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (
         metadata_path: Path to IOH metadata file.
         dims: int indicating the dimensionality for which to return the data
           file.
+        verbose: If True print more detailed information.
 
     Returns:
         str algorithm name.
@@ -31,6 +32,9 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (
           have a value like 4.6355715189945e-310. An empty list is returned if
           no file is found.
     """
+    if verbose:
+        print(f"Reading json file: {metadata_path}")
+
     expected_runs = 25
 
     with metadata_path.open() as metadata_file:
@@ -69,7 +73,7 @@ def read_ioh_json(metadata_path: Path, dims: int) -> (
     return (algo_name, func_name, data_path, run_success)
 
 
-def read_ioh_results(data_dir: Path) -> None:
+def read_ioh_results(data_dir: Path, verbose: bool = False) -> None:
     """Read a specified set of result files form experiments with IOH.
 
     Args:
@@ -80,37 +84,40 @@ def read_ioh_results(data_dir: Path) -> None:
             and problem f1_Sphere it should look like:
             data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
             data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+        verbose: If True print more detailed information.
     """
-    prob_runs = []
-    algo_names = []
-    func_names = []
-    dims = 2
+    for dims in const.DIMS_CONSIDERED:
+        print(f"Reading data for {dims} dimensional problems...")
 
-    for problem_name in const.PROB_NAMES:
-        runs = []
+        prob_runs = []
+        algo_names = []
+        func_names = []
 
-        for algo_id in range(0, 6):
-            algo_dir = const.ALGS_CONSIDERED[algo_id]
-            json_path = Path(
-                f"{data_dir}/{problem_name}/{algo_dir}/"
-                f"IOHprofiler_{problem_name}.json")
-            (algo_name, func_name, data_path, _) = read_ioh_json(
-                json_path, dims)
+        for problem_name in const.PROB_NAMES:
+            runs = []
 
-            # Handle missing data files
-            if data_path.is_file():
-                runs.append(read_ioh_dat(data_path))
-            else:
-                # Filler to avoid mismatch in number of elements
-                runs.append(pd.DataFrame())
+            for algo_id in range(0, 6):
+                algo_dir = const.ALGS_CONSIDERED[algo_id]
+                json_path = Path(
+                    f"{data_dir}/{problem_name}/{algo_dir}/"
+                    f"IOHprofiler_{problem_name}.json")
+                (algo_name, func_name, data_path, _) = read_ioh_json(
+                    json_path, dims, verbose)
 
-            algo_names.append(algo_name)
+                # Handle missing data files
+                if data_path.is_file():
+                    runs.append(read_ioh_dat(data_path, verbose))
+                else:
+                    # Filler to avoid mismatch in number of elements
+                    runs.append(pd.DataFrame())
 
-        prob_runs.append(runs)
-        func_names.append(func_name)
+                algo_names.append(algo_name)
 
-    algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
-    plot_median(prob_runs, algo_names, func_names, dims)
+            prob_runs.append(runs)
+            func_names.append(func_name)
+
+        algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
+        plot_median(prob_runs, algo_names, func_names, dims)
 
     return
 
@@ -135,7 +142,7 @@ def check_run_is_valid(eval_number: int, expected_evals: int,
         return False
 
 
-def read_ioh_dat(result_path: Path) -> pd.DataFrame:
+def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
     """Read a .dat result file with runs from an experiment with IOH.
 
     These files contain blocks of data representing one run each of the form:
@@ -152,10 +159,14 @@ def read_ioh_dat(result_path: Path) -> pd.DataFrame:
 
     Args:
         result_path: Path pointing to an IOH data file.
+        verbose: If True print more detailed information.
     Returns:
         pandas DataFrame with performance data. Columns are evaluations,
           rows are different runs, column names are evaluation numbers.
     """
+    if verbose:
+        print(f"Reading dat file: {result_path}")
+
     expected_evals = 10000
 
     with result_path.open("r") as result_file:
@@ -285,4 +296,4 @@ if __name__ == "__main__":
         help="Directory to analyse.")
     args = parser.parse_args()
 
-    read_ioh_results(args.data_dir)
+    read_ioh_results(args.data_dir, verbose = False)
