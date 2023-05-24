@@ -235,6 +235,107 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
     return all_runs
 
 
+def rank_algorithms(data_dir: Path) -> None:
+    """Rank algorithms based on their performance over multiple problems.
+
+    Args:
+        data_dir: Path to the data directory.
+            This directory should have subdirectories per problem, which in
+            turn should have subdirectories per algorithm, which should be
+            organised in IOH format. E.g. for directory data, algorithm CMA,
+            and problem f1_Sphere it should look like:
+            data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
+            data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+    """
+    verbose = None
+    dims = 25
+    print(f"Reading data for {dims} dimensional problems...")
+
+    algo_names = []
+    prob_names = []
+
+    problem_name = const.PROB_NAMES[0]
+    algo_runs = []
+
+    for algo_id in range(0, 6):
+        algo_dir = const.ALGS_CONSIDERED[algo_id]
+        json_path = Path(
+            f"{data_dir}/{problem_name}/{algo_dir}/"
+            f"IOHprofiler_{problem_name}.json")
+        (algo_name, prob_name, data_path, _) = read_ioh_json(
+            json_path, dims, verbose)
+
+        # Handle missing data files
+        if data_path.is_file():
+            algo_runs.append(read_ioh_dat(data_path, verbose))
+        else:
+            # Filler to avoid mismatch in number of elements
+            algo_runs.append(pd.DataFrame())
+
+        algo_names.append(algo_name)
+
+    algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
+    get_best_runs_of_prob(algo_runs, algo_names, 50, 25)
+
+    return
+
+
+def get_best_runs_of_prob(algo_runs: list[pd.DataFrame],
+                          algo_names: list[str],
+                          eval_n: int,
+                          n_best: int) -> pd.DataFrame:
+    """Return the n best runs for a problem, dimension, budget combination.
+
+    Args:
+        algo_runs: list of pandas DataFrame with performance data per
+            algorithm. Columns are evaluations, rows are different runs, column
+            names are evaluation numbers.
+        algo_names: list of algorithm names.
+        eval_n: int indicating for which number of evaluations to rank the
+            algorithms.
+        n_best: int indicating the top how many runs to look for.
+    Returns:
+        Dict of algorithm str and run ID int
+    """
+    n_runs = 25
+    algorithms = []
+    run_ids = []
+    performances = []
+
+    # Loop over algorithms in algo_runs
+    for runs, algo_name in zip(algo_runs, algo_names):
+        # Find which column contains the relevant performance value
+        for eval_id in runs.columns:
+            if int(eval_id) <= eval_n:
+                eval_col = eval_id
+            else:
+                break
+
+        # Add run properties to lists (algorithm, run ID, performance at eval_n)
+        algorithms.extend([algo_name] * n_runs)
+        run_ids.extend(list(range(1, n_runs + 1)))
+        performances.extend(runs[eval_col])
+#        # Loop over runs in algorithm
+#        for idx, run in enumerate(runs):
+#            # Add run properties to lists (algorithm, run ID, performance at eval_n)
+#            algorithms.append(algo_name)
+#            run_ids.append(idx)
+#            performances.append(run.e)
+
+    # Create a DataFrame from the lists
+    runs = pd.DataFrame({
+        'algorithm': algorithms,
+        'run ID': run_ids,
+        'performance': performances})
+
+    # Sort the DataFrame by performance
+    runs.sort_values('performance', inplace = True)
+    print(runs.head(25))
+
+    # Return a DataFrame with the n_best rows
+    return runs.head(25)
+
+
 def plot_median(func_algo_runs: list[list[pd.DataFrame]],
                 algo_names: list[str],
                 func_names: list[str],
@@ -296,4 +397,5 @@ if __name__ == "__main__":
         help="Directory to analyse.")
     args = parser.parse_args()
 
-    read_ioh_results(args.data_dir, verbose = False)
+    #read_ioh_results(args.data_dir, verbose = False)
+    rank_algorithms(args.data_dir)
