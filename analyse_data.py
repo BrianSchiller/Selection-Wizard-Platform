@@ -74,7 +74,7 @@ def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
 
 
 def read_ioh_results(data_dir: Path, verbose: bool = False) -> None:
-    """Read a specified set of result files form experiments with IOH.
+    """Read a specified set of result files from experiments with IOH.
 
     Args:
         data_dir: Path to the data directory.
