@@ -72,3 +72,32 @@ PROB_NAMES = ["f1_Sphere",
               "f22_Gallagher21",
               "f23_Katsuura",
               "f24_LunacekBiRastrigin"]
+
+
+def get_short_algo_name(algo_name: str) -> str:
+    """Return a str with a short name for a given algorithm name.
+
+    Args:
+        algo_name: str containing the algorithm name.
+
+    Returns:
+        algo_name for algorithms that already have a short name, or a shortened
+            str for algorithms that have a lengthy name.
+    """
+    short_name = algo_name
+
+    if algo_name.startswith("ConfPortfolio"):
+        scl09 = "scale=0.9"
+        scl13 = "scale=1.3"
+        scnd_scale = "NA"
+
+        if scl09 in algo_name:
+            scnd_scale = scl09
+        elif scl13 in algo_name:
+            scnd_scale = scl13
+
+        n_ngopt = algo_name.count("NGOpt14")
+        short_name = (
+            f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
+
+    return short_name
