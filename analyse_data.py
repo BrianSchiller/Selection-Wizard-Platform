@@ -97,7 +97,8 @@ def read_ioh_results(data_dir: Path, verbose: bool = False) -> None:
             runs = []
 
             for algo_id in range(0, 6):
-                algo_dir = const.ALGS_CONSIDERED[algo_id]
+                algo_dir = const.get_short_algo_name(
+                    const.ALGS_CONSIDERED[algo_id])
                 json_path = Path(
                     f"{data_dir}/{problem_name}/{algo_dir}/"
                     f"IOHprofiler_{problem_name}.json")
@@ -247,7 +248,7 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
     return all_runs
 
 
-def rank_algorithms(data_dir: Path) -> None:
+def rank_algorithms(data_dir: Path) -> pd.DataFrame:
     """Rank algorithms based on their performance over multiple problems.
 
     Args:
@@ -258,19 +259,27 @@ def rank_algorithms(data_dir: Path) -> None:
             and problem f1_Sphere it should look like:
             data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
             data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+
+    Returns:
+        DataFrame with columns: algorithm, points
     """
     dims = 25
     budget = 50
     n_best = 25
     print(f"Reading data for {dims} dimensional problems...")
 
-    algo_names = []
+    algo_names = [const.get_short_algo_name(algo_name)
+                  for algo_name in const.ALGS_CONSIDERED]
+    algo_scores = pd.DataFrame({
+        "algorithm": algo_names,
+        "points": [0] * len(algo_names)})
 
     for problem_name in const.PROB_NAMES:
         algo_runs = []
 
-        for algo_id in range(0, 6):
-            algo_dir = const.ALGS_CONSIDERED[algo_id]
+        for algo_id in range(0, len(const.ALGS_CONSIDERED)):
+            algo_dir = const.get_short_algo_name(
+                const.ALGS_CONSIDERED[algo_id])
             json_path = Path(
                 f"{data_dir}/{problem_name}/{algo_dir}/"
                 f"IOHprofiler_{problem_name}.json")
@@ -284,19 +293,20 @@ def rank_algorithms(data_dir: Path) -> None:
                 # Filler to avoid mismatch in number of elements
                 algo_runs.append(pd.DataFrame())
 
-            algo_names.append(algo_name)
-
-        algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
         best_algos = get_best_runs_of_prob(
             algo_runs, algo_names, budget, n_best)
 
-        # TODO: Count occurences of algorithm
-        algo_scores = best_algos["algorithm"].value_counts()
+        # Count occurences of algorithm
+        algo_scores_for_prob = best_algos["algorithm"].value_counts()
 
-        print(len(best_algos))
-        print(algo_scores)
+        # Add counts to the scores
+        algo_scores = pd.merge(
+            algo_scores, algo_scores_for_prob, how="left", on="algorithm")
+        algo_scores["count"].fillna(0, inplace=True)
+        algo_scores["points"] += algo_scores["count"]
+        algo_scores.drop(columns=["count"], inplace=True)
 
-    return
+    return algo_scores
 
 
 def get_best_runs_of_prob(algo_runs: list[pd.DataFrame],
