@@ -85,6 +85,35 @@ class NGEvaluator:
             self.run_success = -3  # "CRASHED" other Exception
 
 
+def get_short_algo_name(algo_name: str) -> str:
+    """Return a str with a short name for a given algorithm name.
+
+    Args:
+        algo_name: str containing the algorithm name.
+
+    Returns:
+        algo_name for algorithms that already have a short name, or a shortened
+            str for algorithms that have a lengthy name.
+    """
+    short_name = algo_name
+
+    if algo_name.startswith("ConfPortfolio"):
+        scl09 = "scale=0.9"
+        scl13 = "scale=1.3"
+        scnd_scale = "NA"
+
+        if scl09 in algo_name:
+            scnd_scale = scl09
+        elif scl13 in algo_name:
+            scnd_scale = scl13
+
+        n_ngopt = algo_name.count("NGOpt14")
+        short_name = (
+            f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
+
+    return short_name
+
+
 def run_algos(algorithms: list[str],
               problems: list[int],
               eval_budget: int,
@@ -106,20 +135,7 @@ def run_algos(algorithms: list[str],
     problem_class = ioh.ProblemClass.REAL
 
     for algname in algorithms:
-        algname_short = algname
-
-        if algname.startswith("ConfPortfolio"):
-            scl09 = "scale=0.9"
-            scl13 = "scale=1.3"
-            scnd_scale = "NA"
-            if scl09 in algname:
-                scnd_scale = scl09
-            elif scl13 in algname:
-                scnd_scale = scl13
-            n_ngopt = algname.count("NGOpt14")
-            algname_short = (
-                f"ConfPortfolio_scale2_{scnd_scale}_ngopt14s_{n_ngopt}")
-
+        algname_short = get_short_algo_name(algname)
         algorithm = NGEvaluator(algname, eval_budget)
         logger = ioh.logger.Analyzer(folder_name=algname_short,
                                      algorithm_name=algname_short)
