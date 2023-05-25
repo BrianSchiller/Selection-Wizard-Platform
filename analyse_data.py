@@ -248,8 +248,8 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
     return all_runs
 
 
-def rank_algorithms(data_dir: Path) -> pd.DataFrame:
-    """Rank algorithms based on their performance over multiple problems.
+def get_ranking_matrix(data_dir: Path) -> pd.DataFrame:
+    """Get a matrix algorithm rankings for dimensionalities versus budget.
 
     Args:
         data_dir: Path to the data directory.
@@ -261,12 +261,47 @@ def rank_algorithms(data_dir: Path) -> pd.DataFrame:
             data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
 
     Returns:
+        DataFrame with rows representing different dimensionalities and columns
+            representing different evaluation budgets.
+    """
+    n_best = 25
+    budgets = [dims * 10 for dims in const.DIMS_CONSIDERED]  # use 10d budgets
+    algo_matrix = pd.DataFrame()
+
+    for budget in budgets:
+        ranks = []
+
+        for dims in const.DIMS_CONSIDERED:
+            ranks.append(rank_algorithms(data_dir, dims, budget, n_best))
+
+        algo_matrix[budget] = ranks
+
+    return algo_matrix
+
+
+def rank_algorithms(data_dir: Path,
+                    dims: int,
+                    budget: int,
+                    n_best: int = 25) -> pd.DataFrame:
+    """Rank algorithms based on their performance over multiple problems.
+
+    Args:
+        data_dir: Path to the data directory.
+            This directory should have subdirectories per problem, which in
+            turn should have subdirectories per algorithm, which should be
+            organised in IOH format. E.g. for directory data, algorithm CMA,
+            and problem f1_Sphere it should look like:
+            data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
+            data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+        dims: int indicating the number of variable space dimensions.
+        budget: int indicating for which number of evaluations to rank the
+            algorithms.
+        n_best: int indicating the top how many runs to look for.
+
+    Returns:
         DataFrame with columns: algorithm, points
     """
-    dims = 25
-    budget = 50
-    n_best = 25
-    print(f"Reading data for {dims} dimensional problems...")
+    print(f"Ranking algorithms for {dims} dimensional problems...")
 
     algo_names = [const.get_short_algo_name(algo_name)
                   for algo_name in const.ALGS_CONSIDERED]
@@ -430,4 +465,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read_ioh_results(args.data_dir, verbose = False)
-    rank_algorithms(args.data_dir)
+    get_ranking_matrix(args.data_dir)
