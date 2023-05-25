@@ -13,7 +13,7 @@ import constants as const
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
         str, str, Path, list[int]):
-    """Read a .json metadata file from experiment with IOH.
+    """Read a .json metadata file from an experiment with IOH.
 
     Args:
         metadata_path: Path to IOH metadata file.
