@@ -162,7 +162,8 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
         verbose: If True print more detailed information.
     Returns:
         pandas DataFrame with performance data. Columns are evaluations,
-          rows are different runs, column names are evaluation numbers.
+            rows are different runs, column names are evaluation numbers.
+            Rows of failed runs are None/NaN.
     """
     if verbose:
         print(f"Reading dat file: {result_path}")
@@ -185,6 +186,8 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
                     if check_run_is_valid(eval_number, expected_evals, run_id):
                         runs.append(run)
                         eval_ids.extend(eval_ids_run)
+                    else:
+                        runs.append(None)
                 run = []
                 eval_ids_run = []
                 run_id = run_id + 1
@@ -200,12 +203,21 @@ def read_ioh_dat(result_path: Path, verbose: bool = False) -> pd.DataFrame:
         if check_run_is_valid(eval_number, expected_evals, run_id):
             runs.append(run)
             eval_ids.extend(eval_ids_run)
+        # Add None row if invalid
+        else:
+            runs.append(None)
 
     eval_ids.sort()
     runs_full = np.zeros((len(runs), len(eval_ids)))
 
+    # Fill the eval values for each run to make them all the same length
     for run_id in range(0, len(runs)):
         range_start = 0
+
+        # Handle failed runs
+        if runs[run_id] is None:
+            runs_full[run_id] = runs[run_id]
+            continue
 
         for run_eval in runs[run_id]:
             for idx in range(range_start, len(eval_ids)):
@@ -247,42 +259,49 @@ def rank_algorithms(data_dir: Path) -> None:
             data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
             data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
     """
-    verbose = None
     dims = 25
+    budget = 50
+    n_best = 25
     print(f"Reading data for {dims} dimensional problems...")
 
     algo_names = []
-    prob_names = []
 
-    problem_name = const.PROB_NAMES[0]
-    algo_runs = []
+    for problem_name in const.PROB_NAMES:
+        algo_runs = []
 
-    for algo_id in range(0, 6):
-        algo_dir = const.ALGS_CONSIDERED[algo_id]
-        json_path = Path(
-            f"{data_dir}/{problem_name}/{algo_dir}/"
-            f"IOHprofiler_{problem_name}.json")
-        (algo_name, prob_name, data_path, _) = read_ioh_json(
-            json_path, dims, verbose)
+        for algo_id in range(0, 6):
+            algo_dir = const.ALGS_CONSIDERED[algo_id]
+            json_path = Path(
+                f"{data_dir}/{problem_name}/{algo_dir}/"
+                f"IOHprofiler_{problem_name}.json")
+            (algo_name, prob_name, data_path, _) = read_ioh_json(
+                json_path, dims)
 
-        # Handle missing data files
-        if data_path.is_file():
-            algo_runs.append(read_ioh_dat(data_path, verbose))
-        else:
-            # Filler to avoid mismatch in number of elements
-            algo_runs.append(pd.DataFrame())
+            # Handle missing data files
+            if data_path.is_file():
+                algo_runs.append(read_ioh_dat(data_path))
+            else:
+                # Filler to avoid mismatch in number of elements
+                algo_runs.append(pd.DataFrame())
 
-        algo_names.append(algo_name)
+            algo_names.append(algo_name)
 
-    algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
-    get_best_runs_of_prob(algo_runs, algo_names, 50, 25)
+        algo_names = list(dict.fromkeys(algo_names))  # Remove duplicates
+        best_algos = get_best_runs_of_prob(
+            algo_runs, algo_names, budget, n_best)
+
+        # TODO: Count occurences of algorithm
+        algo_scores = best_algos["algorithm"].value_counts()
+
+        print(len(best_algos))
+        print(algo_scores)
 
     return
 
 
 def get_best_runs_of_prob(algo_runs: list[pd.DataFrame],
                           algo_names: list[str],
-                          eval_n: int,
+                          budget: int,
                           n_best: int) -> pd.DataFrame:
     """Return the n best runs for a problem, dimension, budget combination.
 
@@ -291,11 +310,13 @@ def get_best_runs_of_prob(algo_runs: list[pd.DataFrame],
             algorithm. Columns are evaluations, rows are different runs, column
             names are evaluation numbers.
         algo_names: list of algorithm names.
-        eval_n: int indicating for which number of evaluations to rank the
+        budget: int indicating for which number of evaluations to rank the
             algorithms.
         n_best: int indicating the top how many runs to look for.
     Returns:
-        Dict of algorithm str and run ID int
+        DataFrame with n_best rows of algorithm, run ID, and performance. Any
+            rows beyond row n_best that have the same performance as row n_best
+            are also returned.
     """
     n_runs = 25
     algorithms = []
@@ -306,34 +327,35 @@ def get_best_runs_of_prob(algo_runs: list[pd.DataFrame],
     for runs, algo_name in zip(algo_runs, algo_names):
         # Find which column contains the relevant performance value
         for eval_id in runs.columns:
-            if int(eval_id) <= eval_n:
+            if int(eval_id) <= budget:
                 eval_col = eval_id
             else:
                 break
 
-        # Add run properties to lists (algorithm, run ID, performance at eval_n)
+        # Add run properties to lists: algorithm, run ID, performance at budget
         algorithms.extend([algo_name] * n_runs)
         run_ids.extend(list(range(1, n_runs + 1)))
         performances.extend(runs[eval_col])
-#        # Loop over runs in algorithm
-#        for idx, run in enumerate(runs):
-#            # Add run properties to lists (algorithm, run ID, performance at eval_n)
-#            algorithms.append(algo_name)
-#            run_ids.append(idx)
-#            performances.append(run.e)
 
     # Create a DataFrame from the lists
     runs = pd.DataFrame({
-        'algorithm': algorithms,
-        'run ID': run_ids,
-        'performance': performances})
+        "algorithm": algorithms,
+        "run ID": run_ids,
+        "performance": performances})
 
     # Sort the DataFrame by performance
-    runs.sort_values('performance', inplace = True)
-    print(runs.head(25))
+    runs.sort_values("performance", inplace=True)
 
     # Return a DataFrame with the n_best rows
-    return runs.head(25)
+    best_runs = runs.head(n_best)
+    runs = runs.iloc[n_best:]
+
+    # Also return rows beyond n_best that have equal performance to row n_best
+    best_runs_plus = runs.loc[
+        runs["performance"] == best_runs["performance"].iloc[-1]]
+    best_runs = pd.concat([best_runs, best_runs_plus])
+
+    return best_runs
 
 
 def plot_median(func_algo_runs: list[list[pd.DataFrame]],
@@ -397,5 +419,5 @@ if __name__ == "__main__":
         help="Directory to analyse.")
     args = parser.parse_args()
 
-    #read_ioh_results(args.data_dir, verbose = False)
+    # read_ioh_results(args.data_dir, verbose = False)
     rank_algorithms(args.data_dir)
