@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Constant variables for use in multiple files."""
 
+RUNS_PER_SCENARIO = 25
+EVAL_BUDGET = 10000
+
 # 6 algorithms
 # 33 ConfPortfolios
 ALGS_CONSIDERED = [

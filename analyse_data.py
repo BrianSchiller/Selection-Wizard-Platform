@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import json
 
 import constants as const
+from experiment import Experiment
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -465,4 +466,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read_ioh_results(args.data_dir, verbose = False)
-    get_ranking_matrix(args.data_dir)
+    # get_ranking_matrix(args.data_dir)
+
+    exp = Experiment(args.data_dir)
