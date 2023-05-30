@@ -10,7 +10,8 @@ import constants as const
 class Experiment:
     """Holds an experiment and its properties."""
 
-    def __init__(self: Experiment, data_dir: Path) -> None:
+    def __init__(self: Experiment, data_dir: Path,
+                 dimensionalities: list[int] = const.DIMS_CONSIDERED) -> None:
         """Initialise the Experiment.
 
         Args:
@@ -21,10 +22,13 @@ class Experiment:
                 CMA, and problem f1_Sphere it should look like:
                 data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
                 data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+            dimensionalities (optional): List of ints indicating which
+                dimensionalities to handle for the Experiment.
         """
         self.data_dir = data_dir
         self.problems = []
         self.algorithms = []
+        self.dimensionalities = dimensionalities
 
         for prob_name, prob_id in zip(const.PROB_NAMES,
                                       const.PROBS_CONSIDERED):
@@ -51,7 +55,7 @@ class Experiment:
             for algorithm in self.algorithms:
                 d_scenarios = {}
 
-                for dims in const.DIMS_CONSIDERED:
+                for dims in self.dimensionalities:
                     d_scenarios[dims] = Scenario(self.data_dir,
                                                  problem,
                                                  algorithm,
@@ -70,7 +74,12 @@ class Problem:
     """Manages problem properties."""
 
     def __init__(self: Problem, prob_name: str, prob_id: int) -> None:
-        """Initialise a Problem object."""
+        """Initialise a Problem object.
+
+        Args:
+            prob_name: Name of the problem.
+            prob_id: ID of the problem.
+        """
         self.name = prob_name
         self.id = prob_id
 
@@ -79,7 +88,11 @@ class Algorithm:
     """Manages algorithm properties."""
 
     def __init__(self: Algorithm, name: str) -> None:
-        """Initialise an Algorithm object."""
+        """Initialise an Algorithm object.
+
+        Args:
+            name: Full name of the algorithm.
+        """
         self.name = name
         self.name_short = self.get_short_algo_name()
 
@@ -117,7 +130,25 @@ class Run:
     def __init__(self: Run, idx: int, seed: int, status: int,
                  evaluations: list[int], performance: list[int],
                  expected_evals: int) -> None:
-        """Initialise a Run object."""
+        """Initialise a Run object.
+
+        Args:
+            idx: ID of the run.
+            seed: Seed used for the algorithm in the run.
+            status: Exit status of the run. 1 indicates a successful run, 0,
+                -2, -3 a crashed run, -1 a missing run. Other values than these
+                mean something is likely to be wrong, e.g., a crash that was
+                not detected during execution can have a value like
+                4.6355715189945e-310.
+            evaluations: List of evaluation IDs where a performance improvement
+                was found during the run. The last evaluation is always
+                included for succesful runs (i.e., this ID should be equal to
+                expected_evals). Should be equal length to performance.
+            performance: List of performance values matching the evaluation IDs
+                from the evaluations variable. Should be equal length to
+                evaluations.
+            expected_evals: Expected number of evaluations for this run.
+        """
         self.idx = idx
         self.seed = seed
         self.status = status
@@ -154,8 +185,13 @@ class Scenario:
                  algorithm: Algorithm,
                  dims: int,
                  n_runs: int,
-                 n_evals: int) -> None:
-        """Initialise the Scenario."""
+                 n_evals: int,
+                 verbose: bool = False) -> None:
+        """Initialise the Scenario.
+
+        Args:
+            verbose: If True print more detailed information.
+        """
         self.data_dir = data_dir
         self.problem = problem
         self.algorithm = algorithm
@@ -169,17 +205,26 @@ class Scenario:
             f"IOHprofiler_{self.problem.name}.json")
         self._load_data(json_file)
 
-    def _load_data(self: Scenario, json_file: Path) -> None:
-        """Load the data associated with this scenario."""
-        result_path, run_seeds, run_statuses = self._read_ioh_json(json_file)
-        self._read_ioh_dat(result_path, run_seeds, run_statuses, verbose=True)
+    def _load_data(self: Scenario, json_file: Path,
+                   verbose: bool = False) -> None:
+        """Load the data associated with this scenario.
+
+        Args:
+            json_file: Path to an IOH experiment metadata json file.
+            verbose: If True print more detailed information.
+        """
+        result_path, run_seeds, run_statuses = self._read_ioh_json(
+            json_file, verbose)
+        self._read_ioh_dat(result_path, run_seeds, run_statuses, verbose)
 
     def _read_ioh_json(self: Scenario,
-                       metadata_path: Path) -> (Path, list[int], list[int]):
+                       metadata_path: Path,
+                       verbose: bool = False) -> (Path, list[int], list[int]):
         """Read a .json metadata file from an experiment with IOH.
 
         Args:
             metadata_path: Path to IOH metadata file.
+            verbose: If True print more detailed information.
 
         Returns:
             Path to the data file or empty Path if no file is found.
@@ -192,8 +237,6 @@ class Scenario:
                 4.6355715189945e-310. An empty list is returned if no file is
                 found.
         """
-        verbose = True
-
         if verbose:
             print(f"Reading json file: {metadata_path}")
 

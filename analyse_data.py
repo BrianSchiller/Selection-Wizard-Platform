@@ -468,4 +468,4 @@ if __name__ == "__main__":
     # read_ioh_results(args.data_dir, verbose = False)
     # get_ranking_matrix(args.data_dir)
 
-    exp = Experiment(args.data_dir)
+    exp = Experiment(args.data_dir, dimensionalities=[5])
