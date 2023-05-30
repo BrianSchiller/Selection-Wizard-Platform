@@ -468,6 +468,7 @@ if __name__ == "__main__":
     # read_ioh_results(args.data_dir, verbose = False)
     # get_ranking_matrix(args.data_dir)
 
-    exp = Experiment(args.data_dir, dimensionalities=[5])
-    scores = exp.rank_algorithms(5, 100)
+    exp = Experiment(args.data_dir)#, dimensionalities=[5])
+#    scores = exp.rank_algorithms(5, 100, 25)
+    scores = exp.get_ranking_matrix()
     print(scores)

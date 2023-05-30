@@ -74,7 +74,7 @@ class Experiment:
     def rank_algorithms(self: Experiment,
                         dims: int,
                         budget: int,
-                        n_best: int = 25) -> pd.DataFrame:
+                        n_best: int) -> pd.DataFrame:
         """Rank algorithms based on their performance over multiple problems.
 
         Args:
@@ -87,7 +87,7 @@ class Experiment:
             DataFrame with columns: algorithm, points
         """
         print(f"Ranking algorithms for {dims} dimensional problems with budget"
-              f"{budget} ...")
+              f" {budget} ...")
 
         algo_names = [algo.name_short for algo in self.algorithms]
         algo_scores = pd.DataFrame({
@@ -109,6 +109,28 @@ class Experiment:
             algo_scores.drop(columns=["count"], inplace=True)
 
         return algo_scores
+
+    def get_ranking_matrix(self: Experiment) -> pd.DataFrame:
+        """Get a matrix algorithm rankings for dimensionalities versus budget.
+
+        Returns:
+            DataFrame with rows representing different dimensionalities and
+                columns representing different evaluation budgets.
+        """
+        n_best = 25
+        # use 10 * dims budgets
+        budgets = [dims * 10 for dims in const.DIMS_CONSIDERED]
+        algo_matrix = pd.DataFrame()
+
+        for budget in budgets:
+            ranks = []
+
+            for dims in const.DIMS_CONSIDERED:
+                ranks.append(self.rank_algorithms(dims, budget, n_best))
+
+            algo_matrix[budget] = ranks
+
+        return algo_matrix
 
     def get_best_runs_of_prob(self: Experiment,
                               problem: Problem,
