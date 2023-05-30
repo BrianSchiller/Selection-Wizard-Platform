@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import pandas as pd
 
 import constants as const
 
@@ -30,6 +31,7 @@ class Experiment:
         self.problems = []
         self.algorithms = []
         self.dimensionalities = dimensionalities
+        self.prob_scenarios = {}
 
         for prob_name, prob_id in zip(const.PROB_NAMES,
                                       const.PROBS_CONSIDERED):
@@ -49,8 +51,6 @@ class Experiment:
         Args:
             verbose: If True print more detailed information.
         """
-        p_scenarios = {}
-
         for problem in self.problems:
             a_scenarios = {}
 
@@ -67,9 +67,99 @@ class Experiment:
 
                 a_scenarios[algorithm] = d_scenarios
 
-            p_scenarios[problem] = a_scenarios
+            self.prob_scenarios[problem] = a_scenarios
 
         return
+
+    def rank_algorithms(self: Experiment,
+                        dims: int,
+                        budget: int,
+                        n_best: int = 25) -> pd.DataFrame:
+        """Rank algorithms based on their performance over multiple problems.
+
+        Args:
+            dims: int indicating the number of variable space dimensions.
+            budget: int indicating for which number of evaluations to rank the
+                algorithms.
+            n_best: int indicating the top how many runs to look for.
+
+        Returns:
+            DataFrame with columns: algorithm, points
+        """
+        print(f"Ranking algorithms for {dims} dimensional problems with budget"
+              f"{budget} ...")
+
+        algo_names = [algo.name_short for algo in self.algorithms]
+        algo_scores = pd.DataFrame({
+            "algorithm": algo_names,
+            "points": [0] * len(algo_names)})
+
+        for problem in self.problems:
+            best_algos = self.get_best_runs_of_prob(
+                problem, budget, n_best, dims)
+
+            # Count occurences of algorithm
+            algo_scores_for_prob = best_algos["algorithm"].value_counts()
+
+            # Add counts to the scores
+            algo_scores = pd.merge(
+                algo_scores, algo_scores_for_prob, how="left", on="algorithm")
+            algo_scores["count"].fillna(0, inplace=True)
+            algo_scores["points"] += algo_scores["count"]
+            algo_scores.drop(columns=["count"], inplace=True)
+
+        return algo_scores
+
+    def get_best_runs_of_prob(self: Experiment,
+                              problem: Problem,
+                              budget: int,
+                              n_best: int,
+                              dims: int) -> pd.DataFrame:
+        """Return the n best runs for a problem, dimension, budget combination.
+
+        Args:
+            problem: A Problem object for which to get the data.
+            budget: int indicating for which number of evaluations to rank the
+                algorithms.
+            n_best: int indicating the top how many runs to look for.
+            dims: int indicating the dimensionality for which to get the data.
+        Returns:
+            DataFrame with n_best rows of algorithm, run ID, and performance.
+                Any rows beyond row n_best that have the same performance as
+                row n_best are also returned.
+        """
+        n_runs = 25
+        algorithms = []
+        run_ids = []
+        performances = []
+
+        # Retrieve performance and metadata per algorithm
+        for algorithm in self.algorithms:
+            scenario = self.prob_scenarios[problem][algorithm][dims]
+            algorithms.extend([scenario.algorithm.name_short] * n_runs)
+            run_ids.extend([run.idx for run in scenario.runs])
+            performances.extend(
+                [run.get_performance(budget) for run in scenario.runs])
+
+        # Create a DataFrame from the lists
+        runs = pd.DataFrame({
+            "algorithm": algorithms,
+            "run ID": run_ids,
+            "performance": performances})
+
+        # Sort the DataFrame by performance
+        runs.sort_values("performance", inplace=True)
+
+        # Return a DataFrame with the n_best rows
+        best_runs = runs.head(n_best)
+        runs = runs.iloc[n_best:]
+
+        # Also return rows beyond n_best with equal performance to row n_best
+        best_runs_plus = runs.loc[
+            runs["performance"] == best_runs["performance"].iloc[-1]]
+        best_runs = pd.concat([best_runs, best_runs_plus])
+
+        return best_runs
 
 
 class Problem:
@@ -183,6 +273,24 @@ class Run:
                   f"{self.eval_ids[-1]} evaluations instead of "
                   f"{expected_evals}.")
             return False
+
+    def get_performance(self: Run,
+                        budget: int) -> float:
+        """Return the performance of this Run at a specific evaluation budget.
+
+        Args:
+            budget: The evaluation budget for which to get the performance.
+
+        Returns:
+            The performance at the specified evaluation budget as a float.
+        """
+        perf = self.perf_vals[0]
+
+        for eval_id, perf_val in zip(self.eval_ids, self.perf_vals):
+            if budget <= eval_id:
+                return perf
+            else:
+                perf = perf_val
 
 
 class Scenario:

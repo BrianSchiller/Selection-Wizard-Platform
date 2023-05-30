@@ -469,3 +469,5 @@ if __name__ == "__main__":
     # get_ranking_matrix(args.data_dir)
 
     exp = Experiment(args.data_dir, dimensionalities=[5])
+    scores = exp.rank_algorithms(5, 100)
+    print(scores)
