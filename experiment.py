@@ -1,4 +1,5 @@
 """Module with class definitions to describe an experiment and its data."""
+from __future__ import annotations
 
 from pathlib import Path
 import json
@@ -9,7 +10,7 @@ import constants as const
 class Experiment:
     """Holds an experiment and its properties."""
 
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(self: Experiment, data_dir: Path) -> None:
         """Initialise the Experiment.
 
         Args:
@@ -36,7 +37,7 @@ class Experiment:
 
         return
 
-    def load_data(self, verbose: bool = False) -> None:
+    def load_data(self: Experiment, verbose: bool = False) -> None:
         """Read IOH result files from the data directory.
 
         Args:
@@ -68,7 +69,7 @@ class Experiment:
 class Problem:
     """Manages problem properties."""
 
-    def __init__(self, prob_name: str, prob_id: int) -> None:
+    def __init__(self: Problem, prob_name: str, prob_id: int) -> None:
         """Initialise a Problem object."""
         self.name = prob_name
         self.id = prob_id
@@ -77,14 +78,14 @@ class Problem:
 class Algorithm:
     """Manages algorithm properties."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self: Algorithm, name: str) -> None:
         """Initialise an Algorithm object."""
         self.name = name
         self.name_short = self.get_short_algo_name()
 
         return
 
-    def get_short_algo_name(self) -> str:
+    def get_short_algo_name(self: Algorithm) -> str:
         """Return a str with a short name for a given algorithm name.
 
         Returns:
@@ -113,7 +114,7 @@ class Algorithm:
 class Run:
     """Manages run properties."""
 
-    def __init__(self, idx: int, seed: int, status: int,
+    def __init__(self: Run, idx: int, seed: int, status: int,
                  evaluations: list[int], performance: list[int],
                  expected_evals: int) -> None:
         """Initialise a Run object."""
@@ -126,7 +127,7 @@ class Run:
 
         return
 
-    def check_run_is_valid(self, expected_evals: int) -> bool:
+    def check_run_is_valid(self: Run, expected_evals: int) -> bool:
         """Check whether run has the right number of evaluations.
 
         Args:
@@ -147,7 +148,7 @@ class Run:
 class Scenario:
     """Holds an experimental scenario and its properties."""
 
-    def __init__(self,
+    def __init__(self: Scenario,
                  data_dir: Path,
                  problem: Problem,
                  algorithm: Algorithm,
@@ -168,12 +169,12 @@ class Scenario:
             f"IOHprofiler_{self.problem.name}.json")
         self._load_data(json_file)
 
-    def _load_data(self, json_file: Path) -> None:
+    def _load_data(self: Scenario, json_file: Path) -> None:
         """Load the data associated with this scenario."""
         result_path, run_seeds, run_statuses = self._read_ioh_json(json_file)
         self._read_ioh_dat(result_path, run_seeds, run_statuses, verbose=True)
 
-    def _read_ioh_json(self,
+    def _read_ioh_json(self: Scenario,
                        metadata_path: Path) -> (Path, list[int], list[int]):
         """Read a .json metadata file from an experiment with IOH.
 
@@ -236,7 +237,7 @@ class Scenario:
 
         return (data_path, seeds, run_success)
 
-    def _read_ioh_dat(self, result_path: Path, seeds: list[int],
+    def _read_ioh_dat(self: Scenario, result_path: Path, seeds: list[int],
                       run_statuses: list[int],
                       verbose: bool = False) -> None:
         """Read a .dat result file with runs from an experiment with IOH.
