@@ -155,13 +155,17 @@ class Experiment:
         run_ids = []
         performances = []
 
-        # Retrieve performance and metadata per algorithm
+        # Retrieve performance and metadata per algorithm, counting succesful
+        # runs only.
         for algorithm in self.algorithms:
             scenario = self.prob_scenarios[problem][algorithm][dims]
-            algorithms.extend([scenario.algorithm.name_short] * n_runs)
-            run_ids.extend([run.idx for run in scenario.runs])
+            n_runs_suc = sum(1 for run in scenario.runs if run.status == 1)
+            algorithms.extend([scenario.algorithm.name_short] * n_runs_suc)
+            run_ids.extend(
+                [run.idx for run in scenario.runs if run.status == 1])
             performances.extend(
-                [run.get_performance(budget) for run in scenario.runs])
+                [run.get_performance(budget) for run in scenario.runs
+                 if run.status == 1])
 
         # Create a DataFrame from the lists
         runs = pd.DataFrame({
@@ -257,7 +261,8 @@ class Run:
             idx: ID of the run.
             seed: Seed used for the algorithm in the run.
             status: Exit status of the run. 1 indicates a successful run, 0,
-                -2, -3 a crashed run, -1 a missing run. Other values than these
+                -2, -3 a crashed run, -1 a missing run, -4 a incomplete run
+                detected during data reading. Other values than these
                 mean something is likely to be wrong, e.g., a crash that was
                 not detected during execution can have a value like
                 4.6355715189945e-310.
@@ -294,6 +299,7 @@ class Run:
             print(f"Run with ID {self.idx} is partial with only "
                   f"{self.eval_ids[-1]} evaluations instead of "
                   f"{expected_evals}.")
+            self.status = -4
             return False
 
     def get_performance(self: Run,
