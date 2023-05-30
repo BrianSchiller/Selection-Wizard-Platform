@@ -10,7 +10,8 @@ import constants as const
 class Experiment:
     """Holds an experiment and its properties."""
 
-    def __init__(self: Experiment, data_dir: Path,
+    def __init__(self: Experiment,
+                 data_dir: Path,
                  dimensionalities: list[int] = const.DIMS_CONSIDERED) -> None:
         """Initialise the Experiment.
 
@@ -41,7 +42,8 @@ class Experiment:
 
         return
 
-    def load_data(self: Experiment, verbose: bool = False) -> None:
+    def load_data(self: Experiment,
+                  verbose: bool = False) -> None:
         """Read IOH result files from the data directory.
 
         Args:
@@ -73,7 +75,9 @@ class Experiment:
 class Problem:
     """Manages problem properties."""
 
-    def __init__(self: Problem, prob_name: str, prob_id: int) -> None:
+    def __init__(self: Problem,
+                 prob_name: str,
+                 prob_id: int) -> None:
         """Initialise a Problem object.
 
         Args:
@@ -87,7 +91,8 @@ class Problem:
 class Algorithm:
     """Manages algorithm properties."""
 
-    def __init__(self: Algorithm, name: str) -> None:
+    def __init__(self: Algorithm,
+                 name: str) -> None:
         """Initialise an Algorithm object.
 
         Args:
@@ -127,8 +132,12 @@ class Algorithm:
 class Run:
     """Manages run properties."""
 
-    def __init__(self: Run, idx: int, seed: int, status: int,
-                 evaluations: list[int], performance: list[int],
+    def __init__(self: Run,
+                 idx: int,
+                 seed: int,
+                 status: int,
+                 eval_ids: list[int],
+                 perf_vals: list[int],
                  expected_evals: int) -> None:
         """Initialise a Run object.
 
@@ -140,25 +149,25 @@ class Run:
                 mean something is likely to be wrong, e.g., a crash that was
                 not detected during execution can have a value like
                 4.6355715189945e-310.
-            evaluations: List of evaluation IDs where a performance improvement
+            eval_ids: List of evaluation IDs where a performance improvement
                 was found during the run. The last evaluation is always
                 included for succesful runs (i.e., this ID should be equal to
-                expected_evals). Should be equal length to performance.
-            performance: List of performance values matching the evaluation IDs
-                from the evaluations variable. Should be equal length to
-                evaluations.
+                expected_evals). Should be equal length to perf_vals.
+            perf_vals: List of performance values matching the evaluation IDs
+                from the eval_ids variable. Should be equal length to eval_ids.
             expected_evals: Expected number of evaluations for this run.
         """
         self.idx = idx
         self.seed = seed
         self.status = status
-        self.evaluations = evaluations
-        self.performance = performance
+        self.eval_ids = eval_ids
+        self.perf_vals = perf_vals
         self.complete = self.check_run_is_valid(expected_evals)
 
         return
 
-    def check_run_is_valid(self: Run, expected_evals: int) -> bool:
+    def check_run_is_valid(self: Run,
+                           expected_evals: int) -> bool:
         """Check whether run has the right number of evaluations.
 
         Args:
@@ -167,11 +176,11 @@ class Run:
         Returns:
             bool True if eval_number and expected_evals match, False otherwise.
         """
-        if self.evaluations[-1] == expected_evals:
+        if self.eval_ids[-1] == expected_evals:
             return True
         else:
             print(f"Run with ID {self.idx} is partial with only "
-                  f"{self.evaluations[-1]} evaluations instead of "
+                  f"{self.eval_ids[-1]} evaluations instead of "
                   f"{expected_evals}.")
             return False
 
@@ -190,6 +199,18 @@ class Scenario:
         """Initialise the Scenario.
 
         Args:
+            data_dir: data_dir: Path to the data directory.
+                This directory should have subdirectories per problem, which in
+                turn should have subdirectories per algorithm, which should be
+                organised in IOH format. E.g. for directory data, algorithm
+                CMA, and problem f1_Sphere it should look like:
+                data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
+                data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+            problem: Problem used in the scenario.
+            algorithm: Algorithm used in the scenario.
+            dims: Dimensionality of the search space (number of variables).
+            n_runs: Number of runs performed with these settings.
+            n_evals: Number of evaluations per run.
             verbose: If True print more detailed information.
         """
         self.data_dir = data_dir
@@ -205,7 +226,8 @@ class Scenario:
             f"IOHprofiler_{self.problem.name}.json")
         self._load_data(json_file)
 
-    def _load_data(self: Scenario, json_file: Path,
+    def _load_data(self: Scenario,
+                   json_file: Path,
                    verbose: bool = False) -> None:
         """Load the data associated with this scenario.
 
@@ -280,7 +302,9 @@ class Scenario:
 
         return (data_path, seeds, run_success)
 
-    def _read_ioh_dat(self: Scenario, result_path: Path, seeds: list[int],
+    def _read_ioh_dat(self: Scenario,
+                      result_path: Path,
+                      seeds: list[int],
                       run_statuses: list[int],
                       verbose: bool = False) -> None:
         """Read a .dat result file with runs from an experiment with IOH.
@@ -311,27 +335,27 @@ class Scenario:
             lines = result_file.readlines()
             run_id = 0
             eval_ids = []
-            performance = []
+            perf_vals = []
 
             for line in lines:
                 if line.startswith("e"):  # For 'evaluations'
                     if run_id != 0:
                         run = Run(run_id, seeds[run_id - 1],
                                   run_statuses[run_id - 1],
-                                  eval_ids, performance, self.n_evals)
+                                  eval_ids, perf_vals, self.n_evals)
                         self.runs.append(run)
 
                     eval_ids = []
-                    performance = []
+                    perf_vals = []
                     run_id = run_id + 1
                 else:
                     words = line.split()
                     eval_ids.append(int(words[0]))
-                    performance.append(float(words[1]))
+                    perf_vals.append(float(words[1]))
 
             run = Run(run_id, seeds[run_id - 1],
                       run_statuses[run_id - 1],
-                      eval_ids, performance, self.n_evals)
+                      eval_ids, perf_vals, self.n_evals)
             self.runs.append(run)
 
         return
