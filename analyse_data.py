@@ -473,10 +473,10 @@ if __name__ == "__main__":
     ngopt = NGOptChoice(hsv_file)
     dims = 5
     budget = 100
-    ngopt.get_ngopt_choice(dims, budget)
-#    exp = Experiment(args.data_dir, dimensionalities=[dims])
-#    n_best = 25
-#    scores = exp.rank_algorithms(dims, budget, n_best)
-#    exp.plot_hist(scores)
-##    scores = exp.get_ranking_matrix()
-#    print(scores)
+    algorithm = ngopt.get_ngopt_choice(dims, budget)
+    exp = Experiment(args.data_dir, dimensionalities=[dims])
+    n_best = 25
+    scores = exp.rank_algorithms(dims, budget, n_best)
+    exp.plot_hist(scores, algorithm)
+#    scores = exp.get_ranking_matrix()
+    print(scores)

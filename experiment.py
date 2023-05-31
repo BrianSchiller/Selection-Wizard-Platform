@@ -137,14 +137,23 @@ class Experiment:
 
         return algo_matrix
 
-    def plot_hist(self: Experiment, algo_scores: pd.DataFrame) -> None:
-        """Plot a histogram showing algorithm scores."""
+    def plot_hist(self: Experiment,
+                  algo_scores: pd.DataFrame,
+                  ngopt_algo: Algorithm) -> None:
+        """Plot a histogram showing algorithm scores.
+
+        Args:
+            algo_scores: DataFrame with columns: algorithm, points
+            ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
+                budget combination.
+        """
         top_n = 5
         algo_scores.sort_values("points", inplace=True, ascending=False)
         ax = sns.barplot(x=np.arange(top_n),
                          y=algo_scores["points"].head(top_n),
                          label=algo_scores["algorithm"].head(top_n))
         ax.bar_label(ax.containers[0])
+        ax.set_title(f"NGOpt choice: {ngopt_algo.name_short}")
         plt.axis("off")
         plt.legend(fontsize=4)
         plt.show()
