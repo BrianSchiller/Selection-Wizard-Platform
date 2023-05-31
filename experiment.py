@@ -4,6 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 import constants as const
 
@@ -134,6 +137,21 @@ class Experiment:
 
         return algo_matrix
 
+    def plot_hist(self: Experiment, algo_scores: pd.DataFrame) -> None:
+        """Plot a histogram showing algorithm scores."""
+        top_n = 5
+        algo_scores.sort_values("points", inplace=True, ascending=False)
+        ax = sns.barplot(x=np.arange(top_n),
+                         y=algo_scores["points"].head(top_n),
+                         label=algo_scores["algorithm"].head(top_n))
+        ax.bar_label(ax.containers[0])
+        plt.axis("off")
+        plt.legend(fontsize=4)
+        plt.show()
+        out_path = Path("plots/bar/test.pdf")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
+
     def get_best_runs_of_prob(self: Experiment,
                               problem: Problem,
                               budget: int,
@@ -152,7 +170,6 @@ class Experiment:
                 Any rows beyond row n_best that have the same performance as
                 row n_best are also returned.
         """
-        n_runs = 25
         algorithms = []
         run_ids = []
         performances = []
@@ -204,6 +221,52 @@ class Problem:
         """
         self.name = prob_name
         self.id = prob_id
+
+
+class NGOptChoice:
+    """Manages algorithm choices by NGOpt."""
+
+    def __init__(self: NGOptChoice,
+                 hsv_file: Path) -> None:
+        """Initialise an NGOptChoice object.
+
+        Args:
+            hsv_file: Path to a # (hash) separated value file.
+        """
+        self.hsv_file = hsv_file
+        self._load_data()
+
+        return
+
+    def _load_data(self: NGOptChoice) -> None:
+        """Load NGOpt choices from file."""
+        self.ngopt_choices = pd.read_csv(self.hsv_file, sep="#")
+
+    def get_ngopt_choice(self: NGOptChoice,
+                         dims: int,
+                         budget: int) -> Algorithm:
+        """Return the algorithm NGOpt chose for a dimensionality and budget.
+
+        Args:
+            dims: Dimensionality of the search space (number of variables).
+            budget: The evaluation budget for which to get the NGOpt choice.
+
+        Returns:
+            An Algorithm object with the algorithm NGOpt chose.
+        """
+        # Take the right dimensionality and remove too large budgets
+        relevant_rows = self.ngopt_choices.loc[
+            (self.ngopt_choices["dimensionality"] == dims)
+            & (self.ngopt_choices["budget"] <= budget)]
+
+        # Largest budget remaining is the correct row
+        right_row = relevant_rows[
+            relevant_rows["budget"] == relevant_rows["budget"].max()]
+
+        # Retrieve the algorithm name
+        algo_name = right_row.values[0][0]
+
+        return Algorithm(algo_name)
 
 
 class Algorithm:

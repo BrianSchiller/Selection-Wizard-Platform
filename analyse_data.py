@@ -10,6 +10,7 @@ import json
 
 import constants as const
 from experiment import Experiment
+from experiment import NGOptChoice
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -468,7 +469,14 @@ if __name__ == "__main__":
     # read_ioh_results(args.data_dir, verbose = False)
     # get_ranking_matrix(args.data_dir)
 
-    exp = Experiment(args.data_dir)#, dimensionalities=[5])
-#    scores = exp.rank_algorithms(5, 100, 25)
-    scores = exp.get_ranking_matrix()
-    print(scores)
+    hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator.hsv")
+    ngopt = NGOptChoice(hsv_file)
+    dims = 5
+    budget = 100
+    ngopt.get_ngopt_choice(dims, budget)
+#    exp = Experiment(args.data_dir, dimensionalities=[dims])
+#    n_best = 25
+#    scores = exp.rank_algorithms(dims, budget, n_best)
+#    exp.plot_hist(scores)
+##    scores = exp.get_ranking_matrix()
+#    print(scores)

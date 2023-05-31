@@ -1,4 +1,4 @@
-Algorithm#dimensionality#evaluation budget
+algorithm#dimensionality#budget
 Cobyla#1#1
 MetaModel#1#51
 <class 'nevergrad.optimization.optimizerlib.NGOpt16'>#1#501
