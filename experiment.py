@@ -139,13 +139,17 @@ class Experiment:
 
     def plot_hist(self: Experiment,
                   algo_scores: pd.DataFrame,
-                  ngopt_algo: Algorithm) -> None:
+                  ngopt_algo: Algorithm,
+                  dims: int,
+                  budget: int) -> None:
         """Plot a histogram showing algorithm scores.
 
         Args:
             algo_scores: DataFrame with columns: algorithm, points
             ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
                 budget combination.
+            dims: The dimensionality algorithms are ranked for.
+            budget: The evaluation budget algorithms are ranked for.
         """
         top_n = 5
         algo_scores.sort_values("points", inplace=True, ascending=False)
@@ -153,7 +157,8 @@ class Experiment:
                          y=algo_scores["points"].head(top_n),
                          label=algo_scores["algorithm"].head(top_n))
         ax.bar_label(ax.containers[0])
-        ax.set_title(f"NGOpt choice: {ngopt_algo.name_short}")
+        ax.set_title(f"Dimensions: {dims}, Budget: {budget}, "
+                     f"NGOpt choice: {ngopt_algo.name_short}")
         plt.axis("off")
         plt.legend(fontsize=4)
         plt.show()

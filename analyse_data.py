@@ -477,6 +477,6 @@ if __name__ == "__main__":
     exp = Experiment(args.data_dir, dimensionalities=[dims])
     n_best = 25
     scores = exp.rank_algorithms(dims, budget, n_best)
-    exp.plot_hist(scores, algorithm)
+    exp.plot_hist(scores, algorithm, dims, budget)
 #    scores = exp.get_ranking_matrix()
     print(scores)
