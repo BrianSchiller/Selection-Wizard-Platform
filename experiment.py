@@ -130,6 +130,8 @@ class Experiment:
 
             algo_matrix[budget] = ranks
 
+        algo_matrix.index = const.DIMS_CONSIDERED
+
         return algo_matrix
 
     def get_best_runs_of_prob(self: Experiment,
