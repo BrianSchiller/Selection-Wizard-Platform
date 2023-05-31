@@ -467,16 +467,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # read_ioh_results(args.data_dir, verbose = False)
-    # get_ranking_matrix(args.data_dir)
 
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator.hsv")
     ngopt = NGOptChoice(hsv_file)
     dims = 5
     budget = 100
     algorithm = ngopt.get_ngopt_choice(dims, budget)
-    exp = Experiment(args.data_dir, dimensionalities=[dims])
+    exp = Experiment(args.data_dir, dimensionalities=[dims,10])
     n_best = 25
-    scores = exp.rank_algorithms(dims, budget, n_best)
-    exp.plot_hist(scores, algorithm, dims, budget)
+#    scores = exp.rank_algorithms(dims, budget, n_best)
+#    exp.plot_hist(scores, algorithm, dims, budget)
+    matrix = exp.get_ranking_matrix()
+    exp.plot_hist_grid(matrix, ngopt)
 #    scores = exp.get_ranking_matrix()
-    print(scores)
+#    print(scores)
