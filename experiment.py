@@ -156,44 +156,43 @@ class Experiment:
         budgets = [
             dims * self.dim_multiplier for dims in self.dimensionalities]
         algorithms = algo_matrix.values[0][0]["algorithm"]
-        print(algorithms)
-        colours = sns.color_palette("hls", len(algorithms))
+        colours = sns.color_palette("colorblind", len(algorithms))
         palette = {algorithm: colour
                    for algorithm, colour in zip(algorithms, colours)}
 
         rows = len(self.dimensionalities)
         cols = len(budgets)
         fig, axs = plt.subplots(rows, cols, layout="constrained",
-                                figsize=(34, 34), dpi=80)
-
+                                figsize=(cols*7.4, rows*5.6), dpi=80)
         bud_dims = [
-            (bud, dim) for bud in budgets for dim in self.dimensionalities]
+            (bud, dim) for dim in self.dimensionalities for bud in budgets]
+
         for bud_dim, ax in zip(bud_dims, axs.flatten()):
-#        for budget, col in zip(budgets, enumerate(axs)):
-#            for dims, ax in zip(self.dimensionalities, enumerate(col)):
             ngopt_algo = ngopt.get_ngopt_choice(bud_dim[1], bud_dim[0])
             algo_scores = algo_matrix.loc[bud_dim[1]].at[bud_dim[0]]
             algo_scores.sort_values(
                 "points", inplace=True, ascending=False)
             algo_scores = algo_scores.head(top_n)
-            ax = sns.barplot(x=np.arange(top_n),
-                             y="points",
-#                              label="algorithm",
-                             hue="algorithm",
-                             data=algo_scores,
-                             palette=palette)
-            ax.bar_label(ax.containers[0])
+            sns.barplot(x=np.arange(top_n),
+                        y="points",
+                        hue="algorithm",
+                        data=algo_scores,
+                        palette=palette,
+                        ax=ax)
+
+            # Loop to show label for every bar
+            for bars in ax.containers:
+                ax.bar_label(bars)
+
             ax.set_title(f"Dimensions: {bud_dim[1]}, Budget: {bud_dim[0]}, "
                          f"NGOpt choice: {ngopt_algo.name_short}")
-
-#                break
+            ax.axis("off")
 
         plt.axis("off")
-#        fig.legend(fontsize=4)
-        fig.show()
+        plt.show()
         out_path = Path("plots/bar/test_grid.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(out_path)
+        plt.savefig(out_path)
 
     def plot_hist(self: Experiment,
                   algo_scores: pd.DataFrame,

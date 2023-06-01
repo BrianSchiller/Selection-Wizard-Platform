@@ -473,7 +473,9 @@ if __name__ == "__main__":
     dims = 5
     budget = 100
     algorithm = ngopt.get_ngopt_choice(dims, budget)
-    exp = Experiment(args.data_dir, dimensionalities=[dims,10])
+    exp = Experiment(args.data_dir)
+#    exp = Experiment(args.data_dir, dimensionalities=[dims,10])
+
     n_best = 25
 #    scores = exp.rank_algorithms(dims, budget, n_best)
 #    exp.plot_hist(scores, algorithm, dims, budget)
