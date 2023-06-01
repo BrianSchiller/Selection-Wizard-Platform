@@ -470,16 +470,7 @@ if __name__ == "__main__":
 
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator.hsv")
     ngopt = NGOptChoice(hsv_file)
-    dims = 5
-    budget = 100
-    algorithm = ngopt.get_ngopt_choice(dims, budget)
     exp = Experiment(args.data_dir)
-#    exp = Experiment(args.data_dir, dimensionalities=[dims,10])
-
-    n_best = 25
-#    scores = exp.rank_algorithms(dims, budget, n_best)
-#    exp.plot_hist(scores, algorithm, dims, budget)
+#    exp = Experiment(args.data_dir, dimensionalities=[15,100])
     matrix = exp.get_ranking_matrix()
     exp.plot_hist_grid(matrix, ngopt)
-#    scores = exp.get_ranking_matrix()
-#    print(scores)

@@ -35,7 +35,7 @@ class Experiment:
         self.algorithms = []
         self.dimensionalities = dimensionalities
         self.prob_scenarios = {}
-        self.dim_multiplier = 10
+        self.dim_multiplier = 100
 
         for prob_name, prob_id in zip(const.PROB_NAMES,
                                       const.PROBS_CONSIDERED):
@@ -184,14 +184,16 @@ class Experiment:
             for bars in ax.containers:
                 ax.bar_label(bars)
 
-            fig.set_facecolor(self._get_bg_colour(algo_scores, ngopt_algo))
+            ax.set_facecolor(self._get_bg_colour(algo_scores, ngopt_algo))
             ax.set_title(f"Dimensions: {bud_dim[1]}, Budget: {bud_dim[0]}, "
-                         f"NGOpt choice: {ngopt_algo.name_short}")
+                         f"NGOpt choice: {ngopt_algo.name_short}",
+                         color=self._get_bg_colour(algo_scores, ngopt_algo),
+                         fontsize=9)
             ax.axis("off")
 
         plt.axis("off")
         plt.show()
-        out_path = Path("plots/bar/test_grid.pdf")
+        out_path = Path(f"plots/bar/grid_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path, facecolor=fig.get_facecolor())
 
@@ -210,13 +212,13 @@ class Experiment:
         """
         # If it matches the algorithm with the highest points, use green
         if ngopt_algo.name_short == algo_scores["algorithm"].values[0]:
-            return "xkcd:very light green"
+            return "green"
         # If it is in the top 5, use orange
         elif ngopt_algo.name_short in algo_scores["algorithm"].values:
-            return "xkcd:light tan"
+            return "orange"
         # Otherwise, use red
         else:
-            return "xkcd:baby pink"
+            return "red"
 
     def plot_hist(self: Experiment,
                   algo_scores: pd.DataFrame,
