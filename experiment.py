@@ -184,6 +184,7 @@ class Experiment:
             for bars in ax.containers:
                 ax.bar_label(bars)
 
+            fig.set_facecolor(self._get_bg_colour(algo_scores, ngopt_algo))
             ax.set_title(f"Dimensions: {bud_dim[1]}, Budget: {bud_dim[0]}, "
                          f"NGOpt choice: {ngopt_algo.name_short}")
             ax.axis("off")
@@ -192,7 +193,30 @@ class Experiment:
         plt.show()
         out_path = Path("plots/bar/test_grid.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(out_path)
+        plt.savefig(out_path, facecolor=fig.get_facecolor())
+
+    def _get_bg_colour(self: Experiment,
+                       algo_scores: pd.DataFrame,
+                       ngopt_algo: Algorithm) -> str:
+        """Get the background colour based on match of NGOpt choice and data.
+
+        Args:
+            algo_scores: Top 5 rows of DataFrame with cols: algorithm, points.
+            ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
+                budget combination.
+
+        Returns:
+            Colour name to use in plot as a str.
+        """
+        # If it matches the algorithm with the highest points, use green
+        if ngopt_algo.name_short == algo_scores["algorithm"].values[0]:
+            return "xkcd:very light green"
+        # If it is in the top 5, use orange
+        elif ngopt_algo.name_short in algo_scores["algorithm"].values:
+            return "xkcd:light tan"
+        # Otherwise, use red
+        else:
+            return "xkcd:baby pink"
 
     def plot_hist(self: Experiment,
                   algo_scores: pd.DataFrame,
@@ -202,7 +226,7 @@ class Experiment:
         """Plot a histogram showing algorithm scores.
 
         Args:
-            algo_scores: DataFrame with columns: algorithm, points
+            algo_scores: DataFrame with columns: algorithm, points.
             ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
                 budget combination.
             dims: The dimensionality algorithms are ranked for.
