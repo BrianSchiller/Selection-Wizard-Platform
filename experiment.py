@@ -153,6 +153,7 @@ class Experiment:
                 choice of NGOpt for plotted dimensionalities and budgets.
         """
         top_n = 5
+        top_algos = set()
         budgets = [
             dims * self.dim_multiplier for dims in self.dimensionalities]
         algorithms = algo_matrix.values[0][0]["algorithm"]
@@ -191,7 +192,13 @@ class Experiment:
                          fontsize=9)
             ax.axis("off")
 
-        plt.axis("off")
+            # Save distinct top 5 algorithm names
+            top_algos.update(algo_scores["algorithm"].values)
+
+        # Print distinct algorithms that appear in the top 5 of dim-bud pairs
+        print("Algorithms that appear in a top 5:")
+        print(*top_algos, sep="\n")
+
         plt.show()
         out_path = Path(f"plots/bar/grid_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
