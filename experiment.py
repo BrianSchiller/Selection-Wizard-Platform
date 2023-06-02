@@ -210,8 +210,12 @@ class Experiment:
         Returns:
             Colour name to use in plot as a str.
         """
-        # If it matches the algorithm with the highest points, use green
-        if ngopt_algo.name_short == algo_scores["algorithm"].values[0]:
+        # Retrieve all algorithms that are tied for first place
+        tied_algo_scores = algo_scores.loc[
+            algo_scores["points"] == algo_scores["points"].iloc[0]]
+
+        # If it matches an algorithms with the highest points, use green
+        if ngopt_algo.name_short in tied_algo_scores["algorithm"].values:
             return "green"
         # If it is in the top 5, use orange
         elif ngopt_algo.name_short in algo_scores["algorithm"].values:
