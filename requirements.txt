@@ -2,6 +2,7 @@ attrs==23.1.0
 bayesian-optimization==1.4.3
 cma==3.3.0
 colorama==0.4.6
+colorcet==3.0.1
 contourpy==1.0.7
 cycler==0.11.0
 flake8==6.0.0
@@ -21,10 +22,12 @@ nevergrad==0.6.0
 numpy==1.24.3
 packaging==23.1
 pandas==2.0.1
+param==1.13.0
 pep8-naming==0.13.3
 Pillow==9.5.0
 pip==23.1.2
 pycodestyle==2.10.0
+pyct==0.5.0
 pydocstyle==6.3.0
 pyflakes==3.0.1
 pyparsing==3.0.9

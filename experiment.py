@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import colorcet as cc
 
 import constants as const
 
@@ -88,7 +89,8 @@ class Experiment:
             n_best: int indicating the top how many runs to look for.
 
         Returns:
-            DataFrame with columns: algorithm, points
+            DataFrame with columns: algorithm, points. The algorithm column
+            holds Algorithm names in short form.
         """
         print(f"Ranking algorithms for {dims} dimensional problems with budget"
               f" {budget} ...")
@@ -138,6 +140,100 @@ class Experiment:
         algo_matrix.index = self.dimensionalities
 
         return algo_matrix
+
+    def _get_best_algorithms(self: Experiment,
+                             algo_matrix: pd.DataFrame,
+                             ngopt: NGOptChoice) -> pd.DataFrame:
+        """Retrieve the top ranked algorithms per budget-dimensionality pair.
+
+        In case of a tie, if one of the top ranking algorithms matches with the
+        choice of NGOpt, this one is shown. If none of the tied algorithms
+        match NGOpt, the one that happens to be on top is shown.
+
+        Args:
+            algo_matrix: DataFrame with rows representing different
+                dimensionalities and columns representing different evaluation
+                budgets. Each cell with algorithm scores in a DataFrame with
+                columns: algorithm, points
+            ngopt: Instance of NGOptChoice to enable retrieving algorithm
+                choice of NGOpt for plotted dimensionalities and budgets.
+
+        Returns:
+            A DataFrame of short Algorithm names with rows representing
+            different dimensionalities and columns representing different
+            evaluation budgets.
+        """
+        best_matrix = pd.DataFrame()
+        budgets = [
+            dims * self.dim_multiplier for dims in self.dimensionalities]
+
+        for budget in budgets:
+            dims_best = []
+
+            for dims in self.dimensionalities:
+                algo_scores = algo_matrix.loc[dims].at[budget]
+
+                # Retrieve all algorithms that are tied for first place
+                algo_scores.sort_values(
+                    "points", inplace=True, ascending=False)
+                algo_scores = algo_scores.loc[
+                    algo_scores["points"] == algo_scores["points"].iloc[0]]
+                ngopt_algo = ngopt.get_ngopt_choice(dims, budget)
+
+                if ngopt_algo.name_short in algo_scores["algorithm"].values:
+                    dims_best.append(ngopt_algo.name_short)
+                else:
+                    dims_best.append(algo_scores["algorithm"].values[0])
+
+            best_matrix[budget] = dims_best
+
+        best_matrix.index = self.dimensionalities
+        print(best_matrix)
+
+        return best_matrix
+
+    def plot_heatmap_data(self: Experiment,
+                          algo_matrix: pd.DataFrame,
+                          ngopt: NGOptChoice) -> None:
+        """Plot a heatmap showing the best algorithm per budget-dimension pair.
+
+        In case of a tie, if one of the top ranking algorithms matches with the
+        choice of NGOpt, this one is shown. If none of the tied algorithms
+        match NGOpt, the one that happens to be on top is shown.
+
+        Args:
+            algo_matrix: DataFrame with rows representing different
+                dimensionalities and columns representing different evaluation
+                budgets. Each cell with algorithm scores in a DataFrame with
+                columns: algorithm, points
+            ngopt: Instance of NGOptChoice to enable retrieving algorithm
+                choice of NGOpt for plotted dimensionalities and budgets.
+        """
+        best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
+
+        # Dict mapping algorithm short names to ints
+        algorithms = algo_matrix.values[0][0]["algorithm"]
+        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
+        print(algo_to_int)
+
+        # Map algorithm names to colours
+        colours = sns.color_palette(cc.glasbey, len(algorithms))
+
+        # Create heatmap
+        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours)
+
+        # Add algorithm names to colour bar
+        colorbar = ax.collections[0].colorbar
+        r = colorbar.vmax - colorbar.vmin
+        n = len(algo_to_int)
+        colorbar.set_ticks([colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+        colorbar.set_ticklabels(list(algo_to_int.keys()))
+
+        # Plot and save the figure
+        plt.show()
+        out_path = Path(f"plots/heatmap/grid_d{self.dim_multiplier}.pdf")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
 
     def plot_hist_grid(self: Experiment,
                        algo_matrix: pd.DataFrame,

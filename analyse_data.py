@@ -470,7 +470,8 @@ if __name__ == "__main__":
 
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator.hsv")
     ngopt = NGOptChoice(hsv_file)
-    exp = Experiment(args.data_dir)
-#    exp = Experiment(args.data_dir, dimensionalities=[15,100])
+#    exp = Experiment(args.data_dir)
+    exp = Experiment(args.data_dir, dimensionalities=[10,35])
     matrix = exp.get_ranking_matrix()
-    exp.plot_hist_grid(matrix, ngopt)
+    #exp.plot_hist_grid(matrix, ngopt)
+    exp.plot_heatmap_data(matrix, ngopt)
