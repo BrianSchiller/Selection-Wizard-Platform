@@ -37,6 +37,8 @@ class Experiment:
         self.dimensionalities = dimensionalities
         self.prob_scenarios = {}
         self.dim_multiplier = 100
+        self.budgets = [
+            dims * self.dim_multiplier for dims in self.dimensionalities]
 
         for prob_name, prob_id in zip(const.PROB_NAMES,
                                       const.PROBS_CONSIDERED):
@@ -124,12 +126,9 @@ class Experiment:
                 columns representing different evaluation budgets.
         """
         n_best = 25
-        # use 10 * dims budgets
-        budgets = [
-            dims * self.dim_multiplier for dims in self.dimensionalities]
         algo_matrix = pd.DataFrame()
 
-        for budget in budgets:
+        for budget in self.budgets:
             ranks = []
 
             for dims in self.dimensionalities:
@@ -164,10 +163,8 @@ class Experiment:
             evaluation budgets.
         """
         best_matrix = pd.DataFrame()
-        budgets = [
-            dims * self.dim_multiplier for dims in self.dimensionalities]
 
-        for budget in budgets:
+        for budget in self.budgets:
             dims_best = []
 
             for dims in self.dimensionalities:
@@ -226,7 +223,8 @@ class Experiment:
         colorbar = ax.collections[0].colorbar
         r = colorbar.vmax - colorbar.vmin
         n = len(algo_to_int)
-        colorbar.set_ticks([colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+        colorbar.set_ticks(
+            [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
         colorbar.set_ticklabels(list(algo_to_int.keys()))
 
         # Plot and save the figure
@@ -250,19 +248,18 @@ class Experiment:
         """
         top_n = 5
         top_algos = set()
-        budgets = [
-            dims * self.dim_multiplier for dims in self.dimensionalities]
         algorithms = algo_matrix.values[0][0]["algorithm"]
         colours = sns.color_palette("colorblind", len(algorithms))
         palette = {algorithm: colour
                    for algorithm, colour in zip(algorithms, colours)}
 
         rows = len(self.dimensionalities)
-        cols = len(budgets)
+        cols = len(self.budgets)
         fig, axs = plt.subplots(rows, cols, layout="constrained",
                                 figsize=(cols*7.4, rows*5.6), dpi=80)
         bud_dims = [
-            (bud, dim) for dim in self.dimensionalities for bud in budgets]
+            (bud, dim) for dim in self.dimensionalities
+            for bud in self.budgets]
 
         for bud_dim, ax in zip(bud_dims, axs.flatten()):
             ngopt_algo = ngopt.get_ngopt_choice(bud_dim[1], bud_dim[0])
