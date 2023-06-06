@@ -244,7 +244,8 @@ class Experiment:
         colours = [colours[i] for i in ids_in_plot]
 
         # Create heatmap
-        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours)
+        fig, ax = plt.subplots(figsize=(10.2, 5.6))
+        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours, square=True)
 
         # Add algorithm names to colour bar
         colorbar = ax.collections[0].colorbar
@@ -255,6 +256,7 @@ class Experiment:
         colorbar.set_ticklabels(list(algo_to_int.keys()))
 
         # Plot and save the figure
+        plt.tight_layout()
         plt.show()
         out_path = Path(f"plots/heatmap/grid_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
