@@ -231,7 +231,8 @@ class Experiment:
         best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
 
         # Dict mapping algorithm short names to ints
-        algorithms = algo_matrix.values[0][0]["algorithm"]
+        algorithms = list(algo_matrix.values[0][0]["algorithm"])
+        algorithms.sort()
         algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
         print(algo_to_int)
 
@@ -270,7 +271,8 @@ class Experiment:
         """
         top_n = 5
         top_algos = set()
-        algorithms = algo_matrix.values[0][0]["algorithm"]
+        algorithms = list(algo_matrix.values[0][0]["algorithm"])
+        algorithms.sort()
         colours = sns.color_palette("colorblind", len(algorithms))
         palette = {algorithm: colour
                    for algorithm, colour in zip(algorithms, colours)}
