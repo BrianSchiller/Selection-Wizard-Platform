@@ -78,6 +78,25 @@ class Experiment:
 
         return
 
+    def get_relevant_ngopt_algos(self: Experiment,
+                                 ngopt: NGOptChoice) -> list[Algorithm]:
+        """Get the algorithms NGOpt uses for the dimensionalities and budgets.
+
+        Args:
+            ngopt: Instance of NGOptChoice to enable retrieving algorithm
+                choice of NGOpt for plotted dimensionalities and budgets.
+
+        Returns:
+            A list of short algorithm names.
+        """
+        algorithms = set()
+
+        for budget in self.budgets:
+            for dims in self.dimensionalities:
+                algorithms.add(ngopt.get_ngopt_choice(dims, budget))
+
+        return list(algorithms)
+
     def rank_algorithms(self: Experiment,
                         dims: int,
                         budget: int,
@@ -177,8 +196,8 @@ class Experiment:
                     algo_scores["points"] == algo_scores["points"].iloc[0]]
                 ngopt_algo = ngopt.get_ngopt_choice(dims, budget)
 
-                if ngopt_algo.name_short in algo_scores["algorithm"].values:
-                    dims_best.append(ngopt_algo.name_short)
+                if ngopt_algo in algo_scores["algorithm"].values:
+                    dims_best.append(ngopt_algo)
                 else:
                     dims_best.append(algo_scores["algorithm"].values[0])
 
@@ -280,7 +299,7 @@ class Experiment:
 
             ax.set_facecolor(self._get_bg_colour(algo_scores, ngopt_algo))
             ax.set_title(f"Dimensions: {bud_dim[1]}, Budget: {bud_dim[0]}, "
-                         f"NGOpt choice: {ngopt_algo.name_short}",
+                         f"NGOpt choice: {ngopt_algo}",
                          color=self._get_bg_colour(algo_scores, ngopt_algo),
                          fontsize=9)
             ax.axis("off")
@@ -299,13 +318,13 @@ class Experiment:
 
     def _get_bg_colour(self: Experiment,
                        algo_scores: pd.DataFrame,
-                       ngopt_algo: Algorithm) -> str:
+                       ngopt_algo: str) -> str:
         """Get the background colour based on match of NGOpt choice and data.
 
         Args:
             algo_scores: Top 5 rows of DataFrame with cols: algorithm, points.
-            ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
-                budget combination.
+            ngopt_algo: Short name of the algorithm chosen by NGOpt for the
+                dimensionality and budget combination.
 
         Returns:
             Colour name to use in plot as a str.
@@ -315,10 +334,10 @@ class Experiment:
             algo_scores["points"] == algo_scores["points"].iloc[0]]
 
         # If it matches an algorithms with the highest points, use green
-        if ngopt_algo.name_short in tied_algo_scores["algorithm"].values:
+        if ngopt_algo in tied_algo_scores["algorithm"].values:
             return "green"
         # If it is in the top 5, use orange
-        elif ngopt_algo.name_short in algo_scores["algorithm"].values:
+        elif ngopt_algo in algo_scores["algorithm"].values:
             return "orange"
         # Otherwise, use red
         else:
@@ -326,15 +345,15 @@ class Experiment:
 
     def plot_hist(self: Experiment,
                   algo_scores: pd.DataFrame,
-                  ngopt_algo: Algorithm,
+                  ngopt_algo: str,
                   dims: int,
                   budget: int) -> None:
         """Plot a histogram showing algorithm scores.
 
         Args:
             algo_scores: DataFrame with columns: algorithm, points.
-            ngopt_algo: Algorithm chosen by NGOpt for the dimensionality and
-                budget combination.
+            ngopt_algo: Short name of the algorithm chosen by NGOpt for the
+                dimensionality and budget combination.
             dims: The dimensionality algorithms are ranked for.
             budget: The evaluation budget algorithms are ranked for.
         """
@@ -345,7 +364,7 @@ class Experiment:
                          label=algo_scores["algorithm"].head(top_n))
         ax.bar_label(ax.containers[0])
         ax.set_title(f"Dimensions: {dims}, Budget: {budget}, "
-                     f"NGOpt choice: {ngopt_algo.name_short}")
+                     f"NGOpt choice: {ngopt_algo}")
         plt.axis("off")
         plt.legend(fontsize=4)
         plt.show()
@@ -446,7 +465,7 @@ class NGOptChoice:
 
     def get_ngopt_choice(self: NGOptChoice,
                          dims: int,
-                         budget: int) -> Algorithm:
+                         budget: int) -> str:
         """Return the algorithm NGOpt chose for a dimensionality and budget.
 
         Args:
@@ -454,7 +473,7 @@ class NGOptChoice:
             budget: The evaluation budget for which to get the NGOpt choice.
 
         Returns:
-            An Algorithm object with the algorithm NGOpt chose.
+            The short name of the algorithm NGOpt chose.
         """
         # Take the right dimensionality and remove too large budgets
         relevant_rows = self.ngopt_choices.loc[
@@ -468,7 +487,7 @@ class NGOptChoice:
         # Retrieve the algorithm name
         algo_name = right_row.values[0][0]
 
-        return Algorithm(algo_name)
+        return Algorithm(algo_name).name_short
 
 
 class Algorithm:
