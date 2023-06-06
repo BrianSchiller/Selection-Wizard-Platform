@@ -207,7 +207,6 @@ class Experiment:
             best_matrix[budget] = dims_best
 
         best_matrix.index = self.dimensionalities
-        print(best_matrix)
 
         return best_matrix
 
@@ -230,14 +229,19 @@ class Experiment:
         """
         best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
 
-        # Dict mapping algorithm short names to ints
         algorithms = list(algo_matrix.values[0][0]["algorithm"])
         algorithms.sort()
-        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
-        print(algo_to_int)
+        # Get indices for algorithms relevant for the plot
+        ids_in_plot = [idx for idx, algo in enumerate(algorithms)
+                       if algo in best_matrix.values.flatten().tolist()]
 
-        # Map algorithm names to colours
+        # Dict mapping short names to ints, reduce to relevant algorithms
+        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
+        algo_to_int = {algorithms[idx]: i for i, idx in enumerate(ids_in_plot)}
+
+        # Map algorithm names to colours and take the relevant colours
         colours = sns.color_palette(cc.glasbey, len(algorithms))
+        colours = [colours[i] for i in ids_in_plot]
 
         # Create heatmap
         ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours)
