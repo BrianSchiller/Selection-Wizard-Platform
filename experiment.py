@@ -95,7 +95,10 @@ class Experiment:
             for dims in self.dimensionalities:
                 algorithms.add(ngopt.get_ngopt_choice(dims, budget))
 
-        return list(algorithms)
+        algo_list = list(algorithms)
+        algo_list.sort()
+
+        return algo_list
 
     def rank_algorithms(self: Experiment,
                         dims: int,
