@@ -210,6 +210,61 @@ class Experiment:
 
         return best_matrix
 
+    def plot_heatmap_ngopt(self: Experiment,
+                           ngopt: NGOptChoice) -> None:
+        """Plot a heatmap showing the best algorithm per budget-dimension pair.
+
+        In case of a tie, if one of the top ranking algorithms matches with the
+        choice of NGOpt, this one is shown. If none of the tied algorithms
+        match NGOpt, the one that happens to be on top is shown.
+
+        Args:
+            ngopt: Instance of NGOptChoice to enable retrieving algorithm
+                choice of NGOpt for plotted dimensionalities and budgets.
+        """
+        ngopt_algos = [
+            ngopt.get_ngopt_choice(dims, bud)
+            for dims in self.dimensionalities for bud in self.budgets]
+        algorithms = [algo.name_short for algo in self.algorithms]
+        algorithms.sort()
+        best_matrix = ngopt.get_ngopt_choices(
+            self.dimensionalities, self.budgets)
+
+        # Get indices for algorithms relevant for the plot
+        ids_in_plot = [idx for idx, algo in enumerate(algorithms)
+                       if algo in ngopt_algos]
+
+        # Dict mapping short names to ints, reduce to relevant algorithms
+        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
+        algo_to_int = {algorithms[idx]: i for i, idx in enumerate(ids_in_plot)}
+
+        # Map algorithm names to colours and take the relevant colours
+        colours = sns.color_palette(cc.glasbey, len(algorithms))
+        colours = [colours[i] for i in ids_in_plot]
+
+        # Create heatmap
+        fig, ax = plt.subplots(figsize=(10.2, 5.6))
+        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours, square=True)
+        ax.set(xlabel="evaluation budget", ylabel="dimensions")
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        ax.tick_params(axis="x", labelrotation=90)
+
+        # Add algorithm names to colour bar
+        colorbar = ax.collections[0].colorbar
+        r = colorbar.vmax - colorbar.vmin
+        n = len(algo_to_int)
+        colorbar.set_ticks(
+            [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+        colorbar.set_ticklabels(list(algo_to_int.keys()))
+
+        # Plot and save the figure
+        plt.tight_layout()
+        plt.show()
+        out_path = Path(f"plots/heatmap/grid_ngopt_d{self.dim_multiplier}.pdf")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(out_path)
+
     def plot_heatmap_data(self: Experiment,
                           algo_matrix: pd.DataFrame,
                           ngopt: NGOptChoice) -> None:
@@ -231,6 +286,7 @@ class Experiment:
 
         algorithms = list(algo_matrix.values[0][0]["algorithm"])
         algorithms.sort()
+
         # Get indices for algorithms relevant for the plot
         ids_in_plot = [idx for idx, algo in enumerate(algorithms)
                        if algo in best_matrix.values.flatten().tolist()]
@@ -262,7 +318,7 @@ class Experiment:
         # Plot and save the figure
         plt.tight_layout()
         plt.show()
-        out_path = Path(f"plots/heatmap/grid_d{self.dim_multiplier}.pdf")
+        out_path = Path(f"plots/heatmap/grid_data_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
 
@@ -503,6 +559,34 @@ class NGOptChoice:
         algo_name = right_row.values[0][0]
 
         return Algorithm(algo_name).name_short
+
+    def get_ngopt_choices(self: NGOptChoice,
+                          dimensionalities: list[int],
+                          budgets: list[int]) -> pd.DataFrame:
+        """Return NGOpt's choices for given dimensionalities and budgets.
+
+        Args:
+            dimensionalities: Dimensionalities of the search space (number of
+                variables).
+            budget: The evaluation budgets for which to get the NGOpt choices.
+
+        Returns:
+            The short names of the algorithms NGOpt chose in DataFrame with
+            dimensionalities as rows and budgets as columns.
+        """
+        algo_matrix = pd.DataFrame()
+
+        for budget in budgets:
+            algos = []
+
+            for dims in dimensionalities:
+                algos.append(self.get_ngopt_choice(dims, budget))
+
+            algo_matrix[budget] = algos
+
+        algo_matrix.index = dimensionalities
+
+        return algo_matrix
 
 
 class Algorithm:
