@@ -246,6 +246,10 @@ class Experiment:
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours, square=True)
+        ax.set(xlabel="evaluation budget", ylabel="dimensions")
+        ax.xaxis.tick_top()
+        ax.xaxis.set_label_position("top")
+        ax.tick_params(axis="x", labelrotation=90)
 
         # Add algorithm names to colour bar
         colorbar = ax.collections[0].colorbar
