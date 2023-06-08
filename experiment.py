@@ -103,7 +103,8 @@ class Experiment:
     def rank_algorithms(self: Experiment,
                         dims: int,
                         budget: int,
-                        n_best: int) -> pd.DataFrame:
+                        n_best: int,
+                        score_per_prob: bool = False) -> pd.DataFrame:
         """Rank algorithms based on their performance over multiple problems.
 
         Args:
@@ -111,6 +112,8 @@ class Experiment:
             budget: int indicating for which number of evaluations to rank the
                 algorithms.
             n_best: int indicating the top how many runs to look for.
+            score_per_prob: If True include a column per problem with the score
+                on that problem.
 
         Returns:
             DataFrame with columns: algorithm, points. The algorithm column
@@ -136,9 +139,51 @@ class Experiment:
                 algo_scores, algo_scores_for_prob, how="left", on="algorithm")
             algo_scores["count"].fillna(0, inplace=True)
             algo_scores["points"] += algo_scores["count"]
-            algo_scores.drop(columns=["count"], inplace=True)
+
+            if score_per_prob:
+                algo_scores.rename(columns={"count": problem}, inplace=True)
+            else:
+                algo_scores.drop(columns=["count"], inplace=True)
 
         return algo_scores
+
+    def write_ranking_csv(self: Experiment) -> None:
+        """Write a CSV file with the algorithm rankings.
+
+        The CSV contains the columns:
+        dimensions, budget, problem, algorithm, score
+        """
+        n_best = 25
+        col_names = ["dimensions", "budget", "problem", "algorithm", "points"]
+        all_scores = []
+
+        for budget in self.budgets:
+            ranks = []
+
+            for dims in self.dimensionalities:
+                ranks = self.rank_algorithms(
+                    dims, budget, n_best, score_per_prob=True)
+
+                for _, row in ranks.iterrows():
+                    row.drop("points", inplace=True)
+                    n_problems = (len(row) - 1)
+                    dim = [dims] * n_problems
+                    buds = [budget] * n_problems
+                    algo = [row["algorithm"]] * n_problems
+                    row.drop("algorithm", inplace=True)
+                    probs = [prob.name for prob in row.keys()]
+                    scores = list(map(int, row.values))
+                    algo_scores = pd.DataFrame(
+                        zip(dim, buds, probs, algo, scores),
+                        columns=col_names)
+                    all_scores.append(algo_scores)
+
+        csv = pd.concat(all_scores)
+        out_path = Path("csvs/scores.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        csv.to_csv(out_path, index=False)
+
+        return
 
     def get_ranking_matrix(self: Experiment) -> pd.DataFrame:
         """Get a matrix algorithm rankings for dimensionalities versus budget.
@@ -244,7 +289,8 @@ class Experiment:
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
-        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours, square=True)
+        ax = sns.heatmap(
+            best_matrix.replace(algo_to_int), cmap=colours, square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
@@ -301,7 +347,8 @@ class Experiment:
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
-        ax = sns.heatmap(best_matrix.replace(algo_to_int), cmap=colours, square=True)
+        ax = sns.heatmap(
+            best_matrix.replace(algo_to_int), cmap=colours, square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
