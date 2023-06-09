@@ -583,15 +583,18 @@ class NGOptChoice:
 
     def get_ngopt_choice(self: NGOptChoice,
                          dims: int,
-                         budget: int) -> str:
+                         budget: int,
+                         short_name: bool = True) -> str:
         """Return the algorithm NGOpt chose for a dimensionality and budget.
 
         Args:
             dims: Dimensionality of the search space (number of variables).
             budget: The evaluation budget for which to get the NGOpt choice.
+            short_name: Flag whether to return algorithm names in short form
+                or not.
 
         Returns:
-            The short name of the algorithm NGOpt chose.
+            The name of the algorithm NGOpt chose.
         """
         # Take the right dimensionality and remove too large budgets
         relevant_rows = self.ngopt_choices.loc[
@@ -605,20 +608,26 @@ class NGOptChoice:
         # Retrieve the algorithm name
         algo_name = right_row.values[0][0]
 
-        return Algorithm(algo_name).name_short
+        if short_name:
+            return Algorithm(algo_name).name_short
+        else:
+            return algo_name
 
     def get_ngopt_choices(self: NGOptChoice,
                           dimensionalities: list[int],
-                          budgets: list[int]) -> pd.DataFrame:
+                          budgets: list[int],
+                          short_name: bool = True) -> pd.DataFrame:
         """Return NGOpt's choices for given dimensionalities and budgets.
 
         Args:
             dimensionalities: Dimensionalities of the search space (number of
                 variables).
             budget: The evaluation budgets for which to get the NGOpt choices.
+            short_name: Flag whether to return algorithm names in short form
+                or not.
 
         Returns:
-            The short names of the algorithms NGOpt chose in DataFrame with
+            The names of the algorithms NGOpt chose in a DataFrame with
             dimensionalities as rows and budgets as columns.
         """
         algo_matrix = pd.DataFrame()
@@ -627,13 +636,45 @@ class NGOptChoice:
             algos = []
 
             for dims in dimensionalities:
-                algos.append(self.get_ngopt_choice(dims, budget))
+                algos.append(self.get_ngopt_choice(dims, budget, short_name))
 
             algo_matrix[budget] = algos
 
         algo_matrix.index = dimensionalities
 
         return algo_matrix
+
+    def write_ngopt_choices_csv(self: NGOptChoice,
+                                dimensionalities: list[int],
+                                budgets: list[int]) -> None:
+        """Write NGOpt's choices to CSV for given dimensionalities and budgets.
+
+        The CSV file contains the columns: dimensions, budget, algorithm.
+
+        Args:
+            dimensionalities: Dimensionalities of the search space (number of
+                variables).
+            budget: The evaluation budgets for which to get the NGOpt choices.
+        """
+        all_choices = []
+        col_names = ["dimensions", "budget", "algorithm"]
+        algo_matrix = self.get_ngopt_choices(dimensionalities, budgets,
+                                             short_name=False)
+
+        for dims, row in algo_matrix.iterrows():
+            n_buds = len(row)
+            dim = [dims] * n_buds
+            algos = list(map(str, row.values))
+            algo_choices = pd.DataFrame(
+                zip(dim, budgets, algos), columns=col_names)
+            all_choices.append(algo_choices)
+
+        csv = pd.concat(all_choices)
+        out_path = Path("csvs/ngopt_choices.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        csv.to_csv(out_path, index=False)
+
+        return
 
 
 class Algorithm:
