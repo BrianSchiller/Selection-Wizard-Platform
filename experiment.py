@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import statistics
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -146,6 +148,37 @@ class Experiment:
                 algo_scores.drop(columns=["count"], inplace=True)
 
         return algo_scores
+
+    def write_medians_csv(self: Experiment) -> None:
+        """Write a CSV file with the medians per algorithm.
+
+        The CSV contains the columns:
+        dimensions, budget, problem, algorithm, median
+        """
+        col_names = ["dimensions", "budget", "problem", "algorithm", "median"]
+        all_medians = []
+
+        for budget in self.budgets:
+            for dims in self.dimensionalities:
+                for problem in self.problems:
+                    medians = self.get_medians_of_prob(problem, budget, dims)
+
+                    n_algos = len(self.algorithms)
+                    dim = [dims] * n_algos
+                    buds = [budget] * n_algos
+                    probs = [problem.name] * n_algos
+                    algos = medians["algorithm"].tolist()
+                    meds = medians["median"].tolist()
+                    prob_meds = pd.DataFrame(
+                        zip(dim, buds, probs, algos, meds), columns=col_names)
+                    all_medians.append(prob_meds)
+
+        csv = pd.concat(all_medians)
+        out_path = Path("csvs/medians.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        csv.to_csv(out_path, index=False)
+
+        return
 
     def write_ranking_csv(self: Experiment) -> None:
         """Write a CSV file with the algorithm rankings.
@@ -489,6 +522,42 @@ class Experiment:
         out_path = Path("plots/bar/test.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
+
+    def get_medians_of_prob(self: Experiment,
+                            problem: Problem,
+                            budget: int,
+                            dims: int) -> pd.DataFrame:
+        """Return the median per algorithm for a problem-dimension-budget set.
+
+        Args:
+            problem: A Problem object for which to get the data.
+            budget: int indicating for which number of evaluations to rank the
+                algorithms.
+            dims: int indicating the dimensionality for which to get the data.
+
+        Returns:
+            DataFrame with a row per algorithm with name and median
+                performance.
+        """
+        algorithms = []
+        medians = []
+
+        # Retrieve median performance per algorithm, counting succesful
+        # runs only.
+        for algorithm in self.algorithms:
+            scenario = self.prob_scenarios[problem][algorithm][dims]
+            algorithms.extend([scenario.algorithm.name_short])
+            runs = [run.get_performance(budget) for run in scenario.runs
+                    if run.status == 1]
+            meds = statistics.median(runs)
+            medians.append(meds)
+
+        # Create a DataFrame from the lists
+        algo_med = pd.DataFrame({
+            "algorithm": algorithms,
+            "median": medians})
+
+        return algo_med
 
     def get_best_runs_of_prob(self: Experiment,
                               problem: Problem,
