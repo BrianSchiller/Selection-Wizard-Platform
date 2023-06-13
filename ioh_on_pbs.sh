@@ -16,10 +16,12 @@
 #PBS -N ar4opt
 
 # Job array from 0 to 1, in steps of 1
-# For MeSU-Beta
+# For MeSU-Beta to run main experiment:
 # First 0-467
 # Second 468-935
-#PBS -J 0-935:1
+# PBS -J 0-935:1 # Remove space before hash to run
+# To run NGOpt choices:
+#PBS -J 0-271:1
 
 # Load modules
 #. /etc/profile.d/modules.sh
@@ -46,11 +48,15 @@ mkdir $PBS_ARRAY_INDEX
 # Copy input files to scratch
 cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 cp $PBS_O_WORKDIR/constants.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
+cp -r $PBS_O_WORKDIR/csvs/ $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX # For NGOpt choices
 
 # Execute
 cd $PBS_ARRAY_INDEX
 
-python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX 1> test.out 2> test.err
+# To run the main experiment:
+#python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX 1> test.out 2> test.err
+# To run NGOpt choices:
+python3 ioh_ng_real.py --pbs-index-ngopt $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 
