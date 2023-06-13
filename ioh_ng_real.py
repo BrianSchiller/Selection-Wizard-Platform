@@ -6,6 +6,7 @@ import math
 import sys
 
 import numpy as np
+import pandas as pd
 
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
@@ -94,7 +95,7 @@ def run_algos(algorithms: list[str],
     """Run the given algorithms on the given problem set.
 
     Args:
-        algorithms: list of names of algorithm to run.
+        algorithms: list of names of algorithms to run.
         problems: list of problem IDs (int) to run the algorithms on.
         eval_budget: int with the evaluation budget per run.
         dimensionalities: list of dimensionalities (int) to run per problem.
@@ -120,16 +121,40 @@ def run_algos(algorithms: list[str],
                                                dimension=dimension,
                                                problem_class=problem_class)
                     function.attach_logger(logger)
+
                     for seed in range(1, n_repetitions + 1):
                         algorithm(function, seed)
                         function.reset()
+
         logger.close()
 
     return
 
 
+def pbs_index_to_args_ngopt(index: int) -> (int, int, str):
+    """Convert a PBS index to a dimension, budget and algorithm combination.
+
+    Args:
+        index: The index of the PBS job to run. This should be in [0,272).
+
+    Returns:
+        An int with the dimensionality.
+        An int with the budget.
+        A str with the algorithm name.
+    """
+    csv_path = "csvs/ngopt_choices.csv"
+    run_settings = pd.read_csv(csv_path)
+
+    dimensionality = run_settings.at[index, "dimensions"]
+    budget = run_settings.at[index, "budget"]
+    algo_id = run_settings.at[index, "algorithm"]
+    algorithm = const.ALGS_CONSIDERED[algo_id]
+
+    return dimensionality, budget, algorithm
+
+
 def pbs_index_to_args_all_dims(index: int) -> (str, int):
-    """Convert a PBS index to algorithm and problem combination.
+    """Convert a PBS index to an algorithm and problem combination.
 
     Args:
         index: The index of the PBS job to run. This should be in [0,936).
@@ -198,7 +223,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pbs-index-all-dims",
         type=int,
-        help="PBS index to convert to algorithm, dimension, and problem IDs.")
+        help="PBS index to convert to algorithm and problem IDs.")
+    parser.add_argument(
+        "--pbs-index-ngopt",
+        type=int,
+        help="PBS index to convert to dimensionality, budget, and algorithm.")
 
     args = parser.parse_args()
 
@@ -208,6 +237,11 @@ if __name__ == "__main__":
         run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
                   const.DIMS_CONSIDERED,
                   DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    elif args.pbs_index_ngopt is not None:
+        dimensionality, budget, algorithm = (
+            pbs_index_to_args_ngopt(args.pbs_index_ngopt))
+        run_algos([algorithm], const.PROBS_CONSIDERED, budget,
+                  [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,

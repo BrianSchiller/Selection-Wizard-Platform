@@ -677,6 +677,11 @@ class NGOptChoice:
         # Retrieve the algorithm name
         algo_name = right_row.values[0][0]
 
+        # Remove class coding from NGOpt versions
+        algo_name = algo_name.replace(
+            "<class 'nevergrad.optimization.optimizerlib.", "")
+        algo_name = algo_name.replace("'>", "")
+
         if short_name:
             return Algorithm(algo_name).name_short
         else:
@@ -733,7 +738,7 @@ class NGOptChoice:
         for dims, row in algo_matrix.iterrows():
             n_buds = len(row)
             dim = [dims] * n_buds
-            algos = list(map(str, row.values))
+            algos = [Algorithm(algo).id for algo in row.values]
             algo_choices = pd.DataFrame(
                 zip(dim, budgets, algos), columns=col_names)
             all_choices.append(algo_choices)
@@ -758,6 +763,7 @@ class Algorithm:
         """
         self.name = name
         self.name_short = self.get_short_algo_name()
+        self.id = const.ALGS_CONSIDERED.index(self.name)
 
         return
 
