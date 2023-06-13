@@ -720,7 +720,8 @@ class NGOptChoice:
 
     def write_ngopt_choices_csv(self: NGOptChoice,
                                 dimensionalities: list[int],
-                                budgets: list[int]) -> None:
+                                budgets: list[int],
+                                file_name: str = "ngopt_choices") -> None:
         """Write NGOpt's choices to CSV for given dimensionalities and budgets.
 
         The CSV file contains the columns: dimensions, budget, algorithm.
@@ -729,6 +730,8 @@ class NGOptChoice:
             dimensionalities: Dimensionalities of the search space (number of
                 variables).
             budget: The evaluation budgets for which to get the NGOpt choices.
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
         """
         all_choices = []
         col_names = ["dimensions", "budget", "algorithm"]
@@ -744,7 +747,7 @@ class NGOptChoice:
             all_choices.append(algo_choices)
 
         csv = pd.concat(all_choices)
-        out_path = Path("csvs/ngopt_choices.csv")
+        out_path = Path(f"csvs/{file_name}.csv")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         csv.to_csv(out_path, index=False)
 
