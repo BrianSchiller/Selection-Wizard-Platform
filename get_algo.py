@@ -16,6 +16,7 @@ class NGOptVersion(str, Enum):
 
     NGOpt8 = "NGOpt8"
     NGOpt15 = "NGOpt15"
+    NGOpt16 = "NGOpt16"
     NGOpt21 = "NGOpt21"
     NGOpt36 = "NGOpt36"
     NGOpt39 = "NGOpt39"
@@ -38,6 +39,12 @@ def get_optimiser(params: Array, budget: int, workers: int,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt21:
         optimiser = ng.optimizers.NGOpt21(
+            parametrization=(
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+            budget=eval_budget,
+            num_workers=n_workers)
+    elif ngopt == NGOptVersion.NGOpt16:
+        optimiser = ng.optimizers.NGOpt16(
             parametrization=(
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
             budget=eval_budget,
@@ -79,6 +86,11 @@ def get_algorithm_for_ngopt(algorithm: Optimizer) -> Optimizer:
             params, eval_budget, n_workers, NGOptVersion.NGOpt21)
         algorithm = optimiser._select_optimizer_cls()
 
+    if algorithm is ng.optimization.optimizerlib.NGOpt16:
+        optimiser = get_optimiser(
+            params, eval_budget, n_workers, NGOptVersion.NGOpt16)
+        algorithm = optimiser._select_optimizer_cls()
+
     if algorithm is ng.optimization.optimizerlib.NGOpt15:
         optimiser = get_optimiser(
             params, eval_budget, n_workers, NGOptVersion.NGOpt15)
@@ -114,7 +126,8 @@ print("fully_continuous", optimiser.fully_continuous)
 print("fully_bounded", ng.parametrization.parameter.helpers.Normalizer(
     optimiser.parametrization).fully_bounded)
 
-print("Algorithm, dimensionality, evaluation budget")
+#print("Algorithm, dimensionality, evaluation budget")
+print("Algorithm#dimensionality#evaluation budget")
 
 for n_dimensions in range(n_dims_min, n_dims_max + 1):
     for eval_budget in range(eval_budget_min, eval_budget_max + 1):
@@ -126,5 +139,6 @@ for n_dimensions in range(n_dims_min, n_dims_max + 1):
 #        algorithm = short_name(algorithm)
 
         if str(algorithm) != latest_algortihm:
-            print(algorithm, n_dimensions, eval_budget)
+#            print(algorithm, n_dimensions, eval_budget)
+            print(f"{algorithm}#{n_dimensions}#{eval_budget}")
             latest_algortihm = str(algorithm)
