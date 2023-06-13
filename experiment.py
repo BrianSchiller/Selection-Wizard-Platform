@@ -678,14 +678,29 @@ class NGOptChoice:
         algo_name = right_row.values[0][0]
 
         # Remove class coding from NGOpt versions
-        algo_name = algo_name.replace(
-            "<class 'nevergrad.optimization.optimizerlib.", "")
-        algo_name = algo_name.replace("'>", "")
+        algo_name = self._remove_algo_class_coding(algo_name)
 
         if short_name:
             return Algorithm(algo_name).name_short
         else:
             return algo_name
+
+    def _remove_algo_class_coding(self: NGOptChoice,
+                                  algo_name: str) -> str:
+        """Return the algorithm name without class coding.
+
+        Args:
+            algo_name: Name of the algorithm.
+
+        Returns:
+            Name of the algorithm without class coding. If there is no class
+            coding in the name, this is equivalent to the input.
+        """
+        algo_name = algo_name.replace(
+            "<class 'nevergrad.optimization.optimizerlib.", "")
+        algo_name = algo_name.replace("'>", "")
+
+        return algo_name
 
     def get_ngopt_choices(self: NGOptChoice,
                           dimensionalities: list[int],
@@ -717,6 +732,34 @@ class NGOptChoice:
         algo_matrix.index = dimensionalities
 
         return algo_matrix
+
+    def write_unique_ngopt_algos_csv(self: NGOptChoice,
+                                     file_name: str = "ngopt_algos") -> None:
+        """Write unique NGOpt choices to CSV for all dimensionalities, budgets.
+
+        The CSV file contains the columns: short name, full name, ID.
+
+        Args:
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
+        """
+        algo_names = set(self.ngopt_choices["algorithm"].values)
+        algo_names = [
+            self._remove_algo_class_coding(name) for name in algo_names]
+        col_names = ["ID", "short name", "full name"]
+        algos = [Algorithm(algo) for algo in algo_names]
+        algo_short_names = [algo.name_short for algo in algos]
+        algo_ids = [algo.id for algo in algos]
+
+        unique_algos = pd.DataFrame(
+            zip(algo_ids, algo_short_names, algo_names), columns=col_names)
+        unique_algos.sort_values("ID", inplace=True)
+
+        out_path = Path(f"csvs/{file_name}.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        unique_algos.to_csv(out_path, index=False)
+
+        return
 
     def write_ngopt_choices_csv(self: NGOptChoice,
                                 dimensionalities: list[int],
