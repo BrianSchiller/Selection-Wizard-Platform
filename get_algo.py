@@ -114,7 +114,7 @@ n_workers = 1
 n_dims_min = 1
 n_dims_max = 100
 eval_budget_min = 1
-eval_budget_max = 10000
+eval_budget_max = const.EVAL_BUDGET
 
 # Print derived problem properties
 optimiser = ng.optimizers.NGOpt39(
