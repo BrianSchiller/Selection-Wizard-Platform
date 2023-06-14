@@ -19,7 +19,8 @@ class Experiment:
 
     def __init__(self: Experiment,
                  data_dir: Path,
-                 dimensionalities: list[int] = const.DIMS_CONSIDERED) -> None:
+                 dimensionalities: list[int] = const.DIMS_CONSIDERED,
+                 ng_version: str = "0.6.0") -> None:
         """Initialise the Experiment.
 
         Args:
@@ -46,7 +47,14 @@ class Experiment:
                                       const.PROBS_CONSIDERED):
             self.problems.append(Problem(prob_name, prob_id))
 
-        for algo_name in const.ALGS_CONSIDERED:
+        if ng_version == "0.5.0":
+             algo_names = [
+                const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_5_0]
+        elif ng_version == "0.6.0":
+            algo_names = [
+                const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+
+        for algo_name in algo_names:
             self.algorithms.append(Algorithm(algo_name))
 
         self.load_data()
@@ -149,11 +157,16 @@ class Experiment:
 
         return algo_scores
 
-    def write_medians_csv(self: Experiment) -> None:
+    def write_medians_csv(self: Experiment,
+                          file_name: str = "medians") -> None:
         """Write a CSV file with the medians per algorithm.
 
         The CSV contains the columns:
         dimensions, budget, problem, algorithm, median
+
+        Args:
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
         """
         col_names = ["dimensions", "budget", "problem", "algorithm", "median"]
         all_medians = []
@@ -174,17 +187,22 @@ class Experiment:
                     all_medians.append(prob_meds)
 
         csv = pd.concat(all_medians)
-        out_path = Path("csvs/medians.csv")
+        out_path = Path(f"csvs/{file_name}.csv")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         csv.to_csv(out_path, index=False)
 
         return
 
-    def write_ranking_csv(self: Experiment) -> None:
+    def write_ranking_csv(self: Experiment,
+                          file_name: str = "scores") -> None:
         """Write a CSV file with the algorithm rankings.
 
         The CSV contains the columns:
         dimensions, budget, problem, algorithm, score
+
+        Args:
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
         """
         n_best = 25
         col_names = ["dimensions", "budget", "problem", "algorithm", "points"]
@@ -212,7 +230,7 @@ class Experiment:
                     all_scores.append(algo_scores)
 
         csv = pd.concat(all_scores)
-        out_path = Path("csvs/scores.csv")
+        out_path = Path(f"csvs/{file_name}.csv")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         csv.to_csv(out_path, index=False)
 
@@ -289,7 +307,8 @@ class Experiment:
         return best_matrix
 
     def plot_heatmap_ngopt(self: Experiment,
-                           ngopt: NGOptChoice) -> None:
+                           ngopt: NGOptChoice,
+                           file_name: str = "grid_ngopt") -> None:
         """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
         In case of a tie, if one of the top ranking algorithms matches with the
@@ -299,6 +318,8 @@ class Experiment:
         Args:
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
+            file_name: Name of the file to write to. Will be written in the
+                plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         """
         ngopt_algos = [
             ngopt.get_ngopt_choice(dims, bud)
@@ -340,13 +361,15 @@ class Experiment:
         # Plot and save the figure
         plt.tight_layout()
         plt.show()
-        out_path = Path(f"plots/heatmap/grid_ngopt_d{self.dim_multiplier}.pdf")
+        out_path = Path(
+            f"plots/heatmap/{file_name}_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
 
     def plot_heatmap_data(self: Experiment,
                           algo_matrix: pd.DataFrame,
-                          ngopt: NGOptChoice) -> None:
+                          ngopt: NGOptChoice,
+                          file_name: str = "grid_data") -> None:
         """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
         In case of a tie, if one of the top ranking algorithms matches with the
@@ -360,6 +383,8 @@ class Experiment:
                 columns: algorithm, points
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
+            file_name: Name of the file to write to. Will be written in the
+                plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         """
         best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
 
@@ -398,13 +423,15 @@ class Experiment:
         # Plot and save the figure
         plt.tight_layout()
         plt.show()
-        out_path = Path(f"plots/heatmap/grid_data_d{self.dim_multiplier}.pdf")
+        out_path = Path(
+            f"plots/heatmap/{file_name}_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
 
     def plot_hist_grid(self: Experiment,
                        algo_matrix: pd.DataFrame,
-                       ngopt: NGOptChoice) -> None:
+                       ngopt: NGOptChoice,
+                       file_name: str = "grid") -> None:
         """Plot a grid of histograms showing algorithm scores.
 
         Args:
@@ -414,6 +441,8 @@ class Experiment:
                 columns: algorithm, points
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
+            file_name: Name of the file to write to. Will be written in the
+                plots/bar/ directory with a _d{multiplier}.pdf extension.
         """
         top_n = 5
         top_algos = set()
@@ -463,7 +492,7 @@ class Experiment:
         print(*top_algos, sep="\n")
 
         plt.show()
-        out_path = Path(f"plots/bar/grid_d{self.dim_multiplier}.pdf")
+        out_path = Path(f"plots/bar/{file_name}_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path, facecolor=fig.get_facecolor())
 

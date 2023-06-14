@@ -451,12 +451,6 @@ def plot_median(func_algo_runs: list[list[pd.DataFrame]],
 
 
 if __name__ == "__main__":
-    DEFAULT_EVAL_BUDGET = 10000
-    DEFAULT_N_REPETITIONS = 25
-    DEFAULT_DIMS = [4, 5]
-    DEFAULT_PROBLEMS = list(range(1, 3))
-    DEFAULT_INSTANCES = [1]
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
@@ -468,10 +462,29 @@ if __name__ == "__main__":
 
     # read_ioh_results(args.data_dir, verbose = False)
 
-    hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator.hsv")
+    nevergrad_version = "0.6.0"
+    hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
+                    f"{nevergrad_version}.hsv")
     ngopt = NGOptChoice(hsv_file)
-#    exp = Experiment(args.data_dir)
-    exp = Experiment(args.data_dir, dimensionalities=[10,35])
+    # Look at all dimensions, but exclude the largest budget (10000) because
+    # it was already included in the original experiments.
+#    budgets = [dims * 100 for dims in const.DIMS_CONSIDERED if dims < 100]
+#    file_name = f"ngopt_choices_{nevergrad_version}"
+#    ngopt.write_ngopt_choices_csv(const.DIMS_CONSIDERED, budgets, file_name)
+    file_name = f"ngopt_algos_{nevergrad_version}"
+    ngopt.write_unique_ngopt_algos_csv(file_name)
+    exp = Experiment(args.data_dir, ng_version=nevergrad_version)
+#    exp = Experiment(args.data_dir, dimensionalities=[10,35],
+#                     ng_version=nevergrad_version)
+    file_name = f"medians_{nevergrad_version}"
+    exp.write_medians_csv(file_name)
+    file_name = f"scores_{nevergrad_version}"
+    exp.write_ranking_csv(file_name)
     matrix = exp.get_ranking_matrix()
-    #exp.plot_hist_grid(matrix, ngopt)
-    exp.plot_heatmap_data(matrix, ngopt)
+    file_name = f"grid_{nevergrad_version}"
+    exp.plot_hist_grid(matrix, ngopt, file_name)
+    file_name = f"grid_data_{nevergrad_version}"
+    exp.plot_heatmap_data(matrix, ngopt, file_name)
+#    exp.plot_heatmap_ngopt(ngopt)
+#    print("Relevant algorithms:")
+#    print(*exp.get_relevant_ngopt_algos(ngopt), sep="\n")
