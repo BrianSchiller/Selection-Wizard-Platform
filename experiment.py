@@ -9,7 +9,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import colorcet as cc
 
 import constants as const
 
@@ -48,7 +47,7 @@ class Experiment:
             self.problems.append(Problem(prob_name, prob_id))
 
         if ng_version == "0.5.0":
-             algo_names = [
+            algo_names = [
                 const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_5_0]
         elif ng_version == "0.6.0":
             algo_names = [
@@ -325,26 +324,25 @@ class Experiment:
             ngopt.get_ngopt_choice(dims, bud)
             for dims in self.dimensionalities for bud in self.budgets]
         algorithms = [algo.name_short for algo in self.algorithms]
-        algorithms.sort()
+        algo_ids = [algo.id for algo in self.algorithms]
         best_matrix = ngopt.get_ngopt_choices(
             self.dimensionalities, self.budgets)
 
         # Get indices for algorithms relevant for the plot
-        ids_in_plot = [idx for idx, algo in enumerate(algorithms)
+        ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
                        if algo in ngopt_algos]
+        algos_in_plot = [algo for algo in algorithms if algo in ngopt_algos]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i in ids_in_plot]
 
         # Dict mapping short names to ints, reduce to relevant algorithms
-        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
-        algo_to_int = {algorithms[idx]: i for i, idx in enumerate(ids_in_plot)}
-
-        # Map algorithm names to colours and take the relevant colours
-        colours = sns.color_palette(cc.glasbey, len(algorithms))
-        colours = [colours[i] for i in ids_in_plot]
+        algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
-            best_matrix.replace(algo_to_int), cmap=colours, square=True)
+            best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+            square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
@@ -388,25 +386,25 @@ class Experiment:
         """
         best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
 
-        algorithms = list(algo_matrix.values[0][0]["algorithm"])
-        algorithms.sort()
+        algorithms = [algo.name_short for algo in self.algorithms]
+        algo_ids = [algo.id for algo in self.algorithms]
+        best_algos = best_matrix.values.flatten().tolist()
 
         # Get indices for algorithms relevant for the plot
-        ids_in_plot = [idx for idx, algo in enumerate(algorithms)
-                       if algo in best_matrix.values.flatten().tolist()]
+        ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+                       if algo in best_algos]
+        algos_in_plot = [algo for algo in algorithms if algo in best_algos]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i in ids_in_plot]
 
-        # Dict mapping short names to ints, reduce to relevant algorithms
-        algo_to_int = {algo: i for i, algo in enumerate(algorithms)}
-        algo_to_int = {algorithms[idx]: i for i, idx in enumerate(ids_in_plot)}
-
-        # Map algorithm names to colours and take the relevant colours
-        colours = sns.color_palette(cc.glasbey, len(algorithms))
-        colours = [colours[i] for i in ids_in_plot]
+        # Dict mapping short names to ints
+        algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
-            best_matrix.replace(algo_to_int), cmap=colours, square=True)
+            best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+            square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
         ax.xaxis.set_label_position("top")
@@ -437,7 +435,7 @@ class Experiment:
         Args:
             algo_matrix: DataFrame with rows representing different
                 dimensionalities and columns representing different evaluation
-                budgets. Each cell with algorithm scores in a DataFrame with
+                budgets. Each cell with algorithm scores is a DataFrame with
                 columns: algorithm, points
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
@@ -446,19 +444,25 @@ class Experiment:
         """
         top_n = 5
         top_algos = set()
-        algorithms = list(algo_matrix.values[0][0]["algorithm"])
-        algorithms.sort()
-        colours = sns.color_palette("colorblind", len(algorithms))
-        palette = {algorithm: colour
-                   for algorithm, colour in zip(algorithms, colours)}
+
+        algorithms = [algo.name_short for algo in self.algorithms]
+        algo_ids = [algo.id for algo in self.algorithms]
+
+        # Get indices for algorithms relevant for the plot
+        algos_in_plot = [algo for algo in algorithms if
+                         algo in list(algo_matrix.values[0][0]["algorithm"])]
+        ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+                       if algo in algos_in_plot]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = {algo: colours[i]
+                           for algo, i in zip(algos_in_plot, ids_in_plot)}
 
         rows = len(self.dimensionalities)
         cols = len(self.budgets)
         fig, axs = plt.subplots(rows, cols, layout="constrained",
                                 figsize=(cols*7.4, rows*5.6), dpi=80)
-        bud_dims = [
-            (bud, dim) for dim in self.dimensionalities
-            for bud in self.budgets]
+        bud_dims = [(bud, dim) for dim in self.dimensionalities
+                    for bud in self.budgets]
 
         for bud_dim, ax in zip(bud_dims, axs.flatten()):
             ngopt_algo = ngopt.get_ngopt_choice(bud_dim[1], bud_dim[0])
@@ -470,7 +474,7 @@ class Experiment:
                         y="points",
                         hue="algorithm",
                         data=algo_scores,
-                        palette=palette,
+                        palette=colours_in_plot,
                         ax=ax)
 
             # Loop to show label for every bar
