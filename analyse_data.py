@@ -333,7 +333,7 @@ def rank_algorithms(data_dir: Path,
         best_algos = get_best_runs_of_prob(
             algo_runs, algo_names, budget, n_best)
 
-        # Count occurences of algorithm
+        # Count occurrences of algorithm
         algo_scores_for_prob = best_algos["algorithm"].value_counts()
 
         # Add counts to the scores
@@ -458,6 +458,12 @@ if __name__ == "__main__":
         default=argparse.SUPPRESS,
         type=Path,
         help="Directory to analyse.")
+    parser.add_argument(
+        "per_budget_data_dir",
+        default=None,
+        type=Path,
+        nargs="?",  # 0 or 1
+        help="Directory of budget specific data to analyse additionally.")
     args = parser.parse_args()
 
     # read_ioh_results(args.data_dir, verbose = False)
@@ -471,20 +477,24 @@ if __name__ == "__main__":
 #    budgets = [dims * 100 for dims in const.DIMS_CONSIDERED if dims < 100]
 #    file_name = f"ngopt_choices_{nevergrad_version}"
 #    ngopt.write_ngopt_choices_csv(const.DIMS_CONSIDERED, budgets, file_name)
-    file_name = f"ngopt_algos_{nevergrad_version}"
-    ngopt.write_unique_ngopt_algos_csv(file_name)
-    exp = Experiment(args.data_dir, ng_version=nevergrad_version)
-#    exp = Experiment(args.data_dir, dimensionalities=[10,35],
+##    file_name = f"ngopt_algos_{nevergrad_version}"
+##    ngopt.write_unique_ngopt_algos_csv(file_name)
+#    exp = Experiment(args.data_dir,
+#                     args.per_budget_data_dir,
 #                     ng_version=nevergrad_version)
-    file_name = f"medians_{nevergrad_version}"
-    exp.write_medians_csv(file_name)
-    file_name = f"scores_{nevergrad_version}"
-    exp.write_ranking_csv(file_name)
-    matrix = exp.get_ranking_matrix()
-    file_name = f"grid_{nevergrad_version}"
-    exp.plot_hist_grid(matrix, ngopt, file_name)
-    file_name = f"grid_data_{nevergrad_version}"
-    exp.plot_heatmap_data(matrix, ngopt, file_name)
+    exp = Experiment(args.data_dir,
+                     args.per_budget_data_dir,
+                     dimensionalities=[10,35],
+                     ng_version=nevergrad_version)
+##    file_name = f"medians_{nevergrad_version}"
+##    exp.write_medians_csv(file_name)
+##    file_name = f"scores_{nevergrad_version}"
+##    exp.write_ranking_csv(file_name)
+#    matrix = exp.get_ranking_matrix()
+#    file_name = f"grid_{nevergrad_version}"
+#    exp.plot_hist_grid(matrix, ngopt, file_name)
+#    file_name = f"grid_data_{nevergrad_version}"
+#    exp.plot_heatmap_data(matrix, ngopt, file_name)
 #    exp.plot_heatmap_ngopt(ngopt)
 #    print("Relevant algorithms:")
 #    print(*exp.get_relevant_ngopt_algos(ngopt), sep="\n")

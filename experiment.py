@@ -18,29 +18,41 @@ class Experiment:
 
     def __init__(self: Experiment,
                  data_dir: Path,
+                 per_budget_data_dir: Path = None,
                  dimensionalities: list[int] = const.DIMS_CONSIDERED,
                  ng_version: str = "0.6.0") -> None:
         """Initialise the Experiment.
 
         Args:
-            data_dir: Path to the data directory.
-                This directory should have subdirectories per problem, which in
+            data_dir: Path to the data directory. By default,
+                this directory should have subdirectories per problem, which in
                 turn should have subdirectories per algorithm, which should be
                 organised in IOH format. E.g. for directory data, algorithm
                 CMA, and problem f1_Sphere it should look like:
                 data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
                 data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+            per_budget_data_dir: If a per_budget_data_dir is provided, this
+                directory should have
+                subdirectories named by algorithm-dimensionality-budget. These
+                should each be organised in IOH format, and contain both a
+                .json and directory for each BBOB function, specific to the
+                dimensionality and budget combination for this subdirectory.
             dimensionalities (optional): List of ints indicating which
                 dimensionalities to handle for the Experiment.
+            ng_version: Version of Nevergrad. This influences which algorithms
+                are chosen by NGOpt, and therefore which algorithms are
+                included in the analysis.
         """
         self.data_dir = data_dir
         self.problems = []
         self.algorithms = []
         self.dimensionalities = dimensionalities
         self.prob_scenarios = {}
+        self.prob_scenarios_per_b = {}
         self.dim_multiplier = 100
         self.budgets = [
             dims * self.dim_multiplier for dims in self.dimensionalities]
+        self.per_budget_data_dir = per_budget_data_dir
 
         for prob_name, prob_id in zip(const.PROB_NAMES,
                                       const.PROBS_CONSIDERED):
@@ -56,7 +68,10 @@ class Experiment:
         for algo_name in algo_names:
             self.algorithms.append(Algorithm(algo_name))
 
-        self.load_data()
+#        self.load_data()
+
+        if per_budget_data_dir is not None:
+            self.load_per_budget_data()
 
         return
 
@@ -85,6 +100,43 @@ class Experiment:
 
             self.prob_scenarios[problem] = a_scenarios
 
+        return
+
+    def load_per_budget_data(self: Experiment) -> None:
+        """Read IOH results from a directory with data for multiple budgets."""
+        data_dirs = [child for child
+                     in self.per_budget_data_dir.iterdir() if child.is_dir()]
+
+        for data_dir in data_dirs:
+            algorithm, dims, budget = data_dir.stem.split("-")
+            # TODO: For all problems in data_dir:
+            self.prob_scenarios_per_b[problem][algorithm][dims][budget] = Scenario(...)
+            
+        for problem in self.problems:
+            a_scenarios = {}
+
+            for algorithm in self.algorithms:
+                d_scenarios = {}
+
+                for dims in self.dimensionalities:
+                    b_scenarios = {}
+
+                    # Skip the full budget since it is in the normal data
+                    for budget in self.budgets[:-1]:
+                        b_scenarios[budget] = Scenario(
+                            self.per_budget_data_dir,
+                            problem,
+                            algorithm,
+                            dims,
+                            const.RUNS_PER_SCENARIO,
+                            budget)
+
+                    d_scenarios[dims] = b_scenarios
+
+                a_scenarios[algorithm] = d_scenarios
+
+            self.prob_scenarios_per_b[problem] = a_scenarios
+        print("Done loading per budget data!")
         return
 
     def get_relevant_ngopt_algos(self: Experiment,
@@ -140,7 +192,7 @@ class Experiment:
             best_algos = self.get_best_runs_of_prob(
                 problem, budget, n_best, dims)
 
-            # Count occurences of algorithm
+            # Count occurrences of algorithm
             algo_scores_for_prob = best_algos["algorithm"].value_counts()
 
             # Add counts to the scores
@@ -575,7 +627,7 @@ class Experiment:
         algorithms = []
         medians = []
 
-        # Retrieve median performance per algorithm, counting succesful
+        # Retrieve median performance per algorithm, counting successful
         # runs only.
         for algorithm in self.algorithms:
             scenario = self.prob_scenarios[problem][algorithm][dims]
@@ -615,9 +667,13 @@ class Experiment:
         run_ids = []
         performances = []
 
-        # Retrieve performance and metadata per algorithm, counting succesful
+        # Retrieve performance and metadata per algorithm, counting successful
         # runs only.
         for algorithm in self.algorithms:
+            # TODO: For per budget data, we know for which algorithm we need to
+            # get data from a different source (based on NGOpt choice), so we
+            # can retrieve the budget specific data here instead of the full
+            # run (if flag for that is set / this data is provided).
             scenario = self.prob_scenarios[problem][algorithm][dims]
             n_runs_suc = sum(1 for run in scenario.runs if run.status == 1)
             algorithms.extend([scenario.algorithm.name_short] * n_runs_suc)
@@ -895,7 +951,7 @@ class Run:
                 4.6355715189945e-310.
             eval_ids: List of evaluation IDs where a performance improvement
                 was found during the run. The last evaluation is always
-                included for succesful runs (i.e., this ID should be equal to
+                included for successful runs (i.e., this ID should be equal to
                 expected_evals). Should be equal length to perf_vals.
             perf_vals: List of performance values matching the evaluation IDs
                 from the eval_ids variable. Should be equal length to eval_ids.
