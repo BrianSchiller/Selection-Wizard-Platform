@@ -26,4 +26,4 @@ exclude =
     data_*
     plots/
     csvs/
-    ng_issue_mwe/
+#    ng_issue_mwe/
