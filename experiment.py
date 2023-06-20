@@ -100,6 +100,8 @@ class Experiment:
 
             self.prob_scenarios[problem] = a_scenarios
 
+        print("Done loading data!")
+
         return
 
     def load_per_budget_data(self: Experiment) -> None:
@@ -108,35 +110,42 @@ class Experiment:
                      in self.per_budget_data_dir.iterdir() if child.is_dir()]
 
         for data_dir in data_dirs:
-            algorithm, dims, budget = data_dir.stem.split("-")
-            # TODO: For all problems in data_dir:
-            # self.prob_scenarios_per_b[problem][algorithm][dims][budget] = Scenario(...)  # noqa: E501
+            algo, dims, budget = data_dir.name.split("-")
+            dims = int(dims)
+            budget = int(budget)
 
-        for problem in self.problems:
-            a_scenarios = {}
+            # Get the matching algorithm object
+            algorithm = next(
+                a for a in self.algorithms if a.name_short == algo)
 
-            for algorithm in self.algorithms:
-                d_scenarios = {}
+            prob_dirs = [child for child
+                         in data_dir.iterdir() if child.is_dir()]
 
-                for dims in self.dimensionalities:
-                    b_scenarios = {}
+            for prob_dir in prob_dirs:
+                # Get the matching problem object
+                prob = prob_dir.name.removeprefix("data_")
+                problem = next(p for p in self.problems if p.name == prob)
 
-                    # Skip the full budget since it is in the normal data
-                    for budget in self.budgets[:-1]:
-                        b_scenarios[budget] = Scenario(
-                            self.per_budget_data_dir,
-                            problem,
-                            algorithm,
-                            dims,
-                            const.RUNS_PER_SCENARIO,
-                            budget)
+                # Create sub-dicts that don't exist yet
+                if problem not in self.prob_scenarios_per_b:
+                    self.prob_scenarios_per_b[problem] = {}
+                if algorithm not in self.prob_scenarios_per_b[problem]:
+                    self.prob_scenarios_per_b[problem][algorithm] = {}
+                if dims not in self.prob_scenarios_per_b[problem][algorithm]:
+                    self.prob_scenarios_per_b[problem][algorithm][dims] = {}
 
-                    d_scenarios[dims] = b_scenarios
+                self.prob_scenarios_per_b[problem][algorithm][dims][budget] = (
+                    Scenario(
+                        self.per_budget_data_dir,
+                        problem,
+                        algorithm,
+                        dims,
+                        const.RUNS_PER_SCENARIO,
+                        budget,
+                        per_budget=True))
 
-                a_scenarios[algorithm] = d_scenarios
-
-            self.prob_scenarios_per_b[problem] = a_scenarios
         print("Done loading per budget data!")
+
         return
 
     def get_relevant_ngopt_algos(self: Experiment,
@@ -1015,6 +1024,7 @@ class Scenario:
                  dims: int,
                  n_runs: int,
                  n_evals: int,
+                 per_budget: bool = False,
                  verbose: bool = False) -> None:
         """Initialise the Scenario.
 
@@ -1031,6 +1041,11 @@ class Scenario:
             dims: Dimensionality of the search space (number of variables).
             n_runs: Number of runs performed with these settings.
             n_evals: Number of evaluations per run.
+            per_budget: If set to True, treat data_dir as being organised with
+                subdirectories named by algorithm-dimensionality-budget. These
+                should each be organised in IOH format, and contain both a
+                .json and directory for each BBOB function, specific to the
+                dimensionality and budget combination for this subdirectory.
             verbose: If True print more detailed information.
         """
         self.data_dir = data_dir
@@ -1041,9 +1056,16 @@ class Scenario:
         self.n_evals = n_evals
         self.runs = []
 
-        json_file = Path(
-            f"{self.data_dir}/{self.problem.name}/{self.algorithm.name_short}/"
-            f"IOHprofiler_{self.problem.name}.json")
+        if per_budget:
+            json_file = Path(
+                f"{self.data_dir}/"
+                f"{self.algorithm.name_short}-{self.dims}-{self.n_evals}/"
+                f"IOHprofiler_{self.problem.name}.json")
+        else:
+            json_file = Path(
+                f"{self.data_dir}/{self.problem.name}/"
+                f"{self.algorithm.name_short}/"
+                f"IOHprofiler_{self.problem.name}.json")
         self._load_data(json_file)
 
     def _load_data(self: Scenario,
@@ -1109,6 +1131,9 @@ class Scenario:
                           f"dimensionality {self.dims}.")
 
                 break
+            else:
+                print(f"No dimension match, file has {scenario['dimension']}, "
+                      f"was looking for {self.dims}")
 
         # Check whether a path to the data was identified
         try:

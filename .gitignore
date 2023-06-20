@@ -1,10 +1,7 @@
 __pycache__/
 venv/
 OUTPUT/
-data_seeds/
-data_seeds2/
-data_seeds_organised/
-data_seeds2_organised/
+data_*/
 *.swp
 *.zip
 plotly*/
