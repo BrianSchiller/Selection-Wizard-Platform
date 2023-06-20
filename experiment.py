@@ -355,6 +355,7 @@ class Experiment:
                     algo_scores["points"] == algo_scores["points"].iloc[0]]
                 ngopt_algo = ngopt.get_ngopt_choice(dims, budget)
 
+                # Prefer the NGOptChoice in case of a tie
                 if ngopt_algo in algo_scores["algorithm"].values:
                     dims_best.append(ngopt_algo)
                 else:
@@ -678,12 +679,17 @@ class Experiment:
 
         # Retrieve performance and metadata per algorithm, counting successful
         # runs only.
-        for algorithm in self.algorithms:
-            # TODO: For per budget data, we know for which algorithm we need to
-            # get data from a different source (based on NGOpt choice), so we
-            # can retrieve the budget specific data here instead of the full
-            # run (if flag for that is set / this data is provided).
-            scenario = self.prob_scenarios[problem][algorithm][dims]
+        for algo in self.algorithms:
+            # If we have per budget data and the algorithm is the NGOpt choice,
+            # we use the budget specific data here instead of the full run
+            # If prob_scenarios_per_b key exists, this is the case
+            # TODO: Reimplement in a nice way
+            try:
+                scenario = (
+                    self.prob_scenarios_per_b[problem][algo][dims][budget])
+            except KeyError:
+                scenario = self.prob_scenarios[problem][algo][dims]
+
             n_runs_suc = sum(1 for run in scenario.runs if run.status == 1)
             algorithms.extend([scenario.algorithm.name_short] * n_runs_suc)
             run_ids.extend(
@@ -1131,7 +1137,7 @@ class Scenario:
                           f"dimensionality {self.dims}.")
 
                 break
-            else:
+            elif verbose:
                 print(f"No dimension match, file has {scenario['dimension']}, "
                       f"was looking for {self.dims}")
 
