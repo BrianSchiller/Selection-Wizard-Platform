@@ -110,8 +110,8 @@ class Experiment:
         for data_dir in data_dirs:
             algorithm, dims, budget = data_dir.stem.split("-")
             # TODO: For all problems in data_dir:
-            self.prob_scenarios_per_b[problem][algorithm][dims][budget] = Scenario(...)
-            
+            # self.prob_scenarios_per_b[problem][algorithm][dims][budget] = Scenario(...)  # noqa: E501
+
         for problem in self.problems:
             a_scenarios = {}
 

@@ -23,3 +23,7 @@ hang-closing = True
 
 exclude =
     venv/,
+    data_*
+    plots/
+    csvs/
+    ng_issue_mwe/

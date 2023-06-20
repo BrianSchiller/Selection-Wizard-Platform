@@ -10,6 +10,8 @@ from nevergrad.optimization.optimizerlib import NGOpt
 from nevergrad.optimization.optimizerlib import ConfPortfolio
 from nevergrad.parametrization.data import Array
 
+import constants as const
+
 
 class NGOptVersion(str, Enum):
     """Enum with different NGOpt versions."""
@@ -126,7 +128,7 @@ print("fully_continuous", optimiser.fully_continuous)
 print("fully_bounded", ng.parametrization.parameter.helpers.Normalizer(
     optimiser.parametrization).fully_bounded)
 
-#print("Algorithm, dimensionality, evaluation budget")
+# print("Algorithm, dimensionality, evaluation budget")
 print("Algorithm#dimensionality#evaluation budget")
 
 for n_dimensions in range(n_dims_min, n_dims_max + 1):
@@ -139,6 +141,6 @@ for n_dimensions in range(n_dims_min, n_dims_max + 1):
 #        algorithm = short_name(algorithm)
 
         if str(algorithm) != latest_algortihm:
-#            print(algorithm, n_dimensions, eval_budget)
+            # print(algorithm, n_dimensions, eval_budget)
             print(f"{algorithm}#{n_dimensions}#{eval_budget}")
             latest_algortihm = str(algorithm)
