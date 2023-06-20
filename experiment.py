@@ -68,9 +68,9 @@ class Experiment:
         for algo_name in algo_names:
             self.algorithms.append(Algorithm(algo_name))
 
-#        self.load_data()
+        self.load_data()
 
-        if per_budget_data_dir is not None:
+        if self.per_budget_data_dir is not None:
             self.load_per_budget_data()
 
         return
