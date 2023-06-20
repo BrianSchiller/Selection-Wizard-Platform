@@ -30,7 +30,7 @@ def move_per_dim_bud(algo_dirs: list[Path]) -> None:
         bud = metadata["scenarios"][0]["runs"][0]["evals"]
 
         # Copy dir to new location
-        algo_name = algo_dir.stem
+        algo_name = algo_dir.name
         destination = Path(f"{algo_name}-{dims}-{bud}")
         shutil.copytree(algo_dir, destination)
 
