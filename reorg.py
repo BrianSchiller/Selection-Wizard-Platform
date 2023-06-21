@@ -66,7 +66,7 @@ def move_per_function(algo_dirs: list[Path]) -> None:
         print(f"Copy {name} to {destination}")
         print(f"From: {algo_dir}")
 
-        return
+    return
 
 
 if __name__ == "__main__":
