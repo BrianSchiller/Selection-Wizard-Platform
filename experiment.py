@@ -174,7 +174,8 @@ class Experiment:
                         dims: int,
                         budget: int,
                         n_best: int,
-                        score_per_prob: bool = False) -> pd.DataFrame:
+                        score_per_prob: bool = False,
+                        ngopt: NGOptChoice = None) -> pd.DataFrame:
         """Rank algorithms based on their performance over multiple problems.
 
         Args:
@@ -184,6 +185,8 @@ class Experiment:
             n_best: int indicating the top how many runs to look for.
             score_per_prob: If True include a column per problem with the score
                 on that problem.
+            ngopt: Instance of NGOptChoice to enable retrieving budget specific
+                data for the algorithm choice of NGOpt, if available.
 
         Returns:
             DataFrame with columns: algorithm, points. The algorithm column
@@ -199,7 +202,7 @@ class Experiment:
 
         for problem in self.problems:
             best_algos = self.get_best_runs_of_prob(
-                problem, budget, n_best, dims)
+                problem, budget, n_best, dims, ngopt=ngopt)
 
             # Count occurrences of algorithm
             algo_scores_for_prob = best_algos["algorithm"].value_counts()
@@ -296,8 +299,13 @@ class Experiment:
 
         return
 
-    def get_ranking_matrix(self: Experiment) -> pd.DataFrame:
+    def get_ranking_matrix(self: Experiment,
+                           ngopt: NGOptChoice = None) -> pd.DataFrame:
         """Get a matrix algorithm rankings for dimensionalities versus budget.
+
+        Args:
+            ngopt: Instance of NGOptChoice to enable retrieving budget specific
+                data for the algorithm choice of NGOpt, if available.
 
         Returns:
             DataFrame with rows representing different dimensionalities and
@@ -310,7 +318,8 @@ class Experiment:
             ranks = []
 
             for dims in self.dimensionalities:
-                ranks.append(self.rank_algorithms(dims, budget, n_best))
+                ranks.append(
+                    self.rank_algorithms(dims, budget, n_best, ngopt=ngopt))
 
             algo_matrix[budget] = ranks
 
@@ -658,7 +667,8 @@ class Experiment:
                               problem: Problem,
                               budget: int,
                               n_best: int,
-                              dims: int) -> pd.DataFrame:
+                              dims: int,
+                              ngopt: NGOptChoice = None) -> pd.DataFrame:
         """Return the n best runs for a problem, dimension, budget combination.
 
         Args:
@@ -667,6 +677,8 @@ class Experiment:
                 algorithms.
             n_best: int indicating the top how many runs to look for.
             dims: int indicating the dimensionality for which to get the data.
+            ngopt: Instance of NGOptChoice to enable retrieving budget specific
+                data for the algorithm choice of NGOpt, if available.
 
         Returns:
             DataFrame with n_best rows of algorithm, run ID, and performance.
@@ -682,12 +694,13 @@ class Experiment:
         for algo in self.algorithms:
             # If we have per budget data and the algorithm is the NGOpt choice,
             # we use the budget specific data here instead of the full run
-            # If prob_scenarios_per_b key exists, this is the case
-            # TODO: Reimplement in a nice way
-            try:
+            if (self.per_budget_data_dir is not None
+                    and ngopt is not None
+                    and budget < const.EVAL_BUDGET and
+                    ngopt.get_ngopt_choice(dims, budget) == algo.name_short):
                 scenario = (
                     self.prob_scenarios_per_b[problem][algo][dims][budget])
-            except KeyError:
+            else:
                 scenario = self.prob_scenarios[problem][algo][dims]
 
             n_runs_suc = sum(1 for run in scenario.runs if run.status == 1)
