@@ -131,8 +131,48 @@ def run_algos(algorithms: list[str],
     return
 
 
+def pbs_index_to_args_bud_dep(index: int) -> (int, int, str, int):
+    """Convert a PBS ID to a dimension, budget, algorithm, problem combination.
+
+    Here the dimension, budget, and problem are kept fixed as:
+    - dimension: 100
+    - budget: 200
+    - problem: 1 (f1_Sphere)
+
+    This is used to get performance data at a smaller budget than the default
+    to be able to do a simple check for which algorithms the given budget
+    influences the optimisation strategy. I.e., for which algorithms
+    performance after, e.g., 200 evaluations is different with a budget of 200
+    than with a budget of 10000.
+
+    Args:
+        index: The index of the PBS job to run. This should be in [0,39).
+
+    Returns:
+        An int with the dimensionality.
+        An int with the budget.
+        A str with the algorithm name.
+        An int with the problem ID.
+    """
+    dimensionality = 100  # largest dimensionality
+    budget = 200  # 100 * the smallest dimensionality
+    algorithm = const.ALGS_CONSIDERED[index]
+    problem = 1  # f1_Sphere, easiest problem
+
+    return dimensionality, budget, algorithm, problem
+
+
 def pbs_index_to_args_ngopt(index: int) -> (int, int, str):
     """Convert a PBS index to a dimension, budget and algorithm combination.
+
+    This is used to get performance data for algorithms chosen by NGOpt when
+    using the specific budget for which NGOpt would use them, rather than
+    measuring the performance at that budget based on runs with a larger
+    budget (e.g., measuring performance at 200 evaluations from a run with
+    10000 evalutions).
+
+    Here budgets up to 9000 are considered, since 10000 is already covered by
+    the main experiment.
 
     Args:
         index: The index of the PBS job to run. This should be in [0,272).
@@ -155,6 +195,9 @@ def pbs_index_to_args_ngopt(index: int) -> (int, int, str):
 
 def pbs_index_to_args_all_dims(index: int) -> (str, int):
     """Convert a PBS index to an algorithm and problem combination.
+
+    This is used to run experiments for all algorithm and problem combinations
+    on a single budget (10000 evaluations).
 
     Args:
         index: The index of the PBS job to run. This should be in [0,936).
@@ -228,6 +271,10 @@ if __name__ == "__main__":
         "--pbs-index-ngopt",
         type=int,
         help="PBS index to convert to dimensionality, budget, and algorithm.")
+    parser.add_argument(
+        "--pbs-index-bud-dep",
+        type=int,
+        help="PBS ID to convert to dimension, budget, algorithm, problem.")
 
     args = parser.parse_args()
 
@@ -241,6 +288,11 @@ if __name__ == "__main__":
         dimensionality, budget, algorithm = (
             pbs_index_to_args_ngopt(args.pbs_index_ngopt))
         run_algos([algorithm], const.PROBS_CONSIDERED, budget,
+                  [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    elif args.pbs_index_bud_dep is not None:
+        dimensionality, budget, algorithm, problem = (
+            pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
+        run_algos([algorithm], [problem], budget,
                   [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
