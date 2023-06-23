@@ -49,6 +49,7 @@ class Experiment:
         self.dimensionalities = dimensionalities
         self.prob_scenarios = {}
         self.prob_scenarios_per_b = {}
+        self.prob_scenarios_comp = {}
         self.dim_multiplier = 100
         self.budgets = [
             dims * self.dim_multiplier for dims in self.dimensionalities]
@@ -145,6 +146,141 @@ class Experiment:
                         per_budget=True))
 
         print("Done loading per budget data!")
+
+        return
+
+    def load_comparison_data(self: Experiment,
+                             data_dir: Path) -> None:
+        """Read IOH results to compare with the main experiment.
+
+        Args:
+            data_dir: Path to the data directory. By default,
+                this directory should have subdirectories per problem, which in
+                turn should have subdirectories per algorithm, which should be
+                organised in IOH format. E.g. for directory data, algorithm
+                CMA, and problem f1_Sphere it should look like:
+                data/f1_Sphere/CMA/IOHprofiler_f1_Sphere.json
+                data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
+        """
+        prob_dirs = [child for child
+                     in self.per_budget_prob_dir.iterdir() if child.is_dir()]
+
+        for prob_dir in prob_dirs:
+            # Get the matching problem object
+            prob = prob_dir.name
+            problem = next(p for p in self.problems if p.name == prob)
+
+            a_scenarios = {}
+
+            # Get the algorithms
+            algo_dirs = [child for child
+                         in prob_dir.iterdir() if child.is_dir()]
+
+            for algo_dir in algo_dirs:
+                # Get the matching algorithm object
+                algo = algo_dir.name
+                algorithm = next(
+                    a for a in self.algorithms if a.name_short == algo)
+
+                d_scenarios = {}
+
+                # Get dimensionalities
+                json_path = algo_dir / f"IOHprofiler_{problem.name}.json"
+
+                with json_path.open() as metadata_file:
+                    metadata = json.load(metadata_file)
+
+                # Read dimensionalities and budgets from json file
+                for scenario in metadata["scenarios"]:
+                    dims = scenario["dimension"]
+                    budget = scenario["runs"][0]["evals"]
+
+                    d_scenarios[dims] = Scenario(data_dir,
+                                                 problem,
+                                                 algorithm,
+                                                 dims,
+                                                 const.RUNS_PER_SCENARIO,
+                                                 budget)
+
+                a_scenarios[algorithm] = d_scenarios
+
+            self.prob_scenarios_comp[problem] = a_scenarios
+
+        print(f"Done loading comparison data from: {data_dir}")
+
+        return
+
+    def _get_perfs(self: Experiment,
+                   algo: Algorithm,
+                   problem: Problem,
+                   budget: int,
+                   dims: int,
+                   main: bool = True) -> list[float]:
+        """Retrieve performance values per run.
+
+        Args:
+            algo: Algorithm object for which to get the data.
+            problem: A Problem object for which to get the data.
+            budget: int indicating for which number of evaluations to get the
+                performances.
+            dims: int indicating the dimensionality for which to get the data.
+            main: bool indicating whether to use the main results set or the
+                comparison results set.
+
+        Returns:
+            List of performance values per run at the specified budget.
+        """
+        if main:
+            scenario = self.prob_scenarios[problem][algo][dims][budget]
+        else:
+            scenario = self.prob_scenarios_comp[problem][algo][dims][budget]
+        # Missing runs get a default value of -999
+        perfs = [run.get_performance(budget) if run.status == 1 else -999
+                 for run in scenario.runs]
+
+        return perfs
+
+    def write_performance_comparison_csv(
+            self: Experiment,
+            file_name: str = "best_comparison") -> None:
+        """Write a CSV comparing performance per run for matching scenarios.
+
+        The CSV file contains the columns:
+        dimensions, budget, problem, algorithm, perf_a, perf_b, equal
+
+        Args:
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
+        """
+        # col_names = ["dimensions", "budget", "problem", "algorithm",
+        #              "perf_a", "perf_b", "equal"]
+        all_medians = []
+
+#        for budget in self.budgets:
+#            for dims in self.dimensionalities:
+#                for problem in self.problems:
+#                    for algorithm in self.algorithms:
+#                        # TODO: Check whether both have the combination?
+#                        perfs_a = self._get_prefs(
+#                            algorithm, problem, budget, dims, main=True)
+#                        perfs_b = self._get_prefs(
+#                            algorithm, problem, budget, dims, main=False)
+#
+#                    n_algos = len(self.algorithms)
+#                    dim = [dims] * n_algos
+#                    buds = [budget] * n_algos
+#                    probs = [problem.name] * n_algos
+#                    algos = medians["algorithm"].tolist()
+#                    meds = medians["median"].tolist()
+#                    prob_meds = pd.DataFrame(
+#                        zip(dim, buds, probs, algos, meds),
+#                        columns=col_names)
+#                    all_medians.append(prob_meds)
+
+        csv = pd.concat(all_medians)
+        out_path = Path(f"csvs/{file_name}.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        csv.to_csv(out_path, index=False)
 
         return
 
