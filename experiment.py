@@ -163,12 +163,17 @@ class Experiment:
                 data/f1_Sphere/CMA/data_f1_Sphere/IOHprofiler_f1_DIM10.dat
         """
         prob_dirs = [child for child
-                     in self.per_budget_prob_dir.iterdir() if child.is_dir()]
+                     in data_dir.iterdir() if child.is_dir()]
+        self.comp_probs = []
+        self.comp_algos = []
+        self.comp_dims = []
+        self.comp_buds = []
 
         for prob_dir in prob_dirs:
             # Get the matching problem object
             prob = prob_dir.name
             problem = next(p for p in self.problems if p.name == prob)
+            self.comp_probs.append(problem)
 
             a_scenarios = {}
 
@@ -179,8 +184,11 @@ class Experiment:
             for algo_dir in algo_dirs:
                 # Get the matching algorithm object
                 algo = algo_dir.name
+                # TODO: Handle StopIteration if algorithm ismatch (e.g., when
+                # comparing data with different ng_version)
                 algorithm = next(
                     a for a in self.algorithms if a.name_short == algo)
+                self.comp_algos.append(algorithm)
 
                 d_scenarios = {}
 
@@ -194,6 +202,8 @@ class Experiment:
                 for scenario in metadata["scenarios"]:
                     dims = scenario["dimension"]
                     budget = scenario["runs"][0]["evals"]
+                    self.comp_dims.append(dims)
+                    self.comp_buds.append(budget)
 
                     d_scenarios[dims] = Scenario(data_dir,
                                                  problem,
@@ -228,12 +238,13 @@ class Experiment:
                 comparison results set.
 
         Returns:
-            List of performance values per run at the specified budget.
+            List of performance values per run at the specified budget. Failed
+            runs are assigned a value of -999.
         """
         if main:
-            scenario = self.prob_scenarios[problem][algo][dims][budget]
+            scenario = self.prob_scenarios[problem][algo][dims]
         else:
-            scenario = self.prob_scenarios_comp[problem][algo][dims][budget]
+            scenario = self.prob_scenarios_comp[problem][algo][dims]
         # Missing runs get a default value of -999
         perfs = [run.get_performance(budget) if run.status == 1 else -999
                  for run in scenario.runs]
@@ -252,32 +263,42 @@ class Experiment:
             file_name: Name of the file to write to. Will be written in the
                 csvs/ directory with a .csv extension.
         """
-        # col_names = ["dimensions", "budget", "problem", "algorithm",
-        #              "perf_a", "perf_b", "equal"]
-        all_medians = []
+        col_names = ["dimensions", "budget", "problem", "algorithm",
+                     "perf_a", "perf_b", "equal"]
+        all_comps = []
 
-#        for budget in self.budgets:
-#            for dims in self.dimensionalities:
-#                for problem in self.problems:
-#                    for algorithm in self.algorithms:
-#                        # TODO: Check whether both have the combination?
-#                        perfs_a = self._get_prefs(
-#                            algorithm, problem, budget, dims, main=True)
-#                        perfs_b = self._get_prefs(
-#                            algorithm, problem, budget, dims, main=False)
-#
-#                    n_algos = len(self.algorithms)
-#                    dim = [dims] * n_algos
-#                    buds = [budget] * n_algos
-#                    probs = [problem.name] * n_algos
-#                    algos = medians["algorithm"].tolist()
-#                    meds = medians["median"].tolist()
-#                    prob_meds = pd.DataFrame(
-#                        zip(dim, buds, probs, algos, meds),
-#                        columns=col_names)
-#                    all_medians.append(prob_meds)
+        budgets = [
+            budget for budget in self.budgets if budget in self.comp_buds]
+        dimensionalities = [
+            dims for dims in self.dimensionalities if dims in self.comp_dims]
+        problems = [
+            problem for problem in self.problems if problem in self.comp_probs]
+        algorithms = [algorithm for algorithm in self.algorithms
+                      if algorithm in self.comp_algos]
 
-        csv = pd.concat(all_medians)
+        for budget in budgets:
+            for dims in dimensionalities:
+                for problem in problems:
+                    for algorithm in algorithms:
+                        perfs_a = self._get_perfs(
+                            algorithm, problem, budget, dims, main=True)
+                        perfs_b = self._get_perfs(
+                            algorithm, problem, budget, dims, main=False)
+
+                        # Add things to organised collection
+                        dim = [dims] * const.RUNS_PER_SCENARIO
+                        bud = [budget] * const.RUNS_PER_SCENARIO
+                        pro = [problem.name] * const.RUNS_PER_SCENARIO
+                        alg = [algorithm.name_short] * const.RUNS_PER_SCENARIO
+                        equ = [a == b for a, b in zip(perfs_a, perfs_b)]
+
+                        # Create and store DataFrame for this combination
+                        comp = pd.DataFrame(
+                            zip(dim, bud, pro, alg, perfs_a, perfs_b, equ),
+                            columns=col_names)
+                        all_comps.append(comp)
+
+        csv = pd.concat(all_comps)
         out_path = Path(f"csvs/{file_name}.csv")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         csv.to_csv(out_path, index=False)
