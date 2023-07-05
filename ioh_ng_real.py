@@ -22,6 +22,12 @@ from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
 
 import constants as const
 
+# SCALE_FACTORS adapted from:
+# https://github.com/Dvermetten/Many-affine-BBOB/blob/master/affine_barebones.py
+SCALE_FACTORS = [
+    11., 17.5, 12.3, 12.6, 11.5, 15.3, 12.1, 15.3, 15.2, 17.4, 13.4, 20.4,
+    12.9, 10.4, 12.3, 10.3, 9.8, 10.6, 10., 14.7, 10.7, 10.8, 9., 12.1]
+
 
 class NGEvaluator:
     """Algorithm wrapper to use nevergrad algorithms with IOHprofiler."""
@@ -84,6 +90,64 @@ class NGEvaluator:
                   f"{self.algorithm_seed} CRASHED with message: {err}",
                   file=sys.stderr)
             self.run_success = -3  # "CRASHED" other Exception
+
+
+class ManyAffine():
+    """Affine combinations of BBOB problems.
+
+    Class adapted from:
+    https://github.com/Dvermetten/Many-affine-BBOB/blob/master/affine_barebones.py
+    """
+
+    def __init__(self: ManyAffine,
+                 weights: list[float],
+                 instances: list[int],
+                 opt_loc: list[float] | int = 1,
+                 dim: int = 5) -> None:
+        """Initialise the problem instance.
+
+        Args:
+            weights: Weights per BBOB problem to specify the desired affine
+                combination. Should have
+                length equal to 24 (the number of BBOB problems).
+            instances: Which instance to use per BBOB problem. Should have
+                length equal to 24 (the number of BBOB problems).
+            opt_loc: Location of the optimum in the search space. If float, it
+                Should have length equal to dim. If an int is given, the
+                optimum from the BBOB problem with this ID is taken (with IDs
+                shifted from 1-24 to 0-23).
+            dim: Dimensionality of the problem.
+        """
+        self.weights = weights / np.sum(weights)
+        # Consider BBOB problems [1,24]
+        self.fcts = [ioh.get_problem(fid, int(iid), dim)
+                     for fid, iid in zip(range(1, 25), instances)]
+        self.opts = [f.optimum.y for f in self.fcts]
+        self.scale_factors = SCALE_FACTORS
+
+        if type(opt_loc) == int:
+            self.opt_x = self.fcts[opt_loc].optimum.x
+        else:
+            self.opt_x = opt_loc
+
+        return
+
+    def __call__(self: ManyAffine,
+                 x: list[float]) -> float:
+        """Evaluate the objective function.
+
+        Args:
+            x: List of variables to evaluate on the function.
+
+        Returns:
+            Objective value.
+        """
+        raw_vals = np.array(
+            [np.clip(f(x+f.optimum.x - self.opt_x)-o, 1e-12, 1e20)
+             for f, o in zip(self.fcts, self.opts)])
+        weighted = (np.log10(raw_vals)+8)/self.scale_factors * self.weights
+
+        return 10**(10*np.sum(weighted)-8)
 
 
 def run_algos(algorithms: list[str],
