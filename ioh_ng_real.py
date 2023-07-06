@@ -23,7 +23,7 @@ from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
 import constants as const
 
 # SCALE_FACTORS adapted from:
-# https://github.com/Dvermetten/Many-affine-BBOB/blob/master/affine_barebones.py
+# https://github.com/Dvermetten/Many-affine-BBOB/blob/1c144ff5fda2e68227bd56ccdb7d55ec696bdfcf/affine_barebones.py#L4
 SCALE_FACTORS = [
     11., 17.5, 12.3, 12.6, 11.5, 15.3, 12.1, 15.3, 15.2, 17.4, 13.4, 20.4,
     12.9, 10.4, 12.3, 10.3, 9.8, 10.6, 10., 14.7, 10.7, 10.8, 9., 12.1]
@@ -61,8 +61,8 @@ class NGEvaluator:
             func: IOH function to run the algorithm on.
             seed: int to seed the algorithm random state.
         """
-        lower_bound = -5
-        upper_bound = 5
+        lower_bound = const.LOWER_BOUND
+        upper_bound = const.UPPER_BOUND
         self.algorithm_seed = seed
         np.random.seed(self.algorithm_seed)
         parametrization = ng.p.Array(init=np.random.uniform(
@@ -96,14 +96,14 @@ class ManyAffine():
     """Affine combinations of BBOB problems.
 
     Class adapted from:
-    https://github.com/Dvermetten/Many-affine-BBOB/blob/master/affine_barebones.py
+    https://github.com/Dvermetten/Many-affine-BBOB/blob/1c144ff5fda2e68227bd56ccdb7d55ec696bdfcf/affine_barebones.py#L8
     """
 
     def __init__(self: ManyAffine,
-                 weights: list[float],
-                 instances: list[int],
-                 opt_loc: list[float] | int = 1,
-                 dim: int = 5) -> None:
+                 weights: np.array[float],
+                 instances: np.array[int],
+                 opt_loc: np.array[float],
+                 dim: int) -> None:
         """Initialise the problem instance.
 
         Args:
@@ -113,9 +113,7 @@ class ManyAffine():
             instances: Which instance to use per BBOB problem. Should have
                 length equal to 24 (the number of BBOB problems).
             opt_loc: Location of the optimum in the search space. If float, it
-                Should have length equal to dim. If an int is given, the
-                optimum from the BBOB problem with this ID is taken (with IDs
-                shifted from 1-24 to 0-23).
+                Should have length equal to dim.
             dim: Dimensionality of the problem.
         """
         self.weights = weights / np.sum(weights)
@@ -124,11 +122,7 @@ class ManyAffine():
                      for fid, iid in zip(range(1, 25), instances)]
         self.opts = [f.optimum.y for f in self.fcts]
         self.scale_factors = SCALE_FACTORS
-
-        if type(opt_loc) == int:
-            self.opt_x = self.fcts[opt_loc].optimum.x
-        else:
-            self.opt_x = opt_loc
+        self.opt_x = opt_loc
 
         return
 
@@ -148,6 +142,42 @@ class ManyAffine():
         weighted = (np.log10(raw_vals)+8)/self.scale_factors * self.weights
 
         return 10**(10*np.sum(weighted)-8)
+
+
+def prepare_affine_problem(ma_problem_id: int,
+                           dimensions: int) -> str:
+    """Create an affine BBOB problem for the given combination.
+
+    Args:
+        ma_problem_id: ID of the MA-BBOB problem. Should be in [0,1656)
+        dimensions: Number of dimensions the problem should have.
+
+    Returns:
+         An affine BBOB problem name.
+    """
+    weights_csv = Path(f"csvs/weights.csv")
+    # TODO: Read weights from CSV
+    weights = np.zeros(24)  # TODO: Get from file? Should loop over 0.9-0.1; 0.5-0.5; 0.1-0.9 per function pair
+    instance_ids = np.ones(24)  # Always use instance 1
+    opts_csv = Path(f"csvs/opt_locs.csv")
+    opt_locs = pd.read_csv(opts_csv, index_col=0)  # TODO: Read pre-generated random optima from file
+
+    ma_prob = ManyAffine(np.array(weights),
+                         np.array(instance_ids),
+                         np.array(opt_locs.iloc[ma_problem_id])[:dimensions],
+                         dimensions)
+    ma_name = ""
+
+    ioh.problem.wrap_real_problem(ma_prob,
+                                  name=ma_name,
+                                  optimization_type=ioh.OptimizationType.MIN,
+                                  lower_bound=LOWER_BOUND,
+                                  upper_bound=UPPER_BOUND)
+
+    ma_inst = 0
+    prob = ioh.get_problem(ma_name, ma_inst, dimensions)
+
+    return ma_name
 
 
 def run_algos(algorithms: list[str],

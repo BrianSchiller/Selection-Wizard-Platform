@@ -4,6 +4,8 @@ from cmcrameri import cm
 
 RUNS_PER_SCENARIO = 25
 EVAL_BUDGET = 10000
+LOWER_BOUND = -5
+UPPER_BOUND = 5
 
 # 6 algorithms
 # 33 ConfPortfolios in nevergrad 0.5.0
