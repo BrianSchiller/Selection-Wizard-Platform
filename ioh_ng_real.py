@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
 """Module to run Nevergrad algorithm implementations with IOH profiler."""
 from __future__ import annotations
 import ioh
 import argparse
 import math
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -155,27 +157,39 @@ def prepare_affine_problem(ma_problem_id: int,
     Returns:
          An affine BBOB problem name.
     """
-    weights_csv = Path(f"csvs/weights.csv")
-    # TODO: Read weights from CSV
-    weights = np.zeros(24)  # TODO: Get from file? Should loop over 0.9-0.1; 0.5-0.5; 0.1-0.9 per function pair
-    instance_ids = np.ones(24)  # Always use instance 1
-    opts_csv = Path(f"csvs/opt_locs.csv")
-    opt_locs = pd.read_csv(opts_csv, index_col=0)  # TODO: Read pre-generated random optima from file
+    # Read BBOB problem pairs and weight combinations from file
+    ma_csv = Path("csvs/ma_prob_combos.csv")
+    ma_prob_combos = pd.read_csv(ma_csv, index_col=0)
+    prob_a = ma_prob_combos["prob_a"][ma_problem_id]
+    prob_b = ma_prob_combos["prob_b"][ma_problem_id]
+    weight_a = ma_prob_combos["weight_a"][ma_problem_id]
+    weight_b = ma_prob_combos["weight_b"][ma_problem_id]
 
+    # Assign weights read from file
+    weights = np.zeros(24)
+    weights[prob_a-1] = weight_a
+    weights[prob_b-1] = weight_b
+
+    # Always use instance 1 for every BBOB problem to be combined
+    instance_ids = np.ones(24)
+
+    # Read pre-generated random optima from file
+    opts_csv = Path("csvs/opt_locs.csv")
+    opt_locs = pd.read_csv(opts_csv, index_col=0)
+
+    # Create MA-BBOB problem for the given combination
     ma_prob = ManyAffine(np.array(weights),
                          np.array(instance_ids),
                          np.array(opt_locs.iloc[ma_problem_id])[:dimensions],
                          dimensions)
-    ma_name = ""
+    ma_name = f"MA{ma_problem_id}_F{prob_a}-W{weight_a}_F{prob_b}_W{weight_b}"
 
+    # Wrap MA-BBOB problem for use with IOH
     ioh.problem.wrap_real_problem(ma_prob,
                                   name=ma_name,
                                   optimization_type=ioh.OptimizationType.MIN,
-                                  lower_bound=LOWER_BOUND,
-                                  upper_bound=UPPER_BOUND)
-
-    ma_inst = 0
-    prob = ioh.get_problem(ma_name, ma_inst, dimensions)
+                                  lb=const.LOWER_BOUND,
+                                  ub=const.UPPER_BOUND)
 
     return ma_name
 
@@ -276,7 +290,7 @@ def pbs_index_to_args_ngopt(index: int) -> (int, int, str):
         An int with the budget.
         A str with the algorithm name.
     """
-    csv_path = "csvs/ngopt_choices.csv"
+    csv_path = "csvs/ngopt_choices_0.6.0.csv"
     run_settings = pd.read_csv(csv_path)
 
     dimensionality = run_settings.at[index, "dimensions"]
@@ -310,6 +324,42 @@ def pbs_index_to_args_all_dims(index: int) -> (str, int):
     problem = const.PROBS_CONSIDERED[prob_id]
 
     return algorithm, problem
+
+
+def pbs_index_to_ma_combo_ngopt(index: int) -> (int, int, str, list[str], int):
+    """Get dimension, budget algorithm, problems, and instance for a PBS index.
+
+    This is used to get performance data for algorithms chosen by NGOpt when
+    using the specific budget for which NGOpt would use them, on the MA-BBOB
+    problems.
+
+    Args:
+        index: The index of the PBS job to run. This should be in [0,289).
+
+    Returns:
+        An int with the dimensionality.
+        An int with the budget.
+        A str with the algorithm name.
+        A list[str] with MA-BBOB problem names.
+        An int with the instance.
+    """
+    csv_path = "csvs/ngopt_choices_0.6.0.csv"
+    run_settings = pd.read_csv(csv_path)
+
+    # Retrieve dimensionality
+    dimensionality = run_settings.at[index, "dimensions"]
+    # Retrieve budget
+    budget = run_settings.at[index, "budget"]
+    # Retrieve the NGOpt choice algorithm for this dimensionality and budget
+    algo_id = run_settings.at[index, "algorithm"]
+    algorithm = const.ALGS_CONSIDERED[algo_id]
+    # Retrieve all MA-BBOB problems
+    problems = [prepare_affine_problem(ma_index, dimensionality)
+                for ma_index in range(0, 1656)]
+    # Always use instance 0 for MA-BBOB problems
+    instance = 0
+
+    return dimensionality, budget, algorithm, problems, instance
 
 
 if __name__ == "__main__":
@@ -369,6 +419,10 @@ if __name__ == "__main__":
         "--pbs-index-bud-dep",
         type=int,
         help="PBS ID to convert to dimension, budget, algorithm, problem.")
+    parser.add_argument(
+        "--pbs-index-ma-ngopt",
+        type=int,
+        help="PBS ID to convert to experiment settings for NGOpt on MA-BBOB.")
 
     args = parser.parse_args()
 
@@ -388,6 +442,12 @@ if __name__ == "__main__":
             pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
         run_algos([algorithm], [problem], budget,
                   [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    elif args.pbs_index_ma_ngopt is not None:
+        dimensionality, budget, algorithm, problems, instance = (
+            pbs_index_to_ma_combo_ngopt(args.pbs_index_ma_ngopt))
+        n_repetitions = 1
+        run_algos([algorithm], problems, budget, [dimensionality],
+                  n_repetitions, [instance])
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,

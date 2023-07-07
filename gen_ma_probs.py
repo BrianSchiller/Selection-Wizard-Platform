@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Module to generate CSV files describing MA-BBOB problems to use."""
 from pathlib import Path
 
@@ -30,10 +31,10 @@ def write_prob_combos_csv() -> None:
     for prob_a in const.PROBS_CONSIDERED:
         for prob_b in const.PROBS_CONSIDERED:
             if prob_a != prob_b:
-                probs_a.append([prob_a] * len(weight_vals))
-                probs_b.append([prob_b] * len(weight_vals))
-                weights_a.append(weight_vals)
-                weights_b.append(weights_rev)
+                probs_a.extend([prob_a] * len(weight_vals))
+                probs_b.extend([prob_b] * len(weight_vals))
+                weights_a.extend(weight_vals)
+                weights_b.extend(weights_rev)
 
     prob_combos = pd.DataFrame(zip(probs_a, probs_b, weights_a, weights_b),
                                columns=col_names)
@@ -42,3 +43,8 @@ def write_prob_combos_csv() -> None:
     prob_combos.to_csv(out_path, index=True)
 
     return
+
+
+if __name__ == "__main__":
+    write_opt_locs_csv()
+    write_prob_combos_csv()
