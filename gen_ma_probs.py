@@ -45,6 +45,56 @@ def write_prob_combos_csv() -> None:
     return
 
 
+def write_algo_combos_csvs() -> None:
+    """Write CSV files for algorithms to run per budget-dimension pair."""
+    # Load NGOpt choice data
+    nevergrad_version = "0.6.0"
+    hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
+                    f"{nevergrad_version}.hsv")
+    ngopt = NGOptChoice(hsv_file)
+
+    # Get NGOpt choices to run per budget and dimension combination
+    budgets = [dims * 100 for dims in const.DIMS_CONSIDERED]
+    # TODO: Retrieve NGOpt choice dataframe
+    # TODO: Exclude shorter runs for the same dimension for algorithms that are
+    # not budget dependent
+    # TODO: Write MA-BBOB NGOpt choice CSV
+#    file_name = f"ngopt_choices_{nevergrad_version}"
+#    ngopt.write_ngopt_choices_csv(const.DIMS_CONSIDERED, budgets, file_name)
+
+    # Load performance data for all budgets and dimensions
+    exp = Experiment(args.data_dir,
+                     args.per_budget_data_dir,
+                     # dimensionalities=[100, 35],
+                     ng_version=nevergrad_version)
+
+    # TODO: Retrieve best algorithm per combination dataframe
+    # TODO: Exclude shorter runs for the same dimension for algorithms that are
+    # not budget dependent
+    # TODO: Exclude runs already covered by NGOpt choices
+    # TODO: Write MA-BBOB data_1 CSV
+
+    # Load budget-dependent performance data
+    comp_data_dir = Path("data_seeds2_bud_dep_organised")
+    exp.load_comparison_data(comp_data_dir)
+    # TODO: Retrieve best algorithm including budget-dependent NGOpt choices
+    # dataframe
+    # TODO: Exclude shorter runs for the same dimension for algorithms that are
+    # not budget dependent
+    # TODO: Write MA-BBOB NGOpt choice CSV (if there is actually any algorithm
+    # that is not already covered by the previous two CSVs)
+
+#    file_name = f"scores_{nevergrad_version}"
+#    exp.write_ranking_csv(file_name)
+#    matrix = exp.get_ranking_matrix(ngopt=ngopt)
+#    file_name = f"best_comparison_{nevergrad_version}"
+#    exp.write_performance_comparison_csv(file_name)
+
+    # TODO: Repeat the retrieval and writing for MA-BBOB data_n
+
+    return
+
+
 if __name__ == "__main__":
     write_opt_locs_csv()
     write_prob_combos_csv()
