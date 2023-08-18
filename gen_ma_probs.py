@@ -10,15 +10,23 @@ import constants as const
 
 def write_opt_locs_csv() -> None:
     """Write a CSV with optimum locations until 100 dimensions."""
+    n_dims = 100
+    n_problems = 828
     opt_locs = np.random.uniform(
-        size=(1656, 100), low=const.LOWER_BOUND, high=const.UPPER_BOUND)
+        size=(n_problems, n_dims),
+        low=const.LOWER_BOUND, high=const.UPPER_BOUND)
     pd.DataFrame(opt_locs).to_csv("csvs/opt_locs.csv")
 
     return
 
 
 def write_prob_combos_csv() -> None:
-    """Write a CSV with BBOB problem pairs and weights."""
+    """Write a CSV with BBOB problem pairs and weights.
+
+    Problems should cover [1,24]. For each pair of problems three weight
+    combinations have to be considered. Since mirrored pairs are equivalent,
+    pairings only have to be considered in one direction. (I.e., F1W0.1-F2W0.9
+    is the same as F2W0.9-F1W0.1, where W indicates the weight.)"""
     col_names = ["prob_a", "prob_b", "weight_a", "weight_b"]
     weight_vals = [0.1, 0.5, 0.9]
     weights_rev = weight_vals[::-1]
@@ -28,8 +36,15 @@ def write_prob_combos_csv() -> None:
     weights_a = []
     weights_b = []
 
+    probs_considered = const.PROBS_CONSIDERED
+
     for prob_a in const.PROBS_CONSIDERED:
-        for prob_b in const.PROBS_CONSIDERED:
+        # Remove the first problem in the list since it is already covered by
+        # the outer loop. By doing this each iteration both pairing problems
+        # with themselves and mirrored pairs are avoided.
+        probs_considered = probs_considered[1:]
+
+        for prob_b in probs_considered:
             if prob_a != prob_b:
                 probs_a.extend([prob_a] * len(weight_vals))
                 probs_b.extend([prob_b] * len(weight_vals))
