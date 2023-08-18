@@ -151,7 +151,7 @@ def prepare_affine_problem(ma_problem_id: int,
     """Create an affine BBOB problem for the given combination.
 
     Args:
-        ma_problem_id: ID of the MA-BBOB problem. Should be in [0,1656)
+        ma_problem_id: ID of the MA-BBOB problem. Should be in [0,828)
         dimensions: Number of dimensions the problem should have.
 
     Returns:
@@ -355,7 +355,7 @@ def pbs_index_to_ma_combo_ngopt(index: int) -> (int, int, str, list[str], int):
     algorithm = const.ALGS_CONSIDERED[algo_id]
     # Retrieve all MA-BBOB problems
     problems = [prepare_affine_problem(ma_index, dimensionality)
-                for ma_index in range(0, 1656)]
+                for ma_index in range(0, const.N_MA_PROBLEMS)]
     # Always use instance 0 for MA-BBOB problems
     instance = 0
 

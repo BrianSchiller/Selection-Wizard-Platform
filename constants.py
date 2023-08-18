@@ -7,6 +7,9 @@ EVAL_BUDGET = 10000
 LOWER_BOUND = -5
 UPPER_BOUND = 5
 
+# Affine combination constants
+N_MA_PROBLEMS = 828
+
 # 6 algorithms
 # 33 ConfPortfolios in nevergrad 0.5.0
 # 28 ConfPortfolios in nevergrad 0.6.0

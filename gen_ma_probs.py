@@ -11,9 +11,8 @@ import constants as const
 def write_opt_locs_csv() -> None:
     """Write a CSV with optimum locations until 100 dimensions."""
     n_dims = 100
-    n_problems = 828
     opt_locs = np.random.uniform(
-        size=(n_problems, n_dims),
+        size=(const.N_MA_PROBLEMS, n_dims),
         low=const.LOWER_BOUND, high=const.UPPER_BOUND)
     pd.DataFrame(opt_locs).to_csv("csvs/opt_locs.csv")
 
