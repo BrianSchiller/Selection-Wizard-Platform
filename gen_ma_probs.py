@@ -25,7 +25,8 @@ def write_prob_combos_csv() -> None:
     Problems should cover [1,24]. For each pair of problems three weight
     combinations have to be considered. Since mirrored pairs are equivalent,
     pairings only have to be considered in one direction. (I.e., F1W0.1-F2W0.9
-    is the same as F2W0.9-F1W0.1, where W indicates the weight.)"""
+    is the same as F2W0.9-F1W0.1, where W indicates the weight.)
+    """
     col_names = ["prob_a", "prob_b", "weight_a", "weight_b"]
     weight_vals = [0.1, 0.5, 0.9]
     weights_rev = weight_vals[::-1]

@@ -491,8 +491,8 @@ if __name__ == "__main__":
 #    file_name = f"medians_{nevergrad_version}"
 #    exp.write_medians_csv(file_name)
 #    file_name = f"scores_{nevergrad_version}"
-#    exp.write_ranking_csv(file_name)
-    matrix = exp.get_ranking_matrix(ngopt=ngopt)
+#    exp.write_scoring_csv(file_name)
+    matrix = exp.get_scoring_matrix(ngopt=ngopt)
 #    file_name = f"grid_{nevergrad_version}"
 #    exp.plot_hist_grid(matrix, ngopt, file_name)
 #    file_name = f"grid_data_{nevergrad_version}"

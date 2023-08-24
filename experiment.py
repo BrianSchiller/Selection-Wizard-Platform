@@ -327,17 +327,21 @@ class Experiment:
 
         return algo_list
 
-    def rank_algorithms(self: Experiment,
-                        dims: int,
-                        budget: int,
-                        n_best: int,
-                        score_per_prob: bool = False,
-                        ngopt: NGOptChoice = None) -> pd.DataFrame:
-        """Rank algorithms based on their performance over multiple problems.
+    def score_algorithms(self: Experiment,
+                         dims: int,
+                         budget: int,
+                         n_best: int,
+                         score_per_prob: bool = False,
+                         ngopt: NGOptChoice = None) -> pd.DataFrame:
+        """Score algorithms based on their performance over multiple problems.
+
+        Scores are based on the number of runs in the top n_best runs over all
+        algorithms per problem, where for each run in the top n_best, one point
+        is assigned.
 
         Args:
             dims: int indicating the number of variable space dimensions.
-            budget: int indicating for which number of evaluations to rank the
+            budget: int indicating for which number of evaluations to score the
                 algorithms.
             n_best: int indicating the top how many runs to look for.
             score_per_prob: If True include a column per problem with the score
@@ -378,7 +382,8 @@ class Experiment:
         return algo_scores
 
     def write_medians_csv(self: Experiment,
-                          file_name: str = "medians") -> None:
+                          file_name: str = "medians"
+                          with_ranks: bool = False) -> None:
         """Write a CSV file with the medians per algorithm.
 
         The CSV contains the columns:
@@ -387,6 +392,8 @@ class Experiment:
         Args:
             file_name: Name of the file to write to. Will be written in the
                 csvs/ directory with a .csv extension.
+            with_ranks: If True, also include a column with the rank of the
+                algorithm for this problem, based on the scores.
         """
         col_names = ["dimensions", "budget", "problem", "algorithm", "median"]
         all_medians = []
@@ -413,9 +420,9 @@ class Experiment:
 
         return
 
-    def write_ranking_csv(self: Experiment,
+    def write_scoring_csv(self: Experiment,
                           file_name: str = "scores") -> None:
-        """Write a CSV file with the algorithm rankings.
+        """Write a CSV file with the algorithm scores.
 
         The CSV contains the columns:
         dimensions, budget, problem, algorithm, score
@@ -429,13 +436,13 @@ class Experiment:
         all_scores = []
 
         for budget in self.budgets:
-            ranks = []
+            prob_scores = []
 
             for dims in self.dimensionalities:
-                ranks = self.rank_algorithms(
+                prob_scores = self.score_algorithms(
                     dims, budget, n_best, score_per_prob=True)
 
-                for _, row in ranks.iterrows():
+                for _, row in prob_scores.iterrows():
                     row.drop("points", inplace=True)
                     n_problems = (len(row) - 1)
                     dim = [dims] * n_problems
@@ -456,9 +463,9 @@ class Experiment:
 
         return
 
-    def get_ranking_matrix(self: Experiment,
+    def get_scoring_matrix(self: Experiment,
                            ngopt: NGOptChoice = None) -> pd.DataFrame:
-        """Get a matrix algorithm rankings for dimensionalities versus budget.
+        """Get a matrix of algorithm scores for dimensionalities versus budget.
 
         Args:
             ngopt: Instance of NGOptChoice to enable retrieving budget specific
@@ -472,13 +479,13 @@ class Experiment:
         algo_matrix = pd.DataFrame()
 
         for budget in self.budgets:
-            ranks = []
+            scores = []
 
             for dims in self.dimensionalities:
-                ranks.append(
-                    self.rank_algorithms(dims, budget, n_best, ngopt=ngopt))
+                scores.append(
+                    self.score_algorithms(dims, budget, n_best, ngopt=ngopt))
 
-            algo_matrix[budget] = ranks
+            algo_matrix[budget] = scores
 
         algo_matrix.index = self.dimensionalities
 
@@ -766,8 +773,8 @@ class Experiment:
             algo_scores: DataFrame with columns: algorithm, points.
             ngopt_algo: Short name of the algorithm chosen by NGOpt for the
                 dimensionality and budget combination.
-            dims: The dimensionality algorithms are ranked for.
-            budget: The evaluation budget algorithms are ranked for.
+            dims: The dimensionality algorithms are scored for.
+            budget: The evaluation budget algorithms are scored for.
         """
         top_n = 5
         algo_scores.sort_values("points", inplace=True, ascending=False)
@@ -792,8 +799,8 @@ class Experiment:
 
         Args:
             problem: A Problem object for which to get the data.
-            budget: int indicating for which number of evaluations to rank the
-                algorithms.
+            budget: int indicating for which number of evaluations to get the
+                data.
             dims: int indicating the dimensionality for which to get the data.
 
         Returns:
@@ -826,7 +833,7 @@ class Experiment:
                               n_best: int,
                               dims: int,
                               ngopt: NGOptChoice = None) -> pd.DataFrame:
-        """Return the n best runs for a problem, dimension, budget combination.
+        """Return the n_best runs for a problem, dimension, budget combination.
 
         Args:
             problem: A Problem object for which to get the data.
