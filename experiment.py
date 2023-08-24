@@ -489,6 +489,48 @@ class Experiment:
 
         return
 
+    def write_score_rank_csv(self: Experiment,
+                             file_name: str = "score_rank",
+                             ngopt: NGOptChoice = None) -> None:
+        """Write the algorithm rank based on scores over all problems to CVS.
+
+        The CSV contains the columns:
+        dimensions, budget, algorithm, points, rank
+
+        Args:
+            file_name: Name of the file to write to. Will be written in the
+                csvs/ directory with a .csv extension.
+            ngopt: Instance of NGOptChoice to enable retrieving budget specific
+                data for the algorithm choice of NGOpt, if available.
+        """
+        algo_matrix = self.get_scoring_matrix(ngopt)
+        col_names = ["dimensions", "budget", "algorithm", "points", "rank"]
+        all_scores = []
+
+        for budget in self.budgets:
+            for dims in self.dimensionalities:
+                algo_scores = algo_matrix.loc[dims].at[budget]
+                n_algos = len(algo_scores)
+
+                dim = [dims] * n_algos
+                buds = [budget] * n_algos
+                algos = algo_scores["algorithm"]
+                points = algo_scores["points"]
+                # First take the negative of the points, to assign ranks in
+                # descending order, since more points is better.
+                neg_points = [-1 * point for point in points]
+                ranks = ss.rankdata(neg_points, method="min")
+                algo_ranks = pd.DataFrame(
+                    zip(dim, buds, algos, points, ranks), columns=col_names)
+                all_scores.append(algo_ranks)
+
+        csv = pd.concat(all_scores)
+        out_path = Path(f"csvs/{file_name}.csv")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        csv.to_csv(out_path, index=False)
+
+        return
+
     def get_scoring_matrix(self: Experiment,
                            ngopt: NGOptChoice = None) -> pd.DataFrame:
         """Get a matrix of algorithm scores for dimensionalities versus budget.
