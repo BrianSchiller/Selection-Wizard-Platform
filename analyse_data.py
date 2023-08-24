@@ -468,7 +468,7 @@ if __name__ == "__main__":
 
     # read_ioh_results(args.data_dir, verbose = False)
 
-    nevergrad_version = "0.6.0"
+    nevergrad_version = "0.5.0"
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
                     f"{nevergrad_version}.hsv")
     ngopt = NGOptChoice(hsv_file)
@@ -488,10 +488,10 @@ if __name__ == "__main__":
                      ng_version=nevergrad_version)
 #    comp_data_dir = Path("data_seeds2_bud_dep_organised")
 #    exp.load_comparison_data(comp_data_dir)
-    file_name = f"score_rank_{nevergrad_version}"
-    exp.write_score_rank_csv(file_name, ngopt)
-#    file_name = f"medians_{nevergrad_version}"
-#    exp.write_medians_csv(file_name, with_ranks=True)
+#    file_name = f"score_rank_{nevergrad_version}"
+#    exp.write_score_rank_csv(file_name, ngopt)
+    file_name = f"medians_{nevergrad_version}"
+    exp.write_medians_csv(file_name, with_ranks=True)
 #    file_name = f"scores_{nevergrad_version}"
 #    exp.write_scoring_csv(file_name)
 #    matrix = exp.get_scoring_matrix(ngopt=ngopt)
