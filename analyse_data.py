@@ -468,7 +468,7 @@ if __name__ == "__main__":
 
     # read_ioh_results(args.data_dir, verbose = False)
 
-    nevergrad_version = "0.5.0"
+    nevergrad_version = "0.6.0"
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
                     f"{nevergrad_version}.hsv")
     ngopt = NGOptChoice(hsv_file)
@@ -486,10 +486,10 @@ if __name__ == "__main__":
                      args.per_budget_data_dir,
                      # dimensionalities=[100, 35],
                      ng_version=nevergrad_version)
-    comp_data_dir = Path("data_seeds2_bud_dep_organised")
-    exp.load_comparison_data(comp_data_dir)
-#    file_name = f"medians_{nevergrad_version}"
-#    exp.write_medians_csv(file_name)
+#    comp_data_dir = Path("data_seeds2_bud_dep_organised")
+#    exp.load_comparison_data(comp_data_dir)
+    file_name = f"medians_{nevergrad_version}"
+    exp.write_medians_csv(file_name, with_ranks=True)
 #    file_name = f"scores_{nevergrad_version}"
 #    exp.write_scoring_csv(file_name)
     matrix = exp.get_scoring_matrix(ngopt=ngopt)
@@ -498,9 +498,9 @@ if __name__ == "__main__":
 #    file_name = f"grid_data_{nevergrad_version}"
 #    exp.plot_heatmap_data(matrix, ngopt, file_name)
 #    exp.plot_heatmap_ngopt(ngopt)
-    file_name = f"best_comparison_{nevergrad_version}"
-    exp.write_performance_comparison_csv(file_name)
-    file_name = f"grid_data_budget_specific_{nevergrad_version}"
-    exp.plot_heatmap_data(matrix, ngopt, file_name)
+#    file_name = f"best_comparison_{nevergrad_version}"
+#    exp.write_performance_comparison_csv(file_name)
+#    file_name = f"grid_data_budget_specific_{nevergrad_version}"
+#    exp.plot_heatmap_data(matrix, ngopt, file_name)
 #    print("Relevant algorithms:")
 #    print(*exp.get_relevant_ngopt_algos(ngopt), sep="\n")

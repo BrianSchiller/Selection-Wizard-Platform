@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import scipy.stats as ss
 
 import constants as const
 
@@ -382,7 +383,7 @@ class Experiment:
         return algo_scores
 
     def write_medians_csv(self: Experiment,
-                          file_name: str = "medians"
+                          file_name: str = "medians",
                           with_ranks: bool = False) -> None:
         """Write a CSV file with the medians per algorithm.
 
@@ -396,10 +397,19 @@ class Experiment:
                 algorithm for this problem, based on the scores.
         """
         col_names = ["dimensions", "budget", "problem", "algorithm", "median"]
+
+        if with_ranks:
+            n_best = 25
+            col_names.extend(["median_rank", "points", "score_rank"])
+
         all_medians = []
 
         for budget in self.budgets:
             for dims in self.dimensionalities:
+                if with_ranks:
+                    prob_scores = self.score_algorithms(
+                        dims, budget, n_best, score_per_prob=True)
+
                 for problem in self.problems:
                     medians = self.get_medians_of_prob(problem, budget, dims)
 
@@ -409,8 +419,26 @@ class Experiment:
                     probs = [problem.name] * n_algos
                     algos = medians["algorithm"].tolist()
                     meds = medians["median"].tolist()
-                    prob_meds = pd.DataFrame(
-                        zip(dim, buds, probs, algos, meds), columns=col_names)
+
+                    if with_ranks:
+                        algo_points = prob_scores[["algorithm", problem]]
+                        points = algo_points.set_index("algorithm").loc[
+                            algos, problem].values
+                        # The "min" method resolves ties by assigning the
+                        # minimum of the ranks of all tied methods. E.g., if
+                        # the best two are tied, they get the minimum of rank 1
+                        # and 2 = 1.
+                        m_ranks = ss.rankdata(meds, method="min")
+                        s_ranks = ss.rankdata(points, method="min")
+
+                        prob_meds = pd.DataFrame(
+                            zip(dim, buds, probs, algos, meds, m_ranks, points,
+                                s_ranks), columns=col_names)
+                    else:
+                        prob_meds = pd.DataFrame(
+                            zip(dim, buds, probs, algos, meds),
+                            columns=col_names)
+
                     all_medians.append(prob_meds)
 
         csv = pd.concat(all_medians)
@@ -436,8 +464,6 @@ class Experiment:
         all_scores = []
 
         for budget in self.budgets:
-            prob_scores = []
-
             for dims in self.dimensionalities:
                 prob_scores = self.score_algorithms(
                     dims, budget, n_best, score_per_prob=True)
