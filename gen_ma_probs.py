@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 import constants as const
+from experiment import NGOptChoice
 
 
 def write_opt_locs_csv() -> None:
@@ -61,51 +62,56 @@ def write_prob_combos_csv() -> None:
 
 
 def write_algo_combos_csvs() -> None:
-    """Write CSV files for algorithms to run per budget-dimension pair."""
+    """Write CSV file for algorithms to run per budget-dimension pair."""
     # Load NGOpt choice data
     nevergrad_version = "0.6.0"
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
                     f"{nevergrad_version}.hsv")
     ngopt = NGOptChoice(hsv_file)
 
-    # Get NGOpt choices to run per budget and dimension combination
+    # Load scoring based ranking data
+    ranking_file = Path(f"csvs/score_rank_{nevergrad_version}.csv")
+    ranking_data = pd.read_csv(ranking_file)
+    ranking_data.drop("points", axis=1, inplace=True)
+
+    # For each budget and dimension
     budgets = [dims * 100 for dims in const.DIMS_CONSIDERED]
-    # TODO: Retrieve NGOpt choice dataframe
-    # TODO: Exclude shorter runs for the same dimension for algorithms that are
-    # not budget dependent
-    # TODO: Write MA-BBOB NGOpt choice CSV
-#    file_name = f"ngopt_choices_{nevergrad_version}"
-#    ngopt.write_ngopt_choices_csv(const.DIMS_CONSIDERED, budgets, file_name)
+    algos_to_run = pd.DataFrame()
 
-    # Load performance data for all budgets and dimensions
-    exp = Experiment(args.data_dir,
-                     args.per_budget_data_dir,
-                     # dimensionalities=[100, 35],
-                     ng_version=nevergrad_version)
+    for budget in budgets:
+        for dims in const.DIMS_CONSIDERED:
+            # Get data for this budget and dimension
+            bud_dim_condition = ((ranking_data["dimensions"] == dims)
+                                 & (ranking_data["budget"] == budget))
+            bud_dim_df = ranking_data.loc[bud_dim_condition].copy()
 
-    # TODO: Retrieve best algorithm per combination dataframe
-    # TODO: Exclude shorter runs for the same dimension for algorithms that are
-    # not budget dependent
-    # TODO: Exclude runs already covered by NGOpt choices
-    # TODO: Write MA-BBOB data_1 CSV
+            # Retrieve the NGOpt choice and its rank from the data
+            # and remove it from the data structure
+            ngopt_choice = ngopt.get_ngopt_choice(dims, budget)
+            rank = bud_dim_df.loc[
+                bud_dim_df["algorithm"] == ngopt_choice, "rank"].values[0]
+            ngopt_rank = f"ngopt_{rank}"
+            ngopt_algo = bud_dim_df.loc[
+                bud_dim_df["algorithm"] == ngopt_choice]
+            ngopt_algo = ngopt_algo.assign(rank=ngopt_rank)
+            bud_dim_df.drop(bud_dim_df[
+                bud_dim_df["algorithm"] == ngopt_choice].index, inplace=True)
 
-    # Load budget-dependent performance data
-    comp_data_dir = Path("data_seeds2_bud_dep_organised")
-    exp.load_comparison_data(comp_data_dir)
-    # TODO: Retrieve best algorithm including budget-dependent NGOpt choices
-    # dataframe
-    # TODO: Exclude shorter runs for the same dimension for algorithms that are
-    # not budget dependent
-    # TODO: Write MA-BBOB NGOpt choice CSV (if there is actually any algorithm
-    # that is not already covered by the previous two CSVs)
+            # Retrieve the (remaining) top 4 algorithms and their ranks from
+            # the data. Resolve ties by taking the algorithm that appears
+            # first. Since the data is sorted, this may create some bias for
+            # algorithms that appear earlier, but ties a quite rare.
+            bud_dim_df.sort_values("rank", inplace=True)
+            best_n = 4
+            best_algos = bud_dim_df.head(best_n)
 
-#    file_name = f"scores_{nevergrad_version}"
-#    exp.write_ranking_csv(file_name)
-#    matrix = exp.get_ranking_matrix(ngopt=ngopt)
-#    file_name = f"best_comparison_{nevergrad_version}"
-#    exp.write_performance_comparison_csv(file_name)
+            # Add NGOpt choice and best algorithms to the to run data frame
+            algos_to_run = pd.concat([algos_to_run, best_algos, ngopt_algo])
 
-    # TODO: Repeat the retrieval and writing for MA-BBOB data_n
+    # Write the CSV
+    out_path = Path("csvs/ma_algos.csv")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    algos_to_run.to_csv(out_path, index=False)
 
     return
 
@@ -113,3 +119,4 @@ def write_algo_combos_csvs() -> None:
 if __name__ == "__main__":
     write_opt_locs_csv()
     write_prob_combos_csv()
+    write_algo_combos_csvs()

@@ -429,8 +429,9 @@ class Experiment:
                         # the best two are tied, they get the minimum of rank 1
                         # and 2 = 1.
                         m_ranks = ss.rankdata(meds, method="min")
-                        # First take the negative of the points, to assign ranks in
-                        # descending order since more points is better.
+                        # First take the negative of the points, to assign
+                        # ranks in descending order since more points is
+                        # better.
                         neg_points = [-1 * point for point in points]
                         s_ranks = ss.rankdata(neg_points, method="min")
 
