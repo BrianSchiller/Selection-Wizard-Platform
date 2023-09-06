@@ -6,6 +6,8 @@ import argparse
 import math
 import sys
 from pathlib import Path
+import os
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -23,6 +25,9 @@ from nevergrad.optimization.optimizerlib import Rescaled  # noqa: F401
 from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
 
 import constants as const
+from experiment import Problem
+from experiment import Algorithm
+from experiment import Scenario
 
 # SCALE_FACTORS adapted from:
 # https://github.com/Dvermetten/Many-affine-BBOB/blob/1c144ff5fda2e68227bd56ccdb7d55ec696bdfcf/affine_barebones.py#L4
@@ -199,7 +204,8 @@ def run_algos(algorithms: list[str],
               eval_budget: int,
               dimensionalities: list[int],
               n_repetitions: int,
-              instances: list[int] = None) -> None:
+              instances: list[int] = None,
+              process_intermediate_data: bool = False) -> None:
     """Run the given algorithms on the given problem set.
 
     Args:
@@ -211,19 +217,30 @@ def run_algos(algorithms: list[str],
             A case is an algorithm-problem-instance-dimensionality combination.
             The repetition number is also used as seed for the run.
         instances: list of instance IDs (int) to run per problem.
+        process_intermediate_data: If True, process and store intermediate data
+            during execution.
     """
     problem_class = ioh.ProblemClass.REAL
 
     for algname in algorithms:
         algname_short = const.get_short_algo_name(algname)
         algorithm = NGEvaluator(algname, eval_budget)
-        logger = ioh.logger.Analyzer(folder_name=algname_short,
-                                     algorithm_name=algname_short)
-        logger.add_run_attributes(algorithm,
-                                  ["algorithm_seed", "run_success"])
+
+        if not process_intermediate_data:
+            logger = ioh.logger.Analyzer(folder_name=algname_short,
+                                         algorithm_name=algname_short)
+            logger.add_run_attributes(algorithm,
+                                      ["algorithm_seed", "run_success"])
 
         for problem in problems:
             for dimension in dimensionalities:
+                if process_intermediate_data:
+                    dir_name = f"{algname_short}_D{dimension}_B{eval_budget}"
+                    logger = ioh.logger.Analyzer(folder_name=dir_name,
+                                                 algorithm_name=algname_short)
+                    logger.add_run_attributes(
+                        algorithm, ["algorithm_seed", "run_success"])
+
                 for instance in instances:
                     function = ioh.get_problem(problem, instance=instance,
                                                dimension=dimension,
@@ -234,7 +251,85 @@ def run_algos(algorithms: list[str],
                         algorithm(function, seed)
                         function.reset()
 
+            # Process all .json files in the output directory
+            if process_intermediate_data:
+                # Flush the logger to ensure files exist before processing
+                logger.close()
+                process_data(Path(dir_name), problem, algname, dimension,
+                             n_repetitions, eval_budget)
+
         logger.close()
+
+    return
+
+
+def process_data(dir_name: Path,
+                 prob_id: int,
+                 algo_name: str,
+                 dims: int,
+                 n_runs: int,
+                 n_evals: int) -> None:
+    """Extract final run performance and add data to .zip file.
+
+    Args:
+        dir_name: Path to the output directory.
+        prob_id: Problem ID.
+        algo_name: Full algorithm name.
+        dims: Dimensionality of the search space (number of variables).
+        n_runs: Number of runs performed with these settings.
+        n_evals: Number of evaluations per run.
+    """
+    # Get all .json files in the output directory
+    json_files = [json_file for json_file in dir_name.iterdir()
+                  if str(json_file).endswith(".json")]
+
+    for json_file in json_files:
+        # Problem is the file without preceding IOHprofiler_ and trailing .json
+        problem_name = json_file.stem.removeprefix("IOHprofiler_")
+        problem = Problem(problem_name, prob_id)
+        algorithm = Algorithm(algo_name)
+        scenario = Scenario(dir_name, problem, algorithm, dims, n_runs,
+                            n_evals, json_file=json_file)
+
+        for run in scenario.runs:
+            # Get the performance data and metadata from the scenario
+            # Desired data: problem, algorithm, dimensions, budget, seed,
+            # run status, performance
+            seed = run.seed
+            status = run.status
+            performance = run.get_performance(n_evals)
+
+            # Write (add) the performance and meta data to a .csv
+            dir_name_out = dir_name.with_name(f"{dir_name.name}_processed")
+            csv_path = dir_name_out / "data.csv"
+
+            if not csv_path.exists():
+                dir_name_out.mkdir(parents=True, exist_ok=True)
+                csv_header = ("problem,algorithm,dimensions,budget,seed,status"
+                              ",performance")
+
+                with csv_path.open("w") as csv_file:
+                    csv_file.write(csv_header)
+
+            csv_row = (f"\n{problem_name},{algorithm.name_short},{dims},"
+                       f"{n_evals},{seed},{status},{performance}")
+
+            with csv_path.open("a") as csv_file:
+                csv_file.write(csv_row)
+
+            # Add the raw data to a .zip
+            json_path = json_file
+            data_path = dir_name / f"data_{problem_name}"
+            zip_path = dir_name_out / "data.zip"
+
+            # Options: -r recursive, -q quiet, -g grow (append to existing zip)
+            if zip_path.exists():
+                os.system(f"zip -r -q -g {zip_path} {data_path} {json_path}")
+            else:
+                os.system(f"zip -r -q {zip_path} {data_path} {json_path}")
+
+            # Remove the uncompressed data
+            shutil.rmtree(dir_name)
 
     return
 
@@ -423,7 +518,6 @@ if __name__ == "__main__":
         "--pbs-index-ma-ngopt",
         type=int,
         help="PBS ID to convert to experiment settings for NGOpt on MA-BBOB.")
-
     args = parser.parse_args()
 
     if args.pbs_index_all_dims is not None:
@@ -447,7 +541,7 @@ if __name__ == "__main__":
             pbs_index_to_ma_combo_ngopt(args.pbs_index_ma_ngopt))
         n_repetitions = 1
         run_algos([algorithm], problems, budget, [dimensionality],
-                  n_repetitions, [instance])
+                  n_repetitions, [instance], process_intermediate_data=True)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,

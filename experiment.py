@@ -1248,6 +1248,7 @@ class Run:
                   f"{self.eval_ids[-1]} evaluations instead of "
                   f"{expected_evals}.")
             self.status = -4
+
             return False
 
     def get_performance(self: Run,
@@ -1280,6 +1281,7 @@ class Scenario:
                  n_runs: int,
                  n_evals: int,
                  per_budget: bool = False,
+                 json_file: Path = None,
                  verbose: bool = False) -> None:
         """Initialise the Scenario.
 
@@ -1301,6 +1303,8 @@ class Scenario:
                 should each be organised in IOH format, and contain both a
                 .json and directory for each BBOB function, specific to the
                 dimensionality and budget combination for this subdirectory.
+            json_file: Path to an IOH .json file for the Scenario. data_dir is
+                treated as the parent directory of the file if this is set.
             verbose: If True print more detailed information.
         """
         self.data_dir = data_dir
@@ -1312,16 +1316,18 @@ class Scenario:
         self.runs = []
 
         if per_budget:
-            json_file = Path(
+            json_path = Path(
                 f"{self.data_dir}/"
                 f"{self.algorithm.name_short}-{self.dims}-{self.n_evals}/"
                 f"IOHprofiler_{self.problem.name}.json")
+        elif json_file is not None:
+            json_path = json_file
         else:
-            json_file = Path(
+            json_path = Path(
                 f"{self.data_dir}/{self.problem.name}/"
                 f"{self.algorithm.name_short}/"
                 f"IOHprofiler_{self.problem.name}.json")
-        self._load_data(json_file)
+        self._load_data(json_path)
 
     def _load_data(self: Scenario,
                    json_file: Path,
