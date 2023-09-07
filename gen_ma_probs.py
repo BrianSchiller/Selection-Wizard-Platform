@@ -62,7 +62,13 @@ def write_prob_combos_csv() -> None:
 
 
 def write_algo_combos_csvs() -> None:
-    """Write CSV file for algorithms to run per budget-dimension pair."""
+    """Write CSV file for algorithms to run per budget-dimension pair.
+
+    For each budget-dimension combination, five algorithms are chosen. The
+    algorithm NGOpt would use is always included. In addition, the top four
+    ranking algorithms are included, where NGOpt's choice is excluded from the
+    ranking.
+    """
     # Load NGOpt choice data
     nevergrad_version = "0.6.0"
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
@@ -73,6 +79,14 @@ def write_algo_combos_csvs() -> None:
     ranking_file = Path(f"csvs/score_rank_{nevergrad_version}.csv")
     ranking_data = pd.read_csv(ranking_file)
     ranking_data.drop("points", axis=1, inplace=True)
+
+    # Load algorithm ID and name mapping
+    algos_file = Path(f"csvs/ngopt_algos_{nevergrad_version}.csv")
+    algo_names = pd.read_csv(algos_file)
+    algo_ids = [
+        algo_names.loc[algo_names["short name"] == algo_name].ID.values[0]
+        for algo_name in ranking_data["algorithm"]]
+    ranking_data["algo ID"] = algo_ids
 
     # For each budget and dimension
     budgets = [dims * 100 for dims in const.DIMS_CONSIDERED]
