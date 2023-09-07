@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# To submit the job:
+# qsub ioh_on_pbs.sh
+
+# To watch to the job status:
+# qstat [-u <username>]
+
 # Set options
-# -q Destination of the job. destination names a queue, a server or a queue at a server
+# -q Destination of the job. Destination names a queue, a server or a queue at a server
 # -l Resource list
 ## select=:ncpus=:mpiprocs= indicate the number of nodes:cores:mpiprocs
 ## Use multiple of 2 with a maximum of 24 on 'ncpus' parameter, one node has 24 cores max
@@ -19,16 +25,23 @@
 # For MeSU-Beta to run main experiment:
 # First 0-467
 # Second 468-935
-# PBS -J 0-935:1 # Remove space after hash to run
+# Remove space after hash to run:
+# PBS -J 0-935:1
+
 # To run NGOpt choices:
-# PBS -J 0-271:1 # Remove space after hash to run
+# Remove space after hash to run:
+# PBS -J 0-271:1
+
 # To run budget dependence test:
-# PBS -J 0-38:1 # Remove space after hash to run
+# Remove space after hash to run:
+# PBS -J 0-38:1
+
 # To run best algorithms and NGOpt choice on MA-BBOB problems:
 # First 0-499
 # Second 500-999
 # Third 1000-1444
-#PBS -J 0-1444:1 # Remove space after hash to run
+# Remove space after hash to run:
+#PBS -J 0-1444:1
 
 # Load modules
 #. /etc/profile.d/modules.sh
@@ -55,7 +68,10 @@ mkdir $PBS_ARRAY_INDEX
 # Copy input files to scratch
 cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 cp $PBS_O_WORKDIR/constants.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
-#cp -r $PBS_O_WORKDIR/csvs/ $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX # For NGOpt choices
+# For NGOpt choices and best algorithms on MA-BBOB problems:
+cp -r $PBS_O_WORKDIR/csvs/ $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
+# For best algorithms on MA-BBOB problems:
+cp $PBS_O_WORKDIR/experiment.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 
 # Execute
 cd $PBS_ARRAY_INDEX
