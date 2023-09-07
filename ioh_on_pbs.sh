@@ -19,11 +19,16 @@
 # For MeSU-Beta to run main experiment:
 # First 0-467
 # Second 468-935
-# PBS -J 0-935:1 # Remove space before hash to run
+# PBS -J 0-935:1 # Remove space after hash to run
 # To run NGOpt choices:
-# PBS -J 0-271:1 # Remove space before hash to run
+# PBS -J 0-271:1 # Remove space after hash to run
 # To run budget dependence test:
-#PBS -J 0-38:1
+# PBS -J 0-38:1 # Remove space after hash to run
+# To run best algorithms and NGOpt choice on MA-BBOB problems:
+# First 0-499
+# Second 500-999
+# Third 1000-1444
+#PBS -J 0-1444:1 # Remove space after hash to run
 
 # Load modules
 #. /etc/profile.d/modules.sh
@@ -60,7 +65,9 @@ cd $PBS_ARRAY_INDEX
 # To run NGOpt choices:
 #python3 ioh_ng_real.py --pbs-index-ngopt $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run budget dependence test:
-python3 ioh_ng_real.py --pbs-index-bud-dep $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 ioh_ng_real.py --pbs-index-bud-dep $PBS_ARRAY_INDEX 1> test.out 2> test.err
+# To run best algorithms and NGOpt choice on MA-BBOB problems:
+python3 ioh_ng_real.py --pbs-index-ma $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 

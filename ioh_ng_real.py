@@ -421,15 +421,18 @@ def pbs_index_to_args_all_dims(index: int) -> (str, int):
     return algorithm, problem
 
 
-def pbs_index_to_ma_combo_ngopt(index: int) -> (int, int, str, list[str], int):
+def pbs_index_to_ma_combo(index: int) -> (int, int, str, list[str], int):
     """Get dimension, budget algorithm, problems, and instance for a PBS index.
 
-    This is used to get performance data for algorithms chosen by NGOpt when
-    using the specific budget for which NGOpt would use them, on the MA-BBOB
-    problems.
+    This is used to get performance data for algorithms chosen by NGOpt and
+    for algorithms that rank high based on performance on training problems.
+    Algorithms are chosen based on the specific budget and dimensionality. They
+    are then executed on the MA-BBOB problems.
 
     Args:
-        index: The index of the PBS job to run. This should be in [0,289).
+        index: The index of the PBS job to run. This should be in [0,1445).
+            This matches the index for the dimension-budget-algorithm
+            combination in the csvs/ma_algos.csv file.
 
     Returns:
         An int with the dimensionality.
@@ -438,15 +441,15 @@ def pbs_index_to_ma_combo_ngopt(index: int) -> (int, int, str, list[str], int):
         A list[str] with MA-BBOB problem names.
         An int with the instance.
     """
-    csv_path = "csvs/ngopt_choices_0.6.0.csv"
+    csv_path = "csvs/ma_algos.csv"
     run_settings = pd.read_csv(csv_path)
 
     # Retrieve dimensionality
     dimensionality = run_settings.at[index, "dimensions"]
     # Retrieve budget
     budget = run_settings.at[index, "budget"]
-    # Retrieve the NGOpt choice algorithm for this dimensionality and budget
-    algo_id = run_settings.at[index, "algorithm"]
+    # Retrieve the algorithm for this dimensionality, budget and index
+    algo_id = run_settings.at[index, "algo ID"]
     algorithm = const.ALGS_CONSIDERED[algo_id]
     # Retrieve all MA-BBOB problems
     problems = [prepare_affine_problem(ma_index, dimensionality)
@@ -515,9 +518,10 @@ if __name__ == "__main__":
         type=int,
         help="PBS ID to convert to dimension, budget, algorithm, problem.")
     parser.add_argument(
-        "--pbs-index-ma-ngopt",
+        "--pbs-index-ma",
         type=int,
-        help="PBS ID to convert to experiment settings for NGOpt on MA-BBOB.")
+        help=("PBS ID to convert to experiment settings for algorithms on "
+              "MA-BBOB."))
     args = parser.parse_args()
 
     if args.pbs_index_all_dims is not None:
@@ -536,9 +540,9 @@ if __name__ == "__main__":
             pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
         run_algos([algorithm], [problem], budget,
                   [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    elif args.pbs_index_ma_ngopt is not None:
+    elif args.pbs_index_ma is not None:
         dimensionality, budget, algorithm, problems, instance = (
-            pbs_index_to_ma_combo_ngopt(args.pbs_index_ma_ngopt))
+            pbs_index_to_ma_combo(args.pbs_index_ma))
         n_repetitions = 1
         run_algos([algorithm], problems, budget, [dimensionality],
                   n_repetitions, [instance], process_intermediate_data=True)
