@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Module to generate CSV files describing MA-BBOB problems to use."""
+"""Module to generate CSV files with MA-BBOB problems and algorithms to use."""
 from pathlib import Path
 
 import numpy as np
@@ -80,14 +80,6 @@ def write_algo_combos_csvs() -> None:
     ranking_data = pd.read_csv(ranking_file)
     ranking_data.drop("points", axis=1, inplace=True)
 
-    # Load algorithm ID and name mapping
-    algos_file = Path(f"csvs/ngopt_algos_{nevergrad_version}.csv")
-    algo_names = pd.read_csv(algos_file)
-    algo_ids = [
-        algo_names.loc[algo_names["short name"] == algo_name].ID.values[0]
-        for algo_name in ranking_data["algorithm"]]
-    ranking_data["algo ID"] = algo_ids
-
     # For each budget and dimension
     budgets = [dims * 100 for dims in const.DIMS_CONSIDERED]
     algos_to_run = pd.DataFrame()
@@ -102,12 +94,9 @@ def write_algo_combos_csvs() -> None:
             # Retrieve the NGOpt choice and its rank from the data
             # and remove it from the data structure
             ngopt_choice = ngopt.get_ngopt_choice(dims, budget)
-            rank = bud_dim_df.loc[
-                bud_dim_df["algorithm"] == ngopt_choice, "rank"].values[0]
-            ngopt_rank = f"ngopt_{rank}"
             ngopt_algo = bud_dim_df.loc[
-                bud_dim_df["algorithm"] == ngopt_choice]
-            ngopt_algo = ngopt_algo.assign(rank=ngopt_rank)
+                bud_dim_df["algorithm"] == ngopt_choice].copy()
+            ngopt_algo["ngopt rank"] = 0
             bud_dim_df.drop(bud_dim_df[
                 bud_dim_df["algorithm"] == ngopt_choice].index, inplace=True)
 
@@ -117,10 +106,22 @@ def write_algo_combos_csvs() -> None:
             # algorithms that appear earlier, but ties a quite rare.
             bud_dim_df.sort_values("rank", inplace=True)
             best_n = 4
-            best_algos = bud_dim_df.head(best_n)
+            best_algos = bud_dim_df.head(best_n).copy()
+            best_algos["ngopt rank"] = best_algos["rank"]
 
             # Add NGOpt choice and best algorithms to the to run data frame
             algos_to_run = pd.concat([algos_to_run, best_algos, ngopt_algo])
+
+    # Add column with algorithm ID from file mapping algorithm IDs and names
+    algos_file = Path(f"csvs/ngopt_algos_{nevergrad_version}.csv")
+    algo_names = pd.read_csv(algos_file)
+    algo_ids = [
+        algo_names.loc[algo_names["short name"] == algo_name].ID.values[0]
+        for algo_name in algos_to_run["algorithm"]]
+    algos_to_run["algo ID"] = algo_ids
+
+    # Sort to prioritise NGOpt choice and higher ranked algorithms
+    algos_to_run.sort_values(by=["ngopt rank"], inplace=True)
 
     # Write the CSV
     out_path = Path("csvs/ma_algos.csv")
