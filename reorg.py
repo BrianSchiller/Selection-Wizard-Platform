@@ -9,6 +9,34 @@ import json
 import argparse
 
 
+def move_ma_csvs(algo_dirs: list[Path]) -> None:
+    """Organise MA-BBOB directories by algorithm-dimension-budget combination.
+
+    Args:
+        algo_dirs:
+            List of algorithm directories to move. Each of these directories
+            should have a .csv with preprocessed data, and a .zip with the raw
+            data over all considered MA-BBOB problems.
+    """
+    current_dir = Path.cwd()
+    target_dir = current_dir.with_name(f"{current_dir.name}_organised")
+    target_dir.mkdir(exist_ok=True)
+
+    for algo_dir in algo_dirs:
+        # Get the name as the directory name, without the _processed component
+        combination_name = str(algo_dir.name).removesuffix("_processed")
+
+        # Copy the data.csv file from the directory to <name>.csv
+        source = algo_dir / "data.csv"
+        destination = target_dir / Path(f"{combination_name}.csv")
+
+        print(f"Copy {source}")
+        print(f"to   {destination}")
+        shutil.copy(source, destination)
+
+    return
+
+
 def move_per_dim_bud(algo_dirs: list[Path]) -> None:
     """Organise directories by algorithm-dimension-budget combination.
 
@@ -20,7 +48,7 @@ def move_per_dim_bud(algo_dirs: list[Path]) -> None:
     """
     for algo_dir in algo_dirs:
         # Get needed scenario metadata
-        # (should be the same for all .json filesrin the directory)
+        # (should be the same for all .json files in the directory)
         json_path = algo_dir / "IOHprofiler_f1_Sphere.json"
 
         with json_path.open() as metadata_file:
@@ -74,20 +102,25 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "data_style",
-        choices=["per_problem", "per_dim_bud"],
+        choices=["per_problem", "per_dim_bud", "ma"],
         default="per_problem",
         type=str,
-        help="How the data directory is organised. Can be: per_problem which "
+        help="How the data directory is organised. Can be:\n"
+             "- per_problem which "
              "has numbered directories each with a single problem and data for"
-             " all dimensionalities, like: data_seeds2/0/CMA/ or it can be "
-             "per_dim_bud which has numbered directories each with a single "
+             " all dimensionalities, like: data_seeds2/0/CMA/\n"
+             "- per_dim_bud which has numbered directories each with a single "
              "algorithm and data for each problem for a specific dimension and"
-             "budget combination like: data_seeds2_ngopt/0/MetaModel/")
+             "budget combination like: data_seeds2_ngopt/0/MetaModel/\n"
+             "- ma which has numbered directories each with a single algorithm"
+             "and a preprocessed csv file like: "
+             "data_seeds2_ma/2/Cobyla_D25_B1000_processed/data.csv")
     args = parser.parse_args()
 
-    # Get PBS batch job directories
+    # Get PBS batch job directories, exclude log
     this_dir = Path(".")
-    pbs_dirs = [child for child in this_dir.iterdir() if child.is_dir()]
+    pbs_dirs = [child for child in this_dir.iterdir() if child.is_dir()
+                and not str(child.name).startswith("log")]
     pbs_dirs.sort()
 
     # Get directories that need to be moved excluding __pycache__ and csvs
@@ -105,3 +138,5 @@ if __name__ == "__main__":
         move_per_function(algo_dirs)
     elif args.data_style == "per_dim_bud":
         move_per_dim_bud(algo_dirs)
+    elif args.data_style == "ma":
+        move_ma_csvs(algo_dirs)
