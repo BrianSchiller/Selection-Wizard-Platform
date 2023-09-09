@@ -14,6 +14,56 @@ import scipy.stats as ss
 import constants as const
 
 
+def analyse_ma_csvs(data_dir: Path) -> None:
+    """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
+
+    Args:
+        data_dir: Path to the data directory. This should have .csv files per
+            algorithm-dimension-budget combination. Each of these files should
+            have the columns: problem, algorithm, dimensions, budget, seed,
+            status, performance; and 828 rows, one per MA-BBOB problem.
+    """
+    # Get all .csv files in the data directory
+    csv_files = [csv_file for csv_file in data_dir.iterdir()
+                 if str(csv_file).endswith(".csv")]
+
+    # Read the data
+    csv_dfs = list()
+
+    for csv_file in csv_files:
+        csv_dfs.append(pd.read_csv(csv_file))
+
+    perf_data = pd.concat(csv_dfs)
+
+    # TODO: Create a ranking per problem-dimension-budget combination
+    dimensionalities = const.DIMS_CONSIDERED
+    dim_multiplier = 100
+    budgets = [dims * dim_multiplier for dims in dimensionalities]
+    problems = 1  # TODO
+
+    # TODO: Check for each run whether it was successful
+
+    for dimension in dimensionalities:
+        for budget in budgets:
+            for problem in problems:
+                perf_algos = perf_data.loc[
+                    (perf_data["dimensions"] == dimension)
+                    & (perf_data["budget"] == budget)
+                    & (perf_data["problem"])]
+
+    print(perf_algos)
+
+    # TODO: Assign 1 point to the best performing algorithm(s) on each problem
+    # TODO: Decide the best performing algorithm per dimension-budget
+    #       combination based on which algorithm has the most points over all
+    #       problems.
+
+    # TODO: Plot a heatmap with the best algorithm per dimension-budget
+    #       combination
+
+    return
+
+
 class Experiment:
     """Holds an experiment and its properties."""
 
