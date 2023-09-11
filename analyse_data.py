@@ -7,10 +7,12 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import json
+import os
 
 import constants as const
 from experiment import Experiment
 from experiment import NGOptChoice
+from experiment import analyse_ma_csvs
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -464,7 +466,16 @@ if __name__ == "__main__":
         type=Path,
         nargs="?",  # 0 or 1
         help="Directory of budget specific data to analyse additionally.")
+    parser.add_argument(
+        "--ma",
+        required=False,
+        action="store_true",
+        help="Analyse data_dir as being MA-BBOB preprocessed data.")
     args = parser.parse_args()
+
+    if args.ma is True:
+        analyse_ma_csvs(args.data_dir)
+        os.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
 

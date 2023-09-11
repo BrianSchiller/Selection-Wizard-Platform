@@ -27,31 +27,79 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     csv_files = [csv_file for csv_file in data_dir.iterdir()
                  if str(csv_file).endswith(".csv")]
 
-    # Read the data
+    # Read the data and collect it into a single DataFrame
     csv_dfs = list()
 
     for csv_file in csv_files:
+        print("Loading:", csv_file)
         csv_dfs.append(pd.read_csv(csv_file))
 
     perf_data = pd.concat(csv_dfs)
+    print("Data loaded")
 
     # TODO: Create a ranking per problem-dimension-budget combination
     dimensionalities = const.DIMS_CONSIDERED
     dim_multiplier = 100
     budgets = [dims * dim_multiplier for dims in dimensionalities]
-    problems = 1  # TODO
+    probs_csv = "csvs/ma_prob_names.csv"
+    problems = pd.read_csv(probs_csv)["problem"].to_list()
 
     # TODO: Check for each run whether it was successful
 
+    # Create a DataFrame to store points per dimension-budget-algorithm combo
+    ma_algos_csv = "csvs/ma_algos.csv"
+    ranking = pd.read_csv(ma_algos_csv)
+    ranking["points test"] = 0
+    ranking["rank test"] = None
+
+    # TODO: Assign points
     for dimension in dimensionalities:
         for budget in budgets:
             for problem in problems:
                 perf_algos = perf_data.loc[
                     (perf_data["dimensions"] == dimension)
                     & (perf_data["budget"] == budget)
-                    & (perf_data["problem"])]
+                    & (perf_data["problem"] == problem)].copy()
 
-    print(perf_algos)
+                # Find best algorithm to assign a point
+                perf_algos.sort_values("performance", inplace=True,
+                                       ignore_index=True)
+                algorithm = perf_algos["algorithm"].iloc[0]
+
+                # Assign points
+                ranking.loc[(ranking["dimensions"] == dimension)
+                            & (ranking["budget"] == budget)
+                            & (ranking["algorithm"] == algorithm),
+                            "points test"] += 1
+
+            # Rank the algorithms for this dimension-budget combination
+            points = ranking.loc[(ranking["dimensions"] == dimension)
+                                 & (ranking["budget"] == budget),
+                                 "points test"].values
+            # First take the negative of the points, to assign
+            # ranks in descending order since more points is
+            # better.
+            neg_points = [-1 * point for point in points]
+
+            # The "min" method resolves ties by assigning the
+            # minimum of the ranks of all tied methods. E.g., if
+            # the best two are tied, they get the minimum of rank 1
+            # and 2 = 1.
+            ranks = ss.rankdata(neg_points, method="min")
+            ranking.loc[(ranking["dimensions"] == dimension)
+                        & (ranking["budget"] == budget),
+                        "rank test"] = ranks
+
+            dim_bud_ranks = ranking.loc[
+                (ranking["dimensions"] == dimension)
+                & (ranking["budget"] == budget)]
+            print(dim_bud_ranks)
+
+            # Add to csv
+            out_path = "csvs/ma_ranking.csv"
+            dim_bud_ranks.to_csv(
+                out_path, mode="a", header=not Path(out_path).exists(),
+                index=False)
 
     # TODO: Assign 1 point to the best performing algorithm(s) on each problem
     # TODO: Decide the best performing algorithm per dimension-budget
