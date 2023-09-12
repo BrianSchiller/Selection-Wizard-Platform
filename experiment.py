@@ -37,14 +37,12 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     perf_data = pd.concat(csv_dfs)
     print("Data loaded")
 
-    # TODO: Create a ranking per problem-dimension-budget combination
+    # Create variables for all problem-dimension-budget combinations
     dimensionalities = const.DIMS_CONSIDERED
     dim_multiplier = 100
     budgets = [dims * dim_multiplier for dims in dimensionalities]
     probs_csv = "csvs/ma_prob_names.csv"
     problems = pd.read_csv(probs_csv)["problem"].to_list()
-
-    # TODO: Check for each run whether it was successful
 
     # Create a DataFrame to store points per dimension-budget-algorithm combo
     ma_algos_csv = "csvs/ma_algos.csv"
@@ -52,7 +50,7 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     ranking["points test"] = 0
     ranking["rank test"] = None
 
-    # TODO: Assign points
+    # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
             for problem in problems:
@@ -61,18 +59,34 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                     & (perf_data["budget"] == budget)
                     & (perf_data["problem"] == problem)].copy()
 
+                # Check for each run whether it was successful
+                failed = perf_algos.loc[perf_algos["status"] != 1]
+                # TODO: Add all failed to runs to a collection to write to csv
+                # in the end
+
+                for idx, run in failed.iterrows():
+                    error = run["status"]
+                    print(f"Run FAILED with error code: {error} for algorithm "
+                          f"{run['algorithm']} on D{dimension}B{budget} on "
+                          f"problem {problem}")
+
+                # Remove the failed runs from the DataFrame
+                perf_algos = perf_algos.loc[perf_algos["status"] == 1]
+
                 # Find best algorithm to assign a point
                 perf_algos.sort_values("performance", inplace=True,
                                        ignore_index=True)
                 algorithm = perf_algos["algorithm"].iloc[0]
 
-                # Assign points
+                # Assign 1 point to the best performing algorithm(s) on this
+                # problem
                 ranking.loc[(ranking["dimensions"] == dimension)
                             & (ranking["budget"] == budget)
                             & (ranking["algorithm"] == algorithm),
                             "points test"] += 1
 
-            # Rank the algorithms for this dimension-budget combination
+            # Rank the algorithms for this dimension-budget combination based
+            # on which algorithm has the most points over all problems.
             points = ranking.loc[(ranking["dimensions"] == dimension)
                                  & (ranking["budget"] == budget),
                                  "points test"].values
@@ -80,7 +94,6 @@ def analyse_ma_csvs(data_dir: Path) -> None:
             # ranks in descending order since more points is
             # better.
             neg_points = [-1 * point for point in points]
-
             # The "min" method resolves ties by assigning the
             # minimum of the ranks of all tied methods. E.g., if
             # the best two are tied, they get the minimum of rank 1
@@ -101,15 +114,11 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                 out_path, mode="a", header=not Path(out_path).exists(),
                 index=False)
 
-    # TODO: Assign 1 point to the best performing algorithm(s) on each problem
-    # TODO: Decide the best performing algorithm per dimension-budget
-    #       combination based on which algorithm has the most points over all
-    #       problems.
-
-    # TODO: Plot a heatmap with the best algorithm per dimension-budget
-    #       combination
-
     return
+
+
+# TODO: Create a function to plot a heatmap with the best algorithm per
+#       dimension-budget combination
 
 
 class Experiment:
