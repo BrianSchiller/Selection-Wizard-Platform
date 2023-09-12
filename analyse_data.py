@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import json
-import os
+import sys
 
 import constants as const
 from experiment import Experiment
@@ -475,7 +475,7 @@ if __name__ == "__main__":
 
     if args.ma is True:
         analyse_ma_csvs(args.data_dir)
-        os.exit()
+        sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
 
