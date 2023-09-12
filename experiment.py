@@ -49,6 +49,7 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     ranking = pd.read_csv(ma_algos_csv)
     ranking["points test"] = 0
     ranking["rank test"] = None
+    failed_runs = pd.DataFrame()
 
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
@@ -61,8 +62,8 @@ def analyse_ma_csvs(data_dir: Path) -> None:
 
                 # Check for each run whether it was successful
                 failed = perf_algos.loc[perf_algos["status"] != 1]
-                # TODO: Add all failed to runs to a collection to write to csv
-                # in the end
+                # Add all failed to runs to a collection
+                failed_runs = pd.concat([failed_runs, failed])
 
                 for idx, run in failed.iterrows():
                     error = run["status"]
@@ -108,11 +109,16 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                 & (ranking["budget"] == budget)]
             print(dim_bud_ranks)
 
-            # Add to csv
+            # Add points and ranks to csv
             out_path = "csvs/ma_ranking.csv"
             dim_bud_ranks.to_csv(
                 out_path, mode="a", header=not Path(out_path).exists(),
                 index=False)
+
+            # Add failed runs to csv
+            out_path = "csvs/ma_ranking_failed.csv"
+            failed_runs.to_csv(out_path, mode="a",
+                               header=not Path(out_path).exists(), index=False)
 
     return
 
