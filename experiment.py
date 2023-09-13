@@ -63,9 +63,11 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                 failed = perf_algos.loc[perf_algos["status"] != 1]
 
                 # Add failed runs to csv
-                out_path = "csvs/ma_ranking_failed.csv"
-                failed.to_csv(out_path, mode="a",
-                              header=not Path(out_path).exists(), index=False)
+                if len(failed.index) > 0:
+                    out_path = "csvs/ma_ranking_failed.csv"
+                    failed.to_csv(out_path, mode="a",
+                                  header=not Path(out_path).exists(),
+                                  index=False)
 
                 for idx, run in failed.iterrows():
                     error = run["status"]
