@@ -82,6 +82,16 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                             & (perf_data["algorithm"] == algorithm)].index,
                         inplace=True)
 
+            # Check whether any data remains for this dim-bud combination
+            perf_algos = perf_data.loc[
+                (perf_data["dimensions"] == dimension)
+                & (perf_data["budget"] == budget)]
+
+            if len(perf_algos.index) == 0:
+                print(f"No results found for D{dimension}B{budget}, skipping!")
+
+                continue
+
             for problem in problems:
                 perf_algos = perf_data.loc[
                     (perf_data["dimensions"] == dimension)
