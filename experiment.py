@@ -117,17 +117,20 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                 # Remove the failed runs from the DataFrame
                 perf_algos = perf_algos.loc[perf_algos["status"] == 1]
 
-                # Find best algorithm to assign a point
-                # TODO: Select multiple algorithms in case of a tie!
+                # Find the best algorithms to assign points
                 perf_algos.sort_values("performance", inplace=True,
                                        ignore_index=True)
-                algorithm = perf_algos["algorithm"].iloc[0]
+                # Select multiple algorithms in case of a tie!
+                perf_algos = perf_algos.loc[
+                    perf_algos["performance"]
+                    == perf_algos["performance"].iloc[0]]
+                algorithm = perf_algos["algorithm"].values
 
                 # Assign 1 point to the best performing algorithm(s) on this
                 # problem
                 ranking.loc[(ranking["dimensions"] == dimension)
                             & (ranking["budget"] == budget)
-                            & (ranking["algorithm"] == algorithm),
+                            & (ranking["algorithm"].isin(algorithm)),
                             "points test"] += 1
 
             # Rank the algorithms for this dimension-budget combination based
