@@ -35,6 +35,7 @@ def analyse_ma_csvs(data_dir: Path) -> None:
         csv_dfs.append(pd.read_csv(csv_file))
 
     perf_data = pd.concat(csv_dfs)
+    perf_data.reset_index(drop=True, inplace=True)
     print("Data loaded")
 
     # Create variables for all problem-dimension-budget combinations
@@ -47,12 +48,40 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     # Create a DataFrame to store points per dimension-budget-algorithm combo
     ma_algos_csv = "csvs/ma_algos.csv"
     ranking = pd.read_csv(ma_algos_csv)
+    ranking["in data"] = False
     ranking["points test"] = 0
     ranking["rank test"] = None
 
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
+            # Check all algorithms we expect for this dimension-budget
+            # combination are there; remove extras; report missing ones.
+            algos_real = perf_data.loc[
+                (perf_data["dimensions"] == dimension)
+                & (perf_data["budget"] == budget)]
+            algos_need = ranking.loc[
+                (ranking["dimensions"] == dimension)
+                & (ranking["budget"] == budget)]
+
+            for algorithm in algos_real["algorithm"].unique():
+                if algorithm in algos_need["algorithm"].values:
+                    # Set in data column to True
+                    ranking.loc[(ranking["dimensions"] == dimension)
+                                & (ranking["budget"] == budget)
+                                & (ranking["algorithm"] == algorithm),
+                                "in data"] = True
+                else:
+                    # Remove algorithm from pref_data DataFrame
+                    print(f"Found unexpected algorithm {algorithm} for "
+                          f"D{dimension}B{budget}, excluding it from analysis")
+                    perf_data.drop(
+                        perf_data[
+                            (perf_data["dimensions"] == dimension)
+                            & (perf_data["budget"] == budget)
+                            & (perf_data["algorithm"] == algorithm)].index,
+                        inplace=True)
+
             for problem in problems:
                 perf_algos = perf_data.loc[
                     (perf_data["dimensions"] == dimension)
@@ -79,6 +108,7 @@ def analyse_ma_csvs(data_dir: Path) -> None:
                 perf_algos = perf_algos.loc[perf_algos["status"] == 1]
 
                 # Find best algorithm to assign a point
+                # TODO: Select multiple algorithms in case of a tie!
                 perf_algos.sort_values("performance", inplace=True,
                                        ignore_index=True)
                 algorithm = perf_algos["algorithm"].iloc[0]
@@ -124,6 +154,72 @@ def analyse_ma_csvs(data_dir: Path) -> None:
 
 # TODO: Create a function to plot a heatmap with the best algorithm per
 #       dimension-budget combination
+#def plot_heatmap_data_test(ranking_csv: Path,
+#                           algo_matrix: pd.DataFrame,
+#                           ngopt: NGOptChoice,
+#                           file_name: str = "grid_data") -> None:
+#    """Plot a heatmap showing the best algorithm per budget-dimension pair.
+#
+#    In case of a tie, if one of the top ranking algorithms matches with the
+#    choice of NGOpt, this one is shown. If none of the tied algorithms
+#    match NGOpt, the one that happens to be on top is shown.
+#
+#    Args:
+#        ranking_csv: Path to a csv file with algorithms ranked based on their
+#            performance on the MA-BBOB problems for each dimension-budget
+#            combination
+#        algo_matrix: DataFrame with rows representing different
+#            dimensionalities and columns representing different evaluation
+#            budgets. Each cell with algorithm scores in a DataFrame with
+#            columns: algorithm, points
+#        ngopt: Instance of NGOptChoice to enable retrieving algorithm
+#            choice of NGOpt for plotted dimensionalities and budgets.
+#        file_name: Name of the file to write to. Will be written in the
+#            plots/heatmap/ directory with a _d{multiplier}.pdf extension.
+#    """
+#    best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
+#
+#    algorithms = [algo.name_short for algo in self.algorithms]
+#    algo_ids = [algo.id for algo in self.algorithms]
+#    best_algos = best_matrix.values.flatten().tolist()
+#
+#    # Get indices for algorithms relevant for the plot
+#    ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+#                   if algo in best_algos]
+#    algos_in_plot = [algo for algo in algorithms if algo in best_algos]
+#    colours = const.ALGO_COLOURS
+#    colours_in_plot = [colours[i] for i in ids_in_plot]
+#
+#    # Dict mapping short names to ints
+#    algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
+#
+#    # Create heatmap
+#    fig, ax = plt.subplots(figsize=(10.2, 5.6))
+#    ax = sns.heatmap(
+#        best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+#        square=True)
+#    ax.set(xlabel="evaluation budget", ylabel="dimensions")
+#    ax.xaxis.tick_top()
+#    ax.xaxis.set_label_position("top")
+#    ax.tick_params(axis="x", labelrotation=90)
+#
+#    # Add algorithm names to colour bar
+#    colorbar = ax.collections[0].colorbar
+#    r = colorbar.vmax - colorbar.vmin
+#    n = len(algo_to_int)
+#    colorbar.set_ticks(
+#        [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+#    colorbar.set_ticklabels(list(algo_to_int.keys()))
+#
+#    # Plot and save the figure
+#    plt.tight_layout()
+#    plt.show()
+#    out_path = Path(
+#        f"plots/heatmap/{file_name}_d{self.dim_multiplier}.pdf")
+#    out_path.parent.mkdir(parents=True, exist_ok=True)
+#    plt.savefig(out_path)
+#
+#    return
 
 
 class Experiment:
