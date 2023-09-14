@@ -167,72 +167,123 @@ def analyse_ma_csvs(data_dir: Path) -> None:
 
 # TODO: Create a function to plot a heatmap with the best algorithm per
 #       dimension-budget combination
-#def plot_heatmap_data_test(ranking_csv: Path,
-#                           algo_matrix: pd.DataFrame,
-#                           ngopt: NGOptChoice,
-#                           file_name: str = "grid_data") -> None:
-#    """Plot a heatmap showing the best algorithm per budget-dimension pair.
-#
-#    In case of a tie, if one of the top ranking algorithms matches with the
-#    choice of NGOpt, this one is shown. If none of the tied algorithms
-#    match NGOpt, the one that happens to be on top is shown.
-#
-#    Args:
-#        ranking_csv: Path to a csv file with algorithms ranked based on their
-#            performance on the MA-BBOB problems for each dimension-budget
-#            combination
-#        algo_matrix: DataFrame with rows representing different
-#            dimensionalities and columns representing different evaluation
-#            budgets. Each cell with algorithm scores in a DataFrame with
-#            columns: algorithm, points
-#        ngopt: Instance of NGOptChoice to enable retrieving algorithm
-#            choice of NGOpt for plotted dimensionalities and budgets.
-#        file_name: Name of the file to write to. Will be written in the
-#            plots/heatmap/ directory with a _d{multiplier}.pdf extension.
-#    """
-#    best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
-#
-#    algorithms = [algo.name_short for algo in self.algorithms]
-#    algo_ids = [algo.id for algo in self.algorithms]
-#    best_algos = best_matrix.values.flatten().tolist()
-#
-#    # Get indices for algorithms relevant for the plot
-#    ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
-#                   if algo in best_algos]
-#    algos_in_plot = [algo for algo in algorithms if algo in best_algos]
-#    colours = const.ALGO_COLOURS
-#    colours_in_plot = [colours[i] for i in ids_in_plot]
-#
-#    # Dict mapping short names to ints
-#    algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
-#
-#    # Create heatmap
-#    fig, ax = plt.subplots(figsize=(10.2, 5.6))
-#    ax = sns.heatmap(
-#        best_matrix.replace(algo_to_int), cmap=colours_in_plot,
-#        square=True)
-#    ax.set(xlabel="evaluation budget", ylabel="dimensions")
-#    ax.xaxis.tick_top()
-#    ax.xaxis.set_label_position("top")
-#    ax.tick_params(axis="x", labelrotation=90)
-#
-#    # Add algorithm names to colour bar
-#    colorbar = ax.collections[0].colorbar
-#    r = colorbar.vmax - colorbar.vmin
-#    n = len(algo_to_int)
-#    colorbar.set_ticks(
-#        [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
-#    colorbar.set_ticklabels(list(algo_to_int.keys()))
-#
-#    # Plot and save the figure
-#    plt.tight_layout()
-#    plt.show()
-#    out_path = Path(
-#        f"plots/heatmap/{file_name}_d{self.dim_multiplier}.pdf")
-#    out_path.parent.mkdir(parents=True, exist_ok=True)
-#    plt.savefig(out_path)
-#
-#    return
+def plot_heatmap_data_test(ranking_csv: Path,
+                           file_name: str = "grid_test") -> None:
+    """Plot a heatmap showing the best algorithm per budget-dimension pair.
+
+    In case of a tie, if one of the top ranking algorithms matches with the
+    choice of NGOpt, this one is shown. If none of the tied algorithms
+    match NGOpt, the one that happens to be on top is shown.
+
+    Args:
+        ranking_csv: Path to a csv file with algorithms ranked based on their
+            performance on the MA-BBOB problems for each dimension-budget
+            combination
+        file_name: Name of the file to write to. Will be written in the
+            plots/heatmap/ directory with a _d{multiplier}.pdf extension.
+    """
+    # Load data from csv
+    algo_df = pd.read_csv(ranking_csv)
+
+    best_matrix = get_best_algorithms_test(algo_df)
+
+    algorithms = []
+    algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+
+    for algo_name in algo_names:
+        algorithms.append(Algorithm(algo_name))
+
+    algo_names = [algo.name_short for algo in algorithms]
+    algo_ids = [algo.id for algo in algorithms]
+    best_algos = best_matrix.values.flatten().tolist()
+
+    # Get indices for algorithms relevant for the plot
+    ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
+                   if algo in best_algos]
+    algos_in_plot = [algo for algo in algo_names if algo in best_algos]
+    colours = const.ALGO_COLOURS
+    colours_in_plot = [colours[i] for i in ids_in_plot]
+
+    # Dict mapping short names to ints
+    algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
+
+    # Create heatmap
+    fig, ax = plt.subplots(figsize=(10.2, 5.6))
+    ax = sns.heatmap(
+        best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+        square=True)
+    ax.set(xlabel="evaluation budget", ylabel="dimensions")
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position("top")
+    ax.tick_params(axis="x", labelrotation=90)
+
+    # Add algorithm names to colour bar
+    colorbar = ax.collections[0].colorbar
+    r = colorbar.vmax - colorbar.vmin
+    n = len(algo_to_int)
+    colorbar.set_ticks(
+        [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+    colorbar.set_ticklabels(list(algo_to_int.keys()))
+
+    # Plot and save the figure
+    plt.tight_layout()
+    plt.show()
+    dim_multiplier = 100
+    out_path = Path(
+        f"plots/heatmap/{file_name}_d{dim_multiplier}.pdf")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path)
+
+    return
+
+
+def get_best_algorithms_test(algo_df: pd.DataFrame) -> pd.DataFrame:
+    """Retrieve the top ranked algorithms per budget-dimensionality pair.
+
+    In case of a tie, if one of the top ranking algorithms matches with the
+    choice of NGOpt, this one is shown. If none of the tied algorithms
+    match NGOpt, the one that happens to be on top is shown.
+
+    Args:
+        algo_df: DataFrame with rows representing different combinations of
+            dimensionalities, budgets and algorithms. Available columns are:
+            dimensions, budget, algorithm, rank, ngopt rank, algo ID, in data,
+            points test, rank test
+
+    Returns:
+        A DataFrame of short Algorithm names with rows representing
+        different dimensionalities and columns representing different
+        evaluation budgets.
+    """
+    best_matrix = pd.DataFrame()
+    budgets = algo_df["budget"].unique()
+    dimensionalities = algo_df["dimensions"].unique()
+
+    for budget in budgets:
+        dims_best = []
+
+        for dims in dimensionalities:
+            algo_scores = algo_df.loc[(algo_df["dimensions"] == dims)
+                                      & (algo_df["budget"] == budget)]
+
+            # Retrieve the NGOpt choice for this dimension-budget combination
+            ngopt_algo = algo_scores.loc[
+                algo_scores["ngopt rank"] == 0, "algorithm"].values[0]
+
+            # Retrieve all algorithms that are tied for first place
+            algo_scores = algo_scores.loc[algo_scores["rank test"] == 1]
+
+            # Prefer the NGOptChoice in case of a tie
+            if ngopt_algo in algo_scores["algorithm"].values:
+                dims_best.append(ngopt_algo)
+            else:
+                dims_best.append(algo_scores["algorithm"].values[0])
+
+        best_matrix[budget] = dims_best
+
+    best_matrix.index = dimensionalities
+
+    return best_matrix
 
 
 class Experiment:

@@ -13,6 +13,7 @@ import constants as const
 from experiment import Experiment
 from experiment import NGOptChoice
 from experiment import analyse_ma_csvs
+from experiment import plot_heatmap_data_test
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -471,10 +472,20 @@ if __name__ == "__main__":
         required=False,
         action="store_true",
         help="Analyse data_dir as being MA-BBOB preprocessed data.")
+    parser.add_argument(
+        "--ma-plot",
+        default=None,
+        type=Path,
+        required=False,
+        help="Generate plot(s) for the given, ranked MA-BBOB csv file.")
+
     args = parser.parse_args()
 
     if args.ma is True:
         analyse_ma_csvs(args.data_dir)
+        sys.exit()
+    elif args.ma_plot is not None:
+        plot_heatmap_data_test(args.ma_plot)
         sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
