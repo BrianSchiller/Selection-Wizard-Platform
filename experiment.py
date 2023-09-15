@@ -203,7 +203,12 @@ def plot_heatmap_data_test(ranking_csv: Path,
 
     if comp_approach:
         best_matrix = get_best_approach_test(algo_df)
-        algos_in_plot = ["NGOpt", "Data", "Tie", "Same", "Missing"]
+        algo_names = [
+            "NGOpt (VBS)", "Data (VBS)", "VBS", "Same (All)",
+            "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
+            "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
+        best_algos = best_matrix.values.flatten().tolist()
+        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
         colours = const.ALGO_COLOURS
         colours_in_plot = [colours[i] for i, algo in enumerate(algos_in_plot)]
     else:
@@ -336,6 +341,9 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
     but they scored the same number of points), Same algoirthm (both choose the
     same algorithm), Missing (no results available).
 
+    If additional options are considered, these additional outcomes are
+    included: VBS (Virtual Best Solver)
+
     Args:
         algo_df: DataFrame with rows representing different combinations of
             dimensionalities, budgets and algorithms. Available columns are:
@@ -366,19 +374,41 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
             # Retrieve all algorithms that are tied for first place
             algo_scores = algo_scores.loc[algo_scores["rank test"] == 1]
 
-            # If algo_scores has more than 1 entry, this is a Tie
-            if len(algo_scores.index) > 1:
-                dims_best.append("Tie")
-            # If ngopt rank is 0 and rank is 1, both use the Same algorithm
+            # If all of 0, -1, >0 appear in ngopt rank, it is a three way Tie
+            if (0 in algo_scores["ngopt rank"].values
+                and -1 in algo_scores["ngopt rank"].values
+                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                dims_best.append("Tie (three-way)")
+            # If both 0, -1 appear in ngopt rank, it is a ngopt-data Tie
+            elif (0 in algo_scores["ngopt rank"].values
+                and -1 in algo_scores["ngopt rank"].values):
+                dims_best.append("Tie (NGopt-Data)")
+            # If both 0, >0 appear in ngopt rank, it is a ngopt-VBS Tie
+            elif (0 in algo_scores["ngopt rank"].values
+                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                dims_best.append("Tie (NGOpt-VBS)")
+            # If both -1, >0 appear in ngopt rank, it is a data-VBS Tie
+            elif (-1 in algo_scores["ngopt rank"].values
+                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                dims_best.append("Tie (Data-VBS)")
+            # If algo_scores still has more than 1 entry, this is a VBS-VSB Tie
+            elif len(algo_scores.index) > 1:
+                dims_best.append("Tie (VBS-VBS)")
+            # If ngopt rank is 0 and rank is 1, all use the Same algorithm.
+            # rank is 1 only checks it is the same as Data, but since this is
+            # the set of algorithms ranked 1 on test, it is also the VBS.
             elif (0 in algo_scores["ngopt rank"].values
                   and 1 in algo_scores["rank"].values):
-                dims_best.append("Same")
-            # Otherwise, if ngopt rank is 0, this is a win for NGOpt
+                dims_best.append("Same (All)")
+            # Otherwise, if ngopt rank is 0, this is a win for NGOpt (=VBS)
             elif 0 in algo_scores["ngopt rank"].values:
-                dims_best.append("NGOpt")
-            # Otherwise, if ngopt rank is -1, this is a win for Data
+                dims_best.append("NGOpt (VBS)")
+            # Otherwise, if ngopt rank is -1, this is a win for Data (=VBS)
             elif -1 in algo_scores["ngopt rank"].values:
-                dims_best.append("Data")
+                dims_best.append("Data (VBS)")
+            # Otherwise, the VBS wins
+            else:
+                dims_best.append("VBS")
 
         best_matrix[budget] = dims_best
 
