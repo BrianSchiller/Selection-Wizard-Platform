@@ -14,7 +14,7 @@ import scipy.stats as ss
 import constants as const
 
 
-def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = True) -> None:
+def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False) -> None:
     """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
 
     Args:
@@ -113,7 +113,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = True) -> None:
                 # Add failed runs to csv
                 if len(failed.index) > 0:
                     if ngopt_vs_data:
-                        out_path = "csvs/ma_ranking_failed2.csv"
+                        out_path = "csvs/ma_ranking2_failed.csv"
                     else:
                         out_path = "csvs/ma_ranking_failed.csv"
 
@@ -182,7 +182,8 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = True) -> None:
 
 
 def plot_heatmap_data_test(ranking_csv: Path,
-                           file_name: str = "grid_test") -> None:
+                           file_name: str = "grid_test",
+                           comp_approach: bool = False) -> None:
     """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
     In case of a tie, if one of the top ranking algorithms matches with the
@@ -195,32 +196,39 @@ def plot_heatmap_data_test(ranking_csv: Path,
             combination
         file_name: Name of the file to write to. Will be written in the
             plots/heatmap/ directory with a _d{multiplier}.pdf extension.
+        comp_approach: If True, compare approaches rather than algorithms.
     """
     # Load data from csv
     algo_df = pd.read_csv(ranking_csv)
 
-    best_matrix = get_best_algorithms_test(algo_df)
+    if comp_approach:
+        best_matrix = get_best_approach_test(algo_df)
+        algos_in_plot = ["NGOpt", "Data", "Tie", "Same", "Missing"]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i, algo in enumerate(algos_in_plot)]
+    else:
+        best_matrix = get_best_algorithms_test(algo_df)
 
-    algorithms = []
-    algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+        algorithms = []
+        algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
 
-    for algo_name in algo_names:
-        algorithms.append(Algorithm(algo_name))
+        for algo_name in algo_names:
+            algorithms.append(Algorithm(algo_name))
 
-    algo_names = [algo.name_short for algo in algorithms]
-    algo_ids = [algo.id for algo in algorithms]
-    best_algos = best_matrix.values.flatten().tolist()
+        algo_names = [algo.name_short for algo in algorithms]
+        algo_ids = [algo.id for algo in algorithms]
+        best_algos = best_matrix.values.flatten().tolist()
 
-    if "Missing" in best_algos:
-        algo_names.append("Missing")
-        algo_ids.append(14)  # Colour not used for const.ALGS_0_6_0
+        if "Missing" in best_algos:
+            algo_names.append("Missing")
+            algo_ids.append(14)  # Colour not used for const.ALGS_0_6_0
 
-    # Get indices for algorithms relevant for the plot
-    ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
-                   if algo in best_algos]
-    algos_in_plot = [algo for algo in algo_names if algo in best_algos]
-    colours = const.ALGO_COLOURS
-    colours_in_plot = [colours[i] for i in ids_in_plot]
+        # Get indices for algorithms relevant for the plot
+        ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
+                       if algo in best_algos]
+        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i in ids_in_plot]
 
     # Dict mapping short names to ints
     algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
@@ -247,8 +255,14 @@ def plot_heatmap_data_test(ranking_csv: Path,
     plt.tight_layout()
     plt.show()
     dim_multiplier = 100
-    out_path = Path(
-        f"plots/heatmap/{file_name}_d{dim_multiplier}.pdf")
+
+    if comp_approach:
+        out_path = Path(
+            f"plots/heatmap/{file_name}_approach_d{dim_multiplier}.pdf")
+    else:
+        out_path = Path(
+            f"plots/heatmap/{file_name}_algos_d{dim_multiplier}.pdf")
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
 
@@ -306,6 +320,65 @@ def get_best_algorithms_test(algo_df: pd.DataFrame) -> pd.DataFrame:
                 dims_best.append(ngopt_algo)
             else:
                 dims_best.append(algo_scores["algorithm"].values[0])
+
+        best_matrix[budget] = dims_best
+
+    best_matrix.index = dimensionalities
+
+    return best_matrix
+
+
+def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
+    """Retrieve the top ranked approach per budget-dimensionality pair.
+
+    When considering only the NGOpt choice and the data choice, the following
+    outcomes are included: NGOpt, Data, Tie (each chose a different algorithm,
+    but they scored the same number of points), Same algoirthm (both choose the
+    same algorithm), Missing (no results available).
+
+    Args:
+        algo_df: DataFrame with rows representing different combinations of
+            dimensionalities, budgets and algorithms. Available columns are:
+            dimensions, budget, algorithm, rank, ngopt rank, algo ID, in data,
+            points test, rank test
+
+    Returns:
+        A DataFrame of outcomes, with rows representing
+        different dimensionalities and columns representing different
+        evaluation budgets.
+    """
+    best_matrix = pd.DataFrame()
+    budgets = algo_df["budget"].unique()
+    dimensionalities = algo_df["dimensions"].unique()
+
+    for budget in budgets:
+        dims_best = []
+
+        for dims in dimensionalities:
+            algo_scores = algo_df.loc[(algo_df["dimensions"] == dims)
+                                      & (algo_df["budget"] == budget)]
+
+            # Handle missing data
+            if len(algo_scores.index) == 0:
+                dims_best.append("Missing")
+                continue
+
+            # Retrieve all algorithms that are tied for first place
+            algo_scores = algo_scores.loc[algo_scores["rank test"] == 1]
+
+            # If algo_scores has more than 1 entry, this is a Tie
+            if len(algo_scores.index) > 1:
+                dims_best.append("Tie")
+            # If ngopt rank is 0 and rank is 1, both use the Same algorithm
+            elif (0 in algo_scores["ngopt rank"].values
+                  and 1 in algo_scores["rank"].values):
+                dims_best.append("Same")
+            # Otherwise, if ngopt rank is 0, this is a win for NGOpt
+            elif 0 in algo_scores["ngopt rank"].values:
+                dims_best.append("NGOpt")
+            # Otherwise, if ngopt rank is -1, this is a win for Data
+            elif -1 in algo_scores["ngopt rank"].values:
+                dims_best.append("Data")
 
         best_matrix[budget] = dims_best
 

@@ -473,19 +473,38 @@ if __name__ == "__main__":
         action="store_true",
         help="Analyse data_dir as being MA-BBOB preprocessed data.")
     parser.add_argument(
+        "--ma-vs",
+        required=False,
+        action="store_true",
+        help=("Analyse data_dir as being MA-BBOB preprocessed data, comparing "
+              "only the NGOpt choice and the data choice."))
+    parser.add_argument(
         "--ma-plot",
         default=None,
         type=Path,
         required=False,
         help="Generate plot(s) for the given, ranked MA-BBOB csv file.")
+    parser.add_argument(
+        "--ma-plot-app",
+        required=False,
+        action="store_true",
+        help=("If set, generate plot(s) for the given, ranked MA-BBOB csv file"
+              " comparing approaches. If not set, compare algorithms."))
 
     args = parser.parse_args()
 
     if args.ma is True:
         analyse_ma_csvs(args.data_dir)
         sys.exit()
+    elif args.ma_vs is True:
+        analyse_ma_csvs(args.data_dir, ngopt_vs_data=True)
+        sys.exit()
     elif args.ma_plot is not None:
-        plot_heatmap_data_test(args.ma_plot)
+        if args.ma_plot_app:
+            plot_heatmap_data_test(args.ma_plot, comp_approach=True)
+        else:
+            plot_heatmap_data_test(args.ma_plot, comp_approach=False)
+
         sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
