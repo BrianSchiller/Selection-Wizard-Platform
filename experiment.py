@@ -376,20 +376,20 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
 
             # If all of 0, -1, >0 appear in ngopt rank, it is a three way Tie
             if (0 in algo_scores["ngopt rank"].values
-                and -1 in algo_scores["ngopt rank"].values
-                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                    and -1 in algo_scores["ngopt rank"].values
+                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
                 dims_best.append("Tie (three-way)")
             # If both 0, -1 appear in ngopt rank, it is a ngopt-data Tie
             elif (0 in algo_scores["ngopt rank"].values
-                and -1 in algo_scores["ngopt rank"].values):
+                    and -1 in algo_scores["ngopt rank"].values):
                 dims_best.append("Tie (NGopt-Data)")
             # If both 0, >0 appear in ngopt rank, it is a ngopt-VBS Tie
             elif (0 in algo_scores["ngopt rank"].values
-                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
                 dims_best.append("Tie (NGOpt-VBS)")
             # If both -1, >0 appear in ngopt rank, it is a data-VBS Tie
             elif (-1 in algo_scores["ngopt rank"].values
-                and any(rnk > 0 for rnk in algo_scores["ngopt rank"].values)):
+                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
                 dims_best.append("Tie (Data-VBS)")
             # If algo_scores still has more than 1 entry, this is a VBS-VSB Tie
             elif len(algo_scores.index) > 1:
