@@ -14,7 +14,7 @@ import scipy.stats as ss
 import constants as const
 
 
-def analyse_ma_csvs(data_dir: Path) -> None:
+def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = True) -> None:
     """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
 
     Args:
@@ -22,6 +22,8 @@ def analyse_ma_csvs(data_dir: Path) -> None:
             algorithm-dimension-budget combination. Each of these files should
             have the columns: problem, algorithm, dimensions, budget, seed,
             status, performance; and 828 rows, one per MA-BBOB problem.
+        ngopt_vs_data: If True, compare only the NGOpt choice and the data
+            choice; if False, compare NGOpt choice and top 4 from the data.
     """
     # Get all .csv files in the data directory
     csv_files = [csv_file for csv_file in data_dir.iterdir()
@@ -51,6 +53,13 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     ranking["in data"] = False
     ranking["points test"] = 0
     ranking["rank test"] = None
+
+    # If we only compare the NGOpt choice and the data choice, remove others
+    if ngopt_vs_data:
+        # The ngopt rank column has 0 for the NGOpt choice, and -1 for the data
+        # choice, if no -1 exists for a dimension-budget combination, the data
+        # choice is the same as the NGOpt choice
+        ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
 
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
@@ -103,7 +112,11 @@ def analyse_ma_csvs(data_dir: Path) -> None:
 
                 # Add failed runs to csv
                 if len(failed.index) > 0:
-                    out_path = "csvs/ma_ranking_failed.csv"
+                    if ngopt_vs_data:
+                        out_path = "csvs/ma_ranking_failed2.csv"
+                    else:
+                        out_path = "csvs/ma_ranking_failed.csv"
+
                     failed.to_csv(out_path, mode="a",
                                   header=not Path(out_path).exists(),
                                   index=False)
@@ -157,7 +170,10 @@ def analyse_ma_csvs(data_dir: Path) -> None:
             print(dim_bud_ranks)
 
             # Add points and ranks to csv
-            out_path = "csvs/ma_ranking.csv"
+            if ngopt_vs_data:
+                out_path = "csvs/ma_ranking2.csv"
+            else:
+                out_path = "csvs/ma_ranking.csv"
             dim_bud_ranks.to_csv(
                 out_path, mode="a", header=not Path(out_path).exists(),
                 index=False)
@@ -165,8 +181,6 @@ def analyse_ma_csvs(data_dir: Path) -> None:
     return
 
 
-# TODO: Create a function to plot a heatmap with the best algorithm per
-#       dimension-budget combination
 def plot_heatmap_data_test(ranking_csv: Path,
                            file_name: str = "grid_test") -> None:
     """Plot a heatmap showing the best algorithm per budget-dimension pair.
@@ -196,6 +210,10 @@ def plot_heatmap_data_test(ranking_csv: Path,
     algo_names = [algo.name_short for algo in algorithms]
     algo_ids = [algo.id for algo in algorithms]
     best_algos = best_matrix.values.flatten().tolist()
+
+    if "Missing" in best_algos:
+        algo_names.append("Missing")
+        algo_ids.append(14)  # Colour not used for const.ALGS_0_6_0
 
     # Get indices for algorithms relevant for the plot
     ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
@@ -266,9 +284,19 @@ def get_best_algorithms_test(algo_df: pd.DataFrame) -> pd.DataFrame:
             algo_scores = algo_df.loc[(algo_df["dimensions"] == dims)
                                       & (algo_df["budget"] == budget)]
 
+            if len(algo_scores.index) == 0:
+                dims_best.append("Missing")
+                continue
+
             # Retrieve the NGOpt choice for this dimension-budget combination
-            ngopt_algo = algo_scores.loc[
-                algo_scores["ngopt rank"] == 0, "algorithm"].values[0]
+            ngopt_results = algo_scores.loc[
+                algo_scores["ngopt rank"] == 0, "algorithm"]
+
+            if len(ngopt_results.index) > 0:
+                ngopt_algo = algo_scores.loc[
+                    algo_scores["ngopt rank"] == 0, "algorithm"].values[0]
+            else:
+                ngopt_algo = None
 
             # Retrieve all algorithms that are tied for first place
             algo_scores = algo_scores.loc[algo_scores["rank test"] == 1]
