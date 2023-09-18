@@ -179,7 +179,9 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 rank_csv_path = "csvs/ma_ranking.csv"
 
             dim_bud_ranks.to_csv(
-                rank_csv_path, mode="a", header=not Path(out_path).exists(),
+                rank_csv_path,
+                mode="a",
+                header=not Path(rank_csv_path).exists(),
                 index=False)
 
     if plot:
