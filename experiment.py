@@ -240,9 +240,11 @@ def plot_heatmap_data_test(ranking_csv: Path,
             "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
             "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
         best_algos = best_matrix.values.flatten().tolist()
+        ids_in_plot = [idx for idx, algo in enumerate(algo_names)
+                       if algo in best_algos]
         algos_in_plot = [algo for algo in algo_names if algo in best_algos]
         colours = const.ALGO_COLOURS
-        colours_in_plot = [colours[i] for i, algo in enumerate(algos_in_plot)]
+        colours_in_plot = [colours[i] for i in ids_in_plot]
     else:
         best_matrix = get_best_algorithms_test(algo_df)
 
