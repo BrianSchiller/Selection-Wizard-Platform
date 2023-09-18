@@ -13,7 +13,7 @@ import constants as const
 from experiment import Experiment
 from experiment import NGOptChoice
 from experiment import analyse_ma_csvs
-from experiment import plot_heatmap_data_test
+from experiment import ma_plot_all
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -476,35 +476,26 @@ if __name__ == "__main__":
         "--ma-vs",
         required=False,
         action="store_true",
-        help=("Analyse data_dir as being MA-BBOB preprocessed data, comparing "
-              "only the NGOpt choice and the data choice."))
+        help=("If set in addition to --ma, compare only the NGOpt choice"
+              " and the data choice instead of all algorithms."))
     parser.add_argument(
         "--ma-plot",
-        default=None,
-        type=Path,
-        required=False,
-        help="Generate plot(s) for the given, ranked MA-BBOB csv file.")
-    parser.add_argument(
-        "--ma-plot-app",
         required=False,
         action="store_true",
-        help=("If set, generate plot(s) for the given, ranked MA-BBOB csv file"
-              " comparing approaches. If not set, compare algorithms."))
+        help=("Generate all plot(s) for the MA-BBOB data. If no other --ma "
+              "argument is given, data_dir should be the path to the ranked "
+              "MA-BBOB csv file. Use --ma-vs to indicate which algorithms are"
+              "compared (controls the output file names)."))
 
     args = parser.parse_args()
 
+    # MA-BBOB analysis handling
     if args.ma is True:
-        analyse_ma_csvs(args.data_dir)
+        analyse_ma_csvs(args.data_dir, ngopt_vs_data=args.ma_vs,
+                        plot=args.ma_plot)
         sys.exit()
-    elif args.ma_vs is True:
-        analyse_ma_csvs(args.data_dir, ngopt_vs_data=True)
-        sys.exit()
-    elif args.ma_plot is not None:
-        if args.ma_plot_app:
-            plot_heatmap_data_test(args.ma_plot, comp_approach=True)
-        else:
-            plot_heatmap_data_test(args.ma_plot, comp_approach=False)
-
+    elif args.ma_plot is True:
+        ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs)
         sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)

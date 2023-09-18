@@ -14,7 +14,8 @@ import scipy.stats as ss
 import constants as const
 
 
-def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False) -> None:
+def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
+                    plot: bool = True) -> None:
     """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
 
     Args:
@@ -24,6 +25,8 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False) -> None:
             status, performance; and 828 rows, one per MA-BBOB problem.
         ngopt_vs_data: If True, compare only the NGOpt choice and the data
             choice; if False, compare NGOpt choice and top 4 from the data.
+        plot: If True, also generate all available plots for the MA-BBOB data
+            after the analysis.
     """
     # Get all .csv files in the data directory
     csv_files = [csv_file for csv_file in data_dir.iterdir()
@@ -113,7 +116,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False) -> None:
                 # Add failed runs to csv
                 if len(failed.index) > 0:
                     if ngopt_vs_data:
-                        out_path = "csvs/ma_ranking2_failed.csv"
+                        out_path = "csvs/ma_ranking_1v1_failed.csv"
                     else:
                         out_path = "csvs/ma_ranking_failed.csv"
 
@@ -171,12 +174,41 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False) -> None:
 
             # Add points and ranks to csv
             if ngopt_vs_data:
-                out_path = "csvs/ma_ranking2.csv"
+                rank_csv_path = "csvs/ma_ranking_1v1.csv"
             else:
-                out_path = "csvs/ma_ranking.csv"
+                rank_csv_path = "csvs/ma_ranking.csv"
+
             dim_bud_ranks.to_csv(
-                out_path, mode="a", header=not Path(out_path).exists(),
+                rank_csv_path, mode="a", header=not Path(out_path).exists(),
                 index=False)
+
+    if plot:
+        ma_plot_all(rank_csv_path)
+
+    return
+
+
+def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool) -> None:
+    """Generate all plots for the MA-BBOB data.
+
+    Args:
+        ranking_csv: Path to a csv file with algorithms ranked based on their
+            performance on the MA-BBOB problems for each dimension-budget
+            combination.
+        ngopt_vs_data: If True, change output file names to indicate that the
+            comparison only considers the NGOpt choice and the data choice; if
+            False, use regular file names for the comparison between the NGOpt
+            choice and top 4 from the data.
+    """
+    file_name = "grid_test"
+
+    if ngopt_vs_data:
+        file_name = f"{file_name}_1v1"
+
+    plot_heatmap_data_test(ranking_csv, file_name=file_name,
+                           comp_approach=False)
+    plot_heatmap_data_test(ranking_csv, file_name=file_name,
+                           comp_approach=True)
 
     return
 
@@ -193,7 +225,7 @@ def plot_heatmap_data_test(ranking_csv: Path,
     Args:
         ranking_csv: Path to a csv file with algorithms ranked based on their
             performance on the MA-BBOB problems for each dimension-budget
-            combination
+            combination.
         file_name: Name of the file to write to. Will be written in the
             plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         comp_approach: If True, compare approaches rather than algorithms.
