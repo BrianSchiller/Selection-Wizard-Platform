@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pathlib import PurePath
 import json
 import statistics
 
@@ -504,6 +505,94 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
     best_matrix.index = dimensionalities
 
     return best_matrix
+
+
+def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
+    """Plot the cumulative percentage of problems over the loss.
+
+    Args:
+        perf_data: Path to the performance data csv with loss values per
+        dimension-budget-algorithm-problem combination, or a pd.DataFrame with
+        the same data.
+    """
+    # If perf_data is given as Path, first load the data
+    if isinstance(perf_data, PurePath):
+        perf_data = pd.read_csv(perf_data)
+
+    # For each dimension-budget combination
+    budgets = perf_data["budget"].unique()
+    dimensionalities = perf_data["dimensions"].unique()
+
+    algorithms = []
+    algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+
+    for algo_name in algo_names:
+        algorithms.append(Algorithm(algo_name))
+
+    for budget in budgets:
+        for dims in dimensionalities:
+            algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
+                                       & (perf_data["budget"] == budget)]
+
+            plt.figure()
+            algos = []
+
+            # For each algorithm
+            for algorithm in algos_data["algorithm"].unique():
+                algos.append(algorithm)
+                algo_data = algos_data.loc[
+                    algos_data["algorithm"] == algorithm].copy()
+                # Order the losses on the 828 problems in ascending order
+                algo_data.sort_values("percent loss", inplace=True)
+                losses = algo_data["percent loss"].tolist()
+                # TODO: Fix this, it still gives runtime warnings, and 0 is not
+                # a good replacement value since negative log losses happen
+                log_losses = np.log10(losses, out=np.zeros_like(losses),
+                                      where=(losses != 0))
+
+                # For every distinct loss value
+                n_probs = len(log_losses)
+                perc_probs = [None] * n_probs
+                last_val = -1
+
+                for idx, loss in reversed(list(enumerate(log_losses))):
+                    # If the loss value is the same, so is the percentage of
+                    # problems solved with this loss value
+                    if loss == last_val:
+                        perc_probs[idx] = perc_probs[idx+1]
+                    else:
+                        # Compute the percentage of problems with equal or
+                        # lower loss
+                        # TODO: Maybe need to handle None/NaN
+                        perc_probs[idx] = (idx + 1) / n_probs * 100
+                        last_val = loss
+
+                algo_loss = pd.DataFrame({"log(loss %)": log_losses,
+                                          "problems %": perc_probs,
+                                          "algorithm": algorithm})
+
+                # Get indices for algorithms relevant for the plot
+                algos_in_plot = [algo.name_short for algo in algorithms
+                                 if algo.name_short in algos]
+                algo_ids = [algo.id for algo in algorithms]
+                ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+                               if algo.name_short in algos_in_plot]
+                colours = const.ALGO_COLOURS
+                colours_in_plot = {algo: colours[i] for algo, i
+                                   in zip(algos_in_plot, ids_in_plot)}
+
+                # Plot the loss (x) against the percentage of problems (y)
+                ax = sns.lineplot(data=algo_loss, x="log(loss %)",
+                                  y="problems %", hue="algorithm",
+                                  palette=colours_in_plot)
+
+            sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
+            ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
+            plt.savefig(f"plots/line/loss_D{dims}B{budget}.pdf",
+                        bbox_inches="tight")
+            plt.close()
+
+    return
 
 
 class Experiment:

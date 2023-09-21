@@ -14,6 +14,7 @@ from experiment import Experiment
 from experiment import NGOptChoice
 from experiment import analyse_ma_csvs
 from experiment import ma_plot_all
+from experiment import plot_cum_loss_data_test
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -486,6 +487,14 @@ if __name__ == "__main__":
               "argument is given, data_dir should be the path to the ranked "
               "MA-BBOB csv file. Use --ma-vs to indicate which algorithms are"
               "compared (controls the output file names)."))
+    parser.add_argument(
+        "--ma-loss",
+        required=False,
+        default=None,
+        type=Path,
+        help=("Path to dataframe with loss data per "
+              "dimension-budget-algorithm-problem combination. If given "
+              "plot lineplots with loss of algorithms per dimension-budget."))
 
     args = parser.parse_args()
 
@@ -496,6 +505,10 @@ if __name__ == "__main__":
         sys.exit()
     elif args.ma_plot is True:
         ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs)
+
+        if args.ma_loss is not None:
+            plot_cum_loss_data_test(args.ma_loss)
+
         sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
