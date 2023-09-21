@@ -43,6 +43,22 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     perf_data.reset_index(drop=True, inplace=True)
     print("Data loaded")
 
+    # Add columns for data we want to add
+    perf_data["algo ID"] = None
+    perf_data["rank"] = None
+    perf_data["percent loss"] = None
+    perf_data["log loss"] = None
+
+    # Add algorithm IDs
+    names_csv = "csvs/ngopt_algos_0.6.0.csv"
+    names_df = pd.read_csv(names_csv)
+
+    for _, algo in names_df.iterrows():
+        algo_name = algo["short name"]
+        algo_id = algo["ID"]
+        perf_data.loc[(perf_data["algorithm"] == algo_name),
+                      "algo ID"] = algo_id
+
     # Create variables for all problem-dimension-budget combinations
     dimensionalities = const.DIMS_CONSIDERED
     dim_multiplier = 100
@@ -51,7 +67,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     problems = pd.read_csv(probs_csv)["problem"].to_list()
 
     # Create a DataFrame to store points per dimension-budget-algorithm combo
-    ma_algos_csv = "csvs/ma_algos.csv"
+    ma_algos_csv = "csvs/ma_algos_ng+data.csv"
     ranking = pd.read_csv(ma_algos_csv)
     ranking["in data"] = False
     ranking["points test"] = 0
@@ -104,11 +120,16 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 continue
 
+            indices = []
+            ranks = []
+            loss_percent = []
+            loss_log = []
+
             for problem in problems:
                 perf_algos = perf_data.loc[
                     (perf_data["dimensions"] == dimension)
                     & (perf_data["budget"] == budget)
-                    & (perf_data["problem"] == problem)].copy()
+                    & (perf_data["problem"] == problem)]
 
                 # Check for each run whether it was successful
                 failed = perf_algos.loc[perf_algos["status"] != 1]
@@ -124,30 +145,62 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                                   header=not Path(out_path).exists(),
                                   index=False)
 
-                for idx, run in failed.iterrows():
+                for _, run in failed.iterrows():
                     error = run["status"]
                     print(f"Run FAILED with error code: {error} for algorithm "
                           f"{run['algorithm']} on D{dimension}B{budget} on "
                           f"problem {problem}")
 
-                # Remove the failed runs from the DataFrame
-                perf_algos = perf_algos.loc[perf_algos["status"] == 1]
+                # Get performance and indices
+                perfs = perf_algos["performance"].values
+                indices.extend(list(perf_algos["performance"].index))
 
-                # Find the best algorithms to assign points
-                perf_algos.sort_values("performance", inplace=True,
-                                       ignore_index=True)
-                # Select multiple algorithms in case of a tie!
-                perf_algos = perf_algos.loc[
-                    perf_algos["performance"]
-                    == perf_algos["performance"].iloc[0]]
-                algorithm = perf_algos["algorithm"].values
+                # Rank the algorithms by performance on this
+                # dimension-budget-problem combination
+                ranks.extend(
+                    ss.rankdata(perfs, method="min", nan_policy="omit"))
 
-                # Assign 1 point to the best performing algorithm(s) on this
-                # problem
+                # Compute loss to best percentage (and handle case where best
+                # is 0)
+                perfs = perfs + 1.0000000001
+                best = min(perfs)
+                loss_percent.extend((perfs - best) / best * 100)
+                loss_log.extend(np.log10(perfs) / np.log10(best))
+
+            # Update DataFrame for this dimension-budget combination
+            perf_data.loc[indices, "rank"] = ranks
+            perf_data.loc[indices, "percent loss"] = loss_percent
+            perf_data.loc[indices, "log loss"] = loss_log
+
+            # Write data of this dimension-budget combination to csv including
+            # ranks and loss
+            perf_db = perf_data.loc[(perf_data["dimensions"] == dimension)
+                                    & (perf_data["budget"] == budget)]
+
+            if ngopt_vs_data:
+                perf_csv_path = "csvs/ma_perf_data_1v1.csv"
+            else:
+                perf_csv_path = "csvs/ma_perf_data.csv"
+
+            perf_db.to_csv(
+                perf_csv_path,
+                mode="a",
+                header=not Path(perf_csv_path).exists(),
+                index=False)
+
+            # Assign one point for each row where an algorithms has rank 1
+            first_ranks = perf_data.loc[
+                (perf_data["dimensions"] == dimension)
+                & (perf_data["budget"] == budget)
+                & (perf_data["rank"] == 1), "algorithm"].values
+
+            algos, counts = np.unique(first_ranks, return_counts=True)
+
+            for algo, count in zip(algos, counts):
                 ranking.loc[(ranking["dimensions"] == dimension)
                             & (ranking["budget"] == budget)
-                            & (ranking["algorithm"].isin(algorithm)),
-                            "points test"] += 1
+                            & (ranking["algorithm"] == algo),
+                            "points test"] = count
 
             # Rank the algorithms for this dimension-budget combination based
             # on which algorithm has the most points over all problems.
@@ -374,7 +427,7 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
 
     When considering only the NGOpt choice and the data choice, the following
     outcomes are included: NGOpt, Data, Tie (each chose a different algorithm,
-    but they scored the same number of points), Same algoirthm (both choose the
+    but they scored the same number of points), Same algorithm (both choose the
     same algorithm), Missing (no results available).
 
     If additional options are considered, these additional outcomes are
@@ -624,7 +677,7 @@ class Experiment:
             for algo_dir in algo_dirs:
                 # Get the matching algorithm object
                 algo = algo_dir.name
-                # TODO: Handle StopIteration if algorithm ismatch (e.g., when
+                # TODO: Handle StopIteration if algorithm is match (e.g., when
                 # comparing data with different ng_version)
                 algorithm = next(
                     a for a in self.algorithms if a.name_short == algo)
@@ -1792,7 +1845,7 @@ class Scenario:
 
         Returns:
             Path to the data file or empty Path if no file is found.
-            list of ints indicating the seed used for the run
+            list of ints indicating the seed used for the run.
             list of usually ints showing the success/failure status of runs for
                 this dimensionality. 1 indicates a successful run, 0, -2, -3 a
                 crashed run, -1 a missing run. Other values than these mean
