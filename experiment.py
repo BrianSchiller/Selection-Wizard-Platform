@@ -29,6 +29,8 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         plot: If True, also generate all available plots for the MA-BBOB data
             after the analysis.
     """
+    ngopt_v_data = "_1v1" if ngopt_vs_data else ""
+
     # Get all .csv files in the data directory
     csv_files = [csv_file for csv_file in data_dir.iterdir()
                  if str(csv_file).endswith(".csv")]
@@ -137,11 +139,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 # Add failed runs to csv
                 if len(failed.index) > 0:
-                    if ngopt_vs_data:
-                        out_path = "csvs/ma_ranking_1v1_failed.csv"
-                    else:
-                        out_path = "csvs/ma_ranking_failed.csv"
-
+                    out_path = f"csvs/ma_ranking{ngopt_v_data}_failed.csv"
                     failed.to_csv(out_path, mode="a",
                                   header=not Path(out_path).exists(),
                                   index=False)
@@ -178,11 +176,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             perf_db = perf_data.loc[(perf_data["dimensions"] == dimension)
                                     & (perf_data["budget"] == budget)]
 
-            if ngopt_vs_data:
-                perf_csv_path = "csvs/ma_perf_data_1v1.csv"
-            else:
-                perf_csv_path = "csvs/ma_perf_data.csv"
-
+            perf_csv_path = "csvs/ma_perf_data{ngopt_v_data}.csv"
             perf_db.to_csv(
                 perf_csv_path,
                 mode="a",
@@ -227,11 +221,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             print(dim_bud_ranks)
 
             # Add points and ranks to csv
-            if ngopt_vs_data:
-                rank_csv_path = "csvs/ma_ranking_1v1.csv"
-            else:
-                rank_csv_path = "csvs/ma_ranking.csv"
-
+            rank_csv_path = f"csvs/ma_ranking{ngopt_v_data}.csv"
             dim_bud_ranks.to_csv(
                 rank_csv_path,
                 mode="a",
