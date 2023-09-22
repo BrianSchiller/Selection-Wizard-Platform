@@ -497,13 +497,15 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
     return best_matrix
 
 
-def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
+def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
+                            log: bool = True) -> None:
     """Plot the cumulative percentage of problems over the loss.
 
     Args:
         perf_data: Path to the performance data csv with loss values per
         dimension-budget-algorithm-problem combination, or a pd.DataFrame with
         the same data.
+        log: If True plot the log loss, otherwise print the percentage loss.
     """
     # If perf_data is given as Path, first load the data
     if isinstance(perf_data, PurePath):
@@ -512,7 +514,6 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
     # For each dimension-budget combination
     budgets = perf_data["budget"].unique()
     dimensionalities = perf_data["dimensions"].unique()
-
     algorithms = []
     algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
 
@@ -523,7 +524,6 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
         for dims in dimensionalities:
             algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
                                        & (perf_data["budget"] == budget)]
-
             plt.figure()
             algos = []
 
@@ -533,8 +533,9 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                 algo_data = algos_data.loc[
                     algos_data["algorithm"] == algorithm].copy()
                 # Order the losses on the 828 problems in ascending order
-                algo_data.sort_values("percent loss", inplace=True)
-                losses = algo_data["percent loss"].tolist()
+                loss_type = "log" if log else "percent"
+                algo_data.sort_values(f"{loss_type} loss", inplace=True)
+                losses = algo_data[f"{loss_type} loss"].tolist()
 
                 # For every distinct loss value
                 n_probs = len(losses)
@@ -553,7 +554,8 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                         perc_probs[idx] = (idx + 1) / n_probs * 100
                         last_val = loss
 
-                algo_loss = pd.DataFrame({"loss %": losses,
+                loss_label = "log loss" if log else "loss %"
+                algo_loss = pd.DataFrame({loss_label: losses,
                                           "problems %": perc_probs,
                                           "algorithm": algorithm})
 
@@ -568,14 +570,14 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                                    in zip(algos_in_plot, ids_in_plot)}
 
                 # Plot the loss (x) against the percentage of problems (y)
-                ax = sns.lineplot(data=algo_loss, x="loss %",
+                ax = sns.lineplot(data=algo_loss, x=loss_label,
                                   y="problems %", hue="algorithm",
                                   palette=colours_in_plot)
 
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
             ax.set_xscale("log")
-            plt.savefig(f"plots/line/loss_D{dims}B{budget}.pdf",
+            plt.savefig(f"plots/line/loss_{loss_type}_D{dims}B{budget}.pdf",
                         bbox_inches="tight")
             plt.close()
 
