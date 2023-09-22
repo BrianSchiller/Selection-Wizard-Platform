@@ -28,10 +28,10 @@ dimensions,budget,algorithm,rank,ngopt rank,algo ID,in data,points test,rank tes
 2,7000,ConfPortfolio_scale2_scale=1.3_ngopt14s_15,11,0,24,True,730,1
 2,7000,ConfPortfolio_scale2_scale=1.3_ngopt14s_20,1,-1,19,True,674,2
 2,8000,ConfPortfolio_scale2_scale=1.3_ngopt14s_17,1,0,22,True,828,1
-2,9000,ConfPortfolio_scale2_scale=1.3_ngopt14s_19,4,0,20,False,0,2
-2,9000,ConfPortfolio_scale2_scale=1.3_ngopt14s_17,1,-1,22,True,828,1
-2,10000,ConfPortfolio_scale2_scale=1.3_ngopt14s_21,5,0,18,False,0,2
-2,10000,ConfPortfolio_scale2_scale=1.3_ngopt14s_17,1,-1,22,True,828,1
+2,9000,ConfPortfolio_scale2_scale=1.3_ngopt14s_19,4,0,20,True,707,2
+2,9000,ConfPortfolio_scale2_scale=1.3_ngopt14s_17,1,-1,22,True,713,1
+2,10000,ConfPortfolio_scale2_scale=1.3_ngopt14s_21,5,0,18,True,702,2
+2,10000,ConfPortfolio_scale2_scale=1.3_ngopt14s_17,1,-1,22,True,736,1
 3,200,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),1,0,5,True,828,1
 3,300,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),1,0,5,True,828,1
 3,500,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),1,0,5,True,828,1

@@ -1,3 +1,3 @@
-problem,algorithm,dimensions,budget,seed,status,performance
-f216_MA156_F3-W0.1_F11_W0.9,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,10000,1,-4,
-f629_MA569_F11-W0.9_F16_W0.1,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),35,10000,1,-4,
+problem,algorithm,dimensions,budget,seed,status,performance,algo ID,rank,percent loss,log loss
+f216_MA156_F3-W0.1_F11_W0.9,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,10000,1,-4,,5,,,
+f629_MA569_F11-W0.9_F16_W0.1,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),35,10000,1,-4,,5,,,
