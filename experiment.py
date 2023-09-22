@@ -498,7 +498,8 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
-                            log: bool = True) -> None:
+                            log: bool = True,
+                            grid: bool = True) -> None:
     """Plot the cumulative percentage of problems over the loss.
 
     Args:
@@ -506,6 +507,8 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
         dimension-budget-algorithm-problem combination, or a pd.DataFrame with
         the same data.
         log: If True plot the log loss, otherwise print the percentage loss.
+        grid: If True plot a grid which each dimension-budget combination as
+            subplot, otherwise create separate plots for each.
     """
     # If perf_data is given as Path, first load the data
     if isinstance(perf_data, PurePath):
@@ -520,6 +523,79 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
     for algo_name in algo_names:
         algorithms.append(Algorithm(algo_name))
 
+    if grid:
+        rows = len(dimensionalities)
+        cols = len(budgets)
+        fig, axs = plt.subplots(rows, cols, layout="tight",
+                                figsize=(cols*6.2, rows*5.6), dpi=80)
+        bud_dims = [(bud, dim) for dim in dimensionalities
+                    for bud in budgets]
+
+        for bud_dim, ax in zip(bud_dims, axs.flatten()):
+            budget = bud_dim[0]
+            dims = bud_dim[1]
+            algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
+                                       & (perf_data["budget"] == budget)]
+            algos = []
+
+            # For each algorithm
+            for algorithm in algos_data["algorithm"].unique():
+                algos.append(algorithm)
+                algo_data = algos_data.loc[
+                    algos_data["algorithm"] == algorithm].copy()
+                # Order the losses on the 828 problems in ascending order
+                loss_type = "log" if log else "percent"
+                algo_data.sort_values(f"{loss_type} loss", inplace=True)
+                losses = algo_data[f"{loss_type} loss"].tolist()
+
+                # For every distinct loss value
+                n_probs = len(losses)
+                perc_probs = [None] * n_probs
+                last_val = -1
+
+                for idx, loss in reversed(list(enumerate(losses))):
+                    # If the loss value is the same, so is the percentage of
+                    # problems solved with this loss value
+                    if loss == last_val:
+                        perc_probs[idx] = perc_probs[idx+1]
+                    else:
+                        # Compute the percentage of problems with equal or
+                        # lower loss
+                        # TODO: Maybe need to handle None/NaN
+                        perc_probs[idx] = (idx + 1) / n_probs * 100
+                        last_val = loss
+
+                loss_label = "log loss" if log else "loss %"
+                algo_loss = pd.DataFrame({loss_label: losses,
+                                          "problems %": perc_probs,
+                                          "algorithm": algorithm})
+
+                # Get indices for algorithms relevant for the plot
+                algos_in_plot = [algo.name_short for algo in algorithms
+                                 if algo.name_short in algos]
+                algo_ids = [algo.id for algo in algorithms]
+                ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+                               if algo.name_short in algos_in_plot]
+                colours = const.ALGO_COLOURS
+                colours_in_plot = {algo: colours[i] for algo, i
+                                   in zip(algos_in_plot, ids_in_plot)}
+
+                # Plot the loss (x) against the percentage of problems (y)
+                sns.lineplot(data=algo_loss, x=loss_label,
+                             y="problems %", hue="algorithm",
+                             palette=colours_in_plot, ax=ax)
+
+            sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
+            ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
+            ax.set_xscale("log")
+
+        plt.savefig(f"plots/line/loss_{loss_type}_grid.pdf",
+                    bbox_inches="tight")
+        plt.close()
+
+        return
+
+    # If we don't plot as grid, plot each figure to separate file:
     for budget in budgets:
         for dims in dimensionalities:
             algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
@@ -577,8 +653,9 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
             ax.set_xscale("log")
-            plt.savefig(f"plots/line/loss_{loss_type}_D{dims}B{budget}.pdf",
-                        bbox_inches="tight")
+            plt.savefig(
+                f"plots/line/single/loss_{loss_type}_D{dims}B{budget}.pdf",
+                bbox_inches="tight")
             plt.close()
 
     return
