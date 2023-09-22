@@ -545,17 +545,13 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                 # Order the losses on the 828 problems in ascending order
                 algo_data.sort_values("percent loss", inplace=True)
                 losses = algo_data["percent loss"].tolist()
-                # TODO: Fix this, it still gives runtime warnings, and 0 is not
-                # a good replacement value since negative log losses happen
-                log_losses = np.log10(losses, out=np.zeros_like(losses),
-                                      where=(losses != 0))
 
                 # For every distinct loss value
-                n_probs = len(log_losses)
+                n_probs = len(losses)
                 perc_probs = [None] * n_probs
                 last_val = -1
 
-                for idx, loss in reversed(list(enumerate(log_losses))):
+                for idx, loss in reversed(list(enumerate(losses))):
                     # If the loss value is the same, so is the percentage of
                     # problems solved with this loss value
                     if loss == last_val:
@@ -567,7 +563,7 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                         perc_probs[idx] = (idx + 1) / n_probs * 100
                         last_val = loss
 
-                algo_loss = pd.DataFrame({"log(loss %)": log_losses,
+                algo_loss = pd.DataFrame({"loss %": losses,
                                           "problems %": perc_probs,
                                           "algorithm": algorithm})
 
@@ -582,12 +578,13 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame) -> None:
                                    in zip(algos_in_plot, ids_in_plot)}
 
                 # Plot the loss (x) against the percentage of problems (y)
-                ax = sns.lineplot(data=algo_loss, x="log(loss %)",
+                ax = sns.lineplot(data=algo_loss, x="loss %",
                                   y="problems %", hue="algorithm",
                                   palette=colours_in_plot)
 
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
+            ax.set_xscale("log")
             plt.savefig(f"plots/line/loss_D{dims}B{budget}.pdf",
                         bbox_inches="tight")
             plt.close()
