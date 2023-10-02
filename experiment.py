@@ -442,7 +442,6 @@ def plot_heatmap_data_test_funcs(perf_csv: Path,
         out_path = Path(
             f"plots/heatmap/{file_name}_algos_d{dim_multiplier}.pdf")
 
-    out_path = Path(f".pdf")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
 
@@ -528,7 +527,6 @@ def get_best_algorithms_test_func(algo_df: pd.DataFrame) -> pd.DataFrame:
     """
     best_matrix = pd.DataFrame()
     budgets = algo_df["budget"].unique()
-    dimensionalities = algo_df["dimensions"].unique()
     functions = ["f60_MA0_F1-W0.1_F2_W0.9",
                  "f129_MA69_F2-W0.1_F3_W0.9",
                  "f195_MA135_F3-W0.1_F4_W0.9",
@@ -555,16 +553,16 @@ def get_best_algorithms_test_func(algo_df: pd.DataFrame) -> pd.DataFrame:
 
     dims = 20
 
-    for func in functions::
+    for func in functions:
         dims_best = []
 
-        budgets = [200,5000,10000]
+        budgets = [200, 5000, 10000]
         for budget in budgets:
             algo_scores = algo_df.loc[(algo_df["dimensions"] == dims)
                                       & (algo_df["budget"] == budget)
                                       & (algo_df["problem"] == func)]
 
-            ## Retrieve all algorithms that are tied for first place
+            # Retrieve all algorithms that are tied for first place
             algo_scores = algo_scores.loc[algo_scores["rank"] == 1]
             dims_best.append(algo_scores["algorithm"].values[0])
             print(algo_scores["algorithm"].values)
