@@ -161,10 +161,14 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 # Compute loss to best percentage (and handle case where best
                 # is 0)
-                perfs = perfs + 1.0000000001
-                best = min(perfs)
-                loss_percent.extend((perfs - best) / best * 100)
-                loss_log.extend(np.log10(perfs) / np.log10(best))
+                perfs_1 = perfs + 1.0000000001
+                best = min(perfs_1)
+                loss_percent.extend((perfs_1 - best) / best * 100)
+
+                minimum = 0.0000000001
+                perfs_min = np.maximum(perfs, minimum)
+                best = min(perfs_min)
+                loss_log.extend(np.log10(perfs_min) - np.log10(best))
 
             # Update DataFrame for this dimension-budget combination
             perf_data.loc[indices, "rank"] = ranks
