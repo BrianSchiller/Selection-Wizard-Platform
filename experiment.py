@@ -83,6 +83,19 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         # choice is the same as the NGOpt choice
         ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
 
+    # Prepare and check output paths
+    failed_csv_path = Path(f"csvs/ma_ranking{ngopt_v_data}_failed.csv")
+    perf_csv_path = Path(f"csvs/ma_perf_data{ngopt_v_data}.csv")
+    rank_csv_path = Path(f"csvs/ma_ranking{ngopt_v_data}.csv")
+    csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path]
+    csv_paths = [csv_path for csv_path in csv_paths if csv_path.is_file()]
+
+    for csv_path in csv_paths:
+        new_csv_path = csv_path.with_suffix(".old")
+        print(f"Output file {csv_path} already exists, moving it to "
+              f"{new_csv_path}")
+        csv_path.rename(new_csv_path)
+
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
@@ -139,9 +152,8 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 # Add failed runs to csv
                 if len(failed.index) > 0:
-                    out_path = f"csvs/ma_ranking{ngopt_v_data}_failed.csv"
-                    failed.to_csv(out_path, mode="a",
-                                  header=not Path(out_path).exists(),
+                    failed.to_csv(failed_csv_path, mode="a",
+                                  header=not Path(failed_csv_path).exists(),
                                   index=False)
 
                 for _, run in failed.iterrows():
@@ -180,7 +192,6 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             perf_db = perf_data.loc[(perf_data["dimensions"] == dimension)
                                     & (perf_data["budget"] == budget)]
 
-            perf_csv_path = "csvs/ma_perf_data{ngopt_v_data}.csv"
             perf_db.to_csv(
                 perf_csv_path,
                 mode="a",
@@ -225,7 +236,6 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             print(dim_bud_ranks)
 
             # Add points and ranks to csv
-            rank_csv_path = f"csvs/ma_ranking{ngopt_v_data}.csv"
             dim_bud_ranks.to_csv(
                 rank_csv_path,
                 mode="a",
