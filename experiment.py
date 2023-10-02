@@ -354,6 +354,101 @@ def plot_heatmap_data_test(ranking_csv: Path,
     return
 
 
+def plot_heatmap_data_test_funcs(perf_csv: Path,
+                                 file_name: str = "func_comp",
+                                 comp_approach: bool = False) -> None:
+    """Plot a heatmap showing the best algorithm per budget-function pair.
+
+    In case of a tie, if one of the top ranking algorithms matches with the
+    choice of NGOpt, this one is shown. If none of the tied algorithms
+    match NGOpt, the one that happens to be on top is shown.
+
+    Args:
+        perf_csv: Path to a csv file with performance of algorithms on
+            the MA-BBOB problems for each dimension-budget combination.
+        file_name: Name of the file to write to. Will be written in the
+            plots/heatmap/ directory with a _d{multiplier}.pdf extension.
+        comp_approach: If True, compare approaches rather than algorithms.
+    """
+    # Load data from csv
+    algo_df = pd.read_csv(perf_csv)
+
+    if comp_approach:
+        best_matrix = get_best_approach_test(algo_df)
+        algo_names = [
+            "NGOpt (VBS)", "Data (VBS)", "VBS", "Same (All)",
+            "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
+            "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
+        best_algos = best_matrix.values.flatten().tolist()
+        ids_in_plot = [idx for idx, algo in enumerate(algo_names)
+                       if algo in best_algos]
+        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i in ids_in_plot]
+    else:
+        best_matrix = get_best_algorithms_test(algo_df)
+
+        algorithms = []
+        algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+
+        for algo_name in algo_names:
+            algorithms.append(Algorithm(algo_name))
+
+        algo_names = [algo.name_short for algo in algorithms]
+        algo_ids = [algo.id for algo in algorithms]
+        best_algos = best_matrix.values.flatten().tolist()
+
+        if "Missing" in best_algos:
+            algo_names.append("Missing")
+            algo_ids.append(14)  # Colour not used for const.ALGS_0_6_0
+
+        # Get indices for algorithms relevant for the plot
+        ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
+                       if algo in best_algos]
+        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
+        colours = const.ALGO_COLOURS
+        colours_in_plot = [colours[i] for i in ids_in_plot]
+
+    # Dict mapping short names to ints
+    algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
+
+    # Create heatmap
+    fig, ax = plt.subplots(figsize=(10.2, 4.6))
+    ax = sns.heatmap(
+        best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+        square=True)
+    ax.set(xlabel="function", ylabel="evaluation budget")
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position("top")
+    ax.tick_params(axis="x", labelrotation=90)
+
+    # Add algorithm names to colour bar
+    colorbar = ax.collections[0].colorbar
+    r = colorbar.vmax - colorbar.vmin
+    n = len(algo_to_int)
+    colorbar.set_ticks(
+        [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+    colorbar.set_ticklabels(list(algo_to_int.keys()))
+
+    # Plot and save the figure
+    plt.tight_layout()
+    plt.show()
+    dim_multiplier = 100
+
+    if comp_approach:
+        out_path = Path(
+            f"plots/heatmap/{file_name}_approach_d{dim_multiplier}.pdf")
+    else:
+        out_path = Path(
+            f"plots/heatmap/{file_name}_algos_d{dim_multiplier}.pdf")
+
+    out_path = Path(f".pdf")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path)
+
+    return
+
+
 def get_best_algorithms_test(algo_df: pd.DataFrame) -> pd.DataFrame:
     """Retrieve the top ranked algorithms per budget-dimensionality pair.
 
@@ -409,6 +504,74 @@ def get_best_algorithms_test(algo_df: pd.DataFrame) -> pd.DataFrame:
         best_matrix[budget] = dims_best
 
     best_matrix.index = dimensionalities
+
+    return best_matrix
+
+
+def get_best_algorithms_test_func(algo_df: pd.DataFrame) -> pd.DataFrame:
+    """Retrieve the top ranked algorithms per budget-function pair.
+
+    In case of a tie, if one of the top ranking algorithms matches with the
+    choice of NGOpt, this one is shown. If none of the tied algorithms
+    match NGOpt, the one that happens to be on top is shown.
+
+    Args:
+        algo_df: DataFrame with rows representing different combinations of
+            dimensionalities, budgets, problems, and algorithms. Available
+            columns are: problem, algorithm, dimensions, budget, seed, status,
+            performance, algo ID, rank, percent loss, log loss
+
+    Returns:
+        A DataFrame of short Algorithm names with rows representing
+        different evaluation budgets and columns representing different
+        functions.
+    """
+    best_matrix = pd.DataFrame()
+    budgets = algo_df["budget"].unique()
+    dimensionalities = algo_df["dimensions"].unique()
+    functions = ["f60_MA0_F1-W0.1_F2_W0.9",
+                 "f129_MA69_F2-W0.1_F3_W0.9",
+                 "f195_MA135_F3-W0.1_F4_W0.9",
+                 "f258_MA198_F4-W0.1_F5_W0.9",
+                 "f318_MA258_F5-W0.1_F6_W0.9",
+                 "f375_MA315_F6-W0.1_F7_W0.9",
+                 "f429_MA369_F7-W0.1_F8_W0.9",
+                 "f480_MA420_F8-W0.1_F9_W0.9",
+                 "f528_MA468_F9-W0.1_F10_W0.9",
+                 "f573_MA513_F10-W0.1_F11_W0.9",
+                 "f615_MA555_F11-W0.1_F12_W0.9",
+                 "f654_MA594_F12-W0.1_F13_W0.9",
+                 "f690_MA630_F13-W0.1_F14_W0.9",
+                 "f723_MA663_F14-W0.1_F15_W0.9",
+                 "f753_MA693_F15-W0.1_F16_W0.9",
+                 "f780_MA720_F16-W0.1_F17_W0.9",
+                 "f804_MA744_F17-W0.1_F18_W0.9",
+                 "f825_MA765_F18-W0.1_F19_W0.9",
+                 "f843_MA783_F19-W0.1_F20_W0.9",
+                 "f858_MA798_F20-W0.1_F21_W0.9",
+                 "f870_MA810_F21-W0.1_F22_W0.9",
+                 "f879_MA819_F22-W0.1_F23_W0.9",
+                 "f885_MA825_F23-W0.1_F24_W0.9"]
+
+    dims = 20
+
+    for func in functions::
+        dims_best = []
+
+        budgets = [200,5000,10000]
+        for budget in budgets:
+            algo_scores = algo_df.loc[(algo_df["dimensions"] == dims)
+                                      & (algo_df["budget"] == budget)
+                                      & (algo_df["problem"] == func)]
+
+            ## Retrieve all algorithms that are tied for first place
+            algo_scores = algo_scores.loc[algo_scores["rank"] == 1]
+            dims_best.append(algo_scores["algorithm"].values[0])
+            print(algo_scores["algorithm"].values)
+
+        best_matrix[func] = dims_best
+
+    best_matrix.index = budgets
 
     return best_matrix
 
