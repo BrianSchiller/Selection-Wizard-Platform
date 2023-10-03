@@ -710,6 +710,26 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
 
     ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
+    if grid:
+        plot_cum_loss_data_test_grid(perf_data, ngopt_v_data, log)
+    else:
+        plot_cum_loss_data_test_separate(perf_data, ngopt_v_data, log)
+
+    return
+
+
+def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
+                                 ngopt_v_data: str,
+                                 log: bool = True) -> None:
+    """Plot the cumulative percentage of problems over the loss in a grid.
+
+    Args:
+        perf_data: pd.DataFrame with the performance data csv with loss values
+            per dimension-budget-algorithm-problem combination.
+        ngopt_v_data: String to use for the output Path. Either empty or 1v1 to
+            indicate only the NGOpt and Data choices are compared.
+        log: If True plot the log loss, otherwise print the percentage loss.
+    """
     # For each dimension-budget combination
     budgets = perf_data["budget"].unique()
     dimensionalities = perf_data["dimensions"].unique()
@@ -719,80 +739,103 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
     for algo_name in algo_names:
         algorithms.append(Algorithm(algo_name))
 
-    if grid:
-        rows = len(dimensionalities)
-        cols = len(budgets)
-        fig, axs = plt.subplots(rows, cols, layout="tight",
-                                figsize=(cols*6.2, rows*5.6), dpi=80)
-        bud_dims = [(bud, dim) for dim in dimensionalities
-                    for bud in budgets]
+    rows = len(dimensionalities)
+    cols = len(budgets)
+    fig, axs = plt.subplots(rows, cols, layout="tight",
+                            figsize=(cols*6.2, rows*5.6), dpi=80)
+    bud_dims = [(bud, dim) for dim in dimensionalities
+                for bud in budgets]
 
-        for bud_dim, ax in zip(bud_dims, axs.flatten()):
-            budget = bud_dim[0]
-            dims = bud_dim[1]
-            algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
-                                       & (perf_data["budget"] == budget)]
-            algos = []
+    for bud_dim, ax in zip(bud_dims, axs.flatten()):
+        budget = bud_dim[0]
+        dims = bud_dim[1]
+        algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
+                                   & (perf_data["budget"] == budget)]
+        algos = []
 
-            # For each algorithm
-            for algorithm in algos_data["algorithm"].unique():
-                algos.append(algorithm)
-                algo_data = algos_data.loc[
-                    algos_data["algorithm"] == algorithm].copy()
-                # Order the losses on the 828 problems in ascending order
-                loss_type = "log" if log else "percent"
-                algo_data.sort_values(f"{loss_type} loss", inplace=True)
-                losses = algo_data[f"{loss_type} loss"].tolist()
+        # For each algorithm
+        for algorithm in algos_data["algorithm"].unique():
+            algos.append(algorithm)
+            algo_data = algos_data.loc[
+                algos_data["algorithm"] == algorithm].copy()
+            # Order the losses on the 828 problems in ascending order
+            loss_type = "log" if log else "percent"
+            algo_data.sort_values(f"{loss_type} loss", inplace=True)
+            losses = algo_data[f"{loss_type} loss"].tolist()
 
-                # For every distinct loss value
-                n_probs = len(losses)
-                perc_probs = [None] * n_probs
-                last_val = -1
+            # For every distinct loss value
+            n_probs = len(losses)
+            perc_probs = [None] * n_probs
+            last_val = -1
 
-                for idx, loss in reversed(list(enumerate(losses))):
-                    # If the loss value is the same, so is the percentage of
-                    # problems solved with this loss value
-                    if loss == last_val:
-                        perc_probs[idx] = perc_probs[idx+1]
-                    else:
-                        # Compute the percentage of problems with equal or
-                        # lower loss
-                        perc_probs[idx] = (idx + 1) / n_probs * 100
-                        last_val = loss
+            for idx, loss in reversed(list(enumerate(losses))):
+                # If the loss value is the same, so is the percentage of
+                # problems solved with this loss value
+                if loss == last_val:
+                    perc_probs[idx] = perc_probs[idx+1]
+                else:
+                    # Compute the percentage of problems with equal or
+                    # lower loss
+                    perc_probs[idx] = (idx + 1) / n_probs * 100
+                    last_val = loss
 
-                loss_label = "log loss" if log else "loss %"
-                algo_loss = pd.DataFrame({loss_label: losses,
-                                          "problems %": perc_probs,
-                                          "algorithm": algorithm})
+            loss_label = "log loss" if log else "loss %"
+            algo_loss = pd.DataFrame({loss_label: losses,
+                                      "problems %": perc_probs,
+                                      "algorithm": algorithm})
 
-                # Get indices for algorithms relevant for the plot
-                algos_in_plot = [algo.name_short for algo in algorithms
-                                 if algo.name_short in algos]
-                algo_ids = [algo.id for algo in algorithms]
-                ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
-                               if algo.name_short in algos_in_plot]
-                colours = const.ALGO_COLOURS
-                colours_in_plot = {algo: colours[i] for algo, i
-                                   in zip(algos_in_plot, ids_in_plot)}
+            # Get indices for algorithms relevant for the plot
+            algos_in_plot = [algo.name_short for algo in algorithms
+                             if algo.name_short in algos]
+            algo_ids = [algo.id for algo in algorithms]
+            ids_in_plot = [idx for idx, algo in zip(algo_ids, algorithms)
+                           if algo.name_short in algos_in_plot]
+            colours = const.ALGO_COLOURS
+            colours_in_plot = {algo: colours[i] for algo, i
+                               in zip(algos_in_plot, ids_in_plot)}
 
-                # Plot the loss (x) against the percentage of problems (y)
-                sns.lineplot(data=algo_loss, x=loss_label,
-                             y="problems %", hue="algorithm",
-                             palette=colours_in_plot, ax=ax)
+            # Plot the loss (x) against the percentage of problems (y)
+            sns.lineplot(data=algo_loss, x=loss_label,
+                         y="problems %", hue="algorithm",
+                         palette=colours_in_plot, ax=ax)
 
-            sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
-            ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
+        sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
+        ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
 
-            if not log:
-                ax.set_xscale("log")
+        if not log:
+            ax.set_xscale("log")
 
-        file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
-        plt.savefig(file_name, bbox_inches="tight")
-        plt.close()
+    file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
+    plt.savefig(file_name, bbox_inches="tight")
+    plt.close()
 
-        return
+    return
 
-    # If we don't plot as grid, plot each figure to separate file:
+
+def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
+                                     ngopt_v_data: str,
+                                     log: bool = True) -> None:
+    """Plot the cumulative percentage of problems over the loss per pair.
+
+    Each pair has a budget and number of dimensions.
+
+    Args:
+        perf_data: pd.DataFrame with the performance data csv with loss values
+            per dimension-budget-algorithm-problem combination.
+        ngopt_v_data: String to use for the output Path. Either empty or 1v1 to
+            indicate only the NGOpt and Data choices are compared.
+        log: If True plot the log loss, otherwise print the percentage loss.
+    """
+    # For each dimension-budget combination
+    budgets = perf_data["budget"].unique()
+    dimensionalities = perf_data["dimensions"].unique()
+    algorithms = []
+    algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
+
+    for algo_name in algo_names:
+        algorithms.append(Algorithm(algo_name))
+
+    # Plot each figure to a separate file:
     for budget in budgets:
         for dims in dimensionalities:
             algos_data = perf_data.loc[(perf_data["dimensions"] == dims)
