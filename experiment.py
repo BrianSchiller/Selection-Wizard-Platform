@@ -757,7 +757,6 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
                     else:
                         # Compute the percentage of problems with equal or
                         # lower loss
-                        # TODO: Maybe need to handle None/NaN
                         perc_probs[idx] = (idx + 1) / n_probs * 100
                         last_val = loss
 
@@ -783,7 +782,9 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
 
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
-            ax.set_xscale("log")
+
+            if not log:
+                ax.set_xscale("log")
 
         file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
         plt.savefig(file_name, bbox_inches="tight")
@@ -822,7 +823,6 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
                     else:
                         # Compute the percentage of problems with equal or
                         # lower loss
-                        # TODO: Maybe need to handle None/NaN
                         perc_probs[idx] = (idx + 1) / n_probs * 100
                         last_val = loss
 
@@ -848,7 +848,10 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
 
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
-            ax.set_xscale("log")
+
+            if not log:
+                ax.set_xscale("log")
+
             file_name = (f"plots/line/single/loss_{loss_type}{ngopt_v_data}"
                          f"_D{dims}B{budget}.pdf")
             plt.savefig(file_name, bbox_inches="tight")
