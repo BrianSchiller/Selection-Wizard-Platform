@@ -191,11 +191,10 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             # ranks and loss
             perf_db = perf_data.loc[(perf_data["dimensions"] == dimension)
                                     & (perf_data["budget"] == budget)]
-
             perf_db.to_csv(
                 perf_csv_path,
                 mode="a",
-                header=not Path(perf_csv_path).exists(),
+                header=not perf_csv_path.exists(),
                 index=False)
 
             # Assign one point for each row where an algorithms has rank 1
@@ -243,12 +242,13 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 index=False)
 
     if plot:
-        ma_plot_all(rank_csv_path)
+        ma_plot_all(rank_csv_path, ngopt_vs_data, perf_csv_path)
 
     return
 
 
-def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool) -> None:
+def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
+                perf_data: Path | pd.DataFrame = None) -> None:
     """Generate all plots for the MA-BBOB data.
 
     Args:
@@ -259,6 +259,9 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool) -> None:
             comparison only considers the NGOpt choice and the data choice; if
             False, use regular file names for the comparison between the NGOpt
             choice and top 4 from the data.
+        perf_data: Path to the performance data csv with loss values per
+            dimension-budget-algorithm-problem combination, or a pd.DataFrame
+            with the same data. If None, don't plot cumulative loss plots.
     """
     file_name = "grid_test"
 
@@ -269,6 +272,13 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool) -> None:
                            comp_approach=False)
     plot_heatmap_data_test(ranking_csv, file_name=file_name,
                            comp_approach=True)
+
+    if perf_data is not None:
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True)
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=False)
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False, grid=True)
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
+                                grid=False)
 
     return
 
@@ -673,21 +683,32 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
+                            ngopt_vs_data: bool,
                             log: bool = True,
                             grid: bool = True) -> None:
     """Plot the cumulative percentage of problems over the loss.
 
     Args:
         perf_data: Path to the performance data csv with loss values per
-        dimension-budget-algorithm-problem combination, or a pd.DataFrame with
-        the same data.
+            dimension-budget-algorithm-problem combination, or a pd.DataFrame
+            with the same data. If it is None, do nothing.
+        ngopt_vs_data: If True, change output file names to indicate that the
+            comparison only considers the NGOpt choice and the data choice; if
+            False, use regular file names for the comparison between the NGOpt
+            choice and top 4 from the data.
         log: If True plot the log loss, otherwise print the percentage loss.
         grid: If True plot a grid which each dimension-budget combination as
             subplot, otherwise create separate plots for each.
     """
+    # If perf_data is None, do nothing
+    if perf_data is None:
+        return
+
     # If perf_data is given as Path, first load the data
     if isinstance(perf_data, PurePath):
         perf_data = pd.read_csv(perf_data)
+
+    ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
     # For each dimension-budget combination
     budgets = perf_data["budget"].unique()
@@ -764,8 +785,8 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
             ax.set_xscale("log")
 
-        plt.savefig(f"plots/line/loss_{loss_type}_grid.pdf",
-                    bbox_inches="tight")
+        file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
+        plt.savefig(file_name, bbox_inches="tight")
         plt.close()
 
         return
@@ -828,9 +849,9 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
             sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
             ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
             ax.set_xscale("log")
-            plt.savefig(
-                f"plots/line/single/loss_{loss_type}_D{dims}B{budget}.pdf",
-                bbox_inches="tight")
+            file_name = (f"plots/line/single/loss_{loss_type}{ngopt_v_data}"
+                         f"_D{dims}B{budget}.pdf")
+            plt.savefig(file_name, bbox_inches="tight")
             plt.close()
 
     return

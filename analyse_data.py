@@ -14,7 +14,6 @@ from experiment import Experiment
 from experiment import NGOptChoice
 from experiment import analyse_ma_csvs
 from experiment import ma_plot_all
-from experiment import plot_cum_loss_data_test
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -504,11 +503,8 @@ if __name__ == "__main__":
                         plot=args.ma_plot)
         sys.exit()
     elif args.ma_plot is True:
-        ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs)
-
-        if args.ma_loss is not None:
-            plot_cum_loss_data_test(args.ma_loss)
-
+        ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs,
+                    perf_data=args.ma_loss)
         sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
