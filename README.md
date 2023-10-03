@@ -36,5 +36,5 @@ Output: `csvs/ma_ranking_1v1.csv`, `csvs/ma_ranking_1v1_failed.csv` (only if any
 Output: `plots/heatmap/grid_test_algos_d100.pdf`, `plots/heatmap/grid_test_approach_d100.pdf`, `plots/line/loss_log_grid.pdf`, `plots/line/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
 
 4. Plot MA-BBOB results comparing only the NGOpt choice and the data based choice:  
-`./analyse_data.py csvs/ma_ranking_1v1.csv --ma-plot --ma-vs --ma-loss csvs/ma_perf_data.csv`  
+`./analyse_data.py csvs/ma_ranking_1v1.csv --ma-plot --ma-vs --ma-loss csvs/ma_perf_data_1v1.csv`  
 Output: `plots/heatmap/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/grid_test_1v1_approach_d100.pdf`, `plots/line/loss_log_1v1_grid.pdf`, `plots/line/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
