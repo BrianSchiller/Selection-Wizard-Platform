@@ -173,11 +173,11 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 # Compute loss to best percentage (and handle case where best
                 # is 0)
-                perfs_1 = perfs + 1.0000000001
+                perfs_1 = perfs + 1
                 best = min(perfs_1)
                 loss_percent.extend((perfs_1 - best) / best * 100)
 
-                minimum = 0.0000000001
+                minimum = 0.00000000001
                 perfs_min = np.maximum(perfs, minimum)
                 best = min(perfs_min)
                 loss_log.extend(np.log10(perfs_min) - np.log10(best))
