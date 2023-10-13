@@ -801,9 +801,12 @@ def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
 
         sns.move_legend(ax, "lower left", bbox_to_anchor=(0, -0.5, 1, 0.2))
         ax.set_title(f"Dimensions: {dims}, Budget: {budget}")
-
         if not log:
             ax.set_xscale("log")
+
+    # Set grid lines
+    for ax in axs.flatten():
+        ax.grid(visible=True)
 
     file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
     plt.savefig(file_name, bbox_inches="tight")
@@ -894,6 +897,9 @@ def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
 
             if not log:
                 ax.set_xscale("log")
+
+            # Set grid lines
+            plt.grid()
 
             file_name = (f"plots/line/single/loss_{loss_type}{ngopt_v_data}"
                          f"_D{dims}B{budget}.pdf")
