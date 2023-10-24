@@ -14,6 +14,7 @@ from experiment import Experiment
 from experiment import NGOptChoice
 from experiment import analyse_ma_csvs
 from experiment import ma_plot_all
+from experiment import plot_loss_gain_heatmap_test
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -496,6 +497,11 @@ if __name__ == "__main__":
               "plot lineplots with loss of algorithms per dimension-budget."))
 
     args = parser.parse_args()
+
+    perf_data = Path("csvs/ma_perf_data.csv")
+    rank_data = Path("csvs/ma_ranking.csv")
+    plot_loss_gain_heatmap_test(perf_data, rank_data)
+    sys.exit()
 
     # MA-BBOB analysis handling
     if args.ma is True:

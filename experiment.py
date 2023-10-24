@@ -5,9 +5,11 @@ from pathlib import Path
 from pathlib import PurePath
 import json
 import statistics
+import sys
 
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
 import seaborn as sns
 import numpy as np
 import scipy.stats as ss
@@ -905,6 +907,131 @@ def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
                          f"_D{dims}B{budget}.pdf")
             plt.savefig(file_name, bbox_inches="tight")
             plt.close()
+
+    return
+
+
+def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
+                                rank_data: Path | pd.DataFrame,
+                                log: bool = True,
+                                compare: str = "data",
+                                magnitude: float = 2) -> None:
+    """Plot a loss/gain heatmap compared to the best algorithm at 0 loss.
+
+    The loss and gain compared to the best algorithm are computed by taking the
+    difference in the percentage of problems for which the algorithms have the
+    chosen worst case loss magnitude. At magnitude zero the data/ngopt choice
+    can only lose or tie with the best algorithm. At higher magnitudes the
+    data/ngopt choice may also perform better than the best algorithm. Here the
+    best algorithm is taken as the algorithm covering the highest
+    number/percentage of problems at magnitude 0.
+
+    Args:
+        perf_data: pd.DataFrame with the performance data csv with loss values
+            per dimension-budget-algorithm-problem combination.
+        rank_data: DataFrame with rows representing different combinations of
+            dimensionalities, budgets and algorithms. Available columns are:
+            dimensions, budget, algorithm, rank, ngopt rank, algo ID, in data,
+            points test, rank test
+        log: If True plot the log loss, otherwise print the percentage loss.
+        compare: The selector to compare with the best algorithm. Can be "data"
+            or "ngopt", to compare to the choices they make.
+        magnitude: The order of magnitude of loss to compare at.
+    """
+    # If rank_data is given as Path, first load the ranking data from csv
+    if isinstance(rank_data, PurePath):
+        rank_data = pd.read_csv(rank_data)
+
+    # If perf_data is given as Path, first load the performance data from csv
+    if isinstance(perf_data, PurePath):
+        perf_data = pd.read_csv(perf_data)
+
+    # TODO: For each dimension-budget pair
+    budgets = rank_data["budget"].unique()
+    dimensionalities = rank_data["dimensions"].unique()
+    diff_matrix = pd.DataFrame()
+
+    for budget in budgets:
+        bud_diffs = []
+
+        for dims in dimensionalities:
+            # Retrieve the relevant algorithm names
+            best_algo = rank_data.loc[(rank_data["dimensions"] == dims)
+                                      & (rank_data["budget"] == budget)
+                                      & (rank_data["rank test"] == 1)]
+            best_algo = best_algo["algorithm"].values[0]
+            comp_algo = rank_data.loc[(rank_data["dimensions"] == dims)
+                                      & (rank_data["budget"] == budget)
+                                      & (rank_data["ngopt rank"] <= 0)]
+
+            if compare == "ngopt":
+                comp_algo = comp_algo.loc[comp_algo["ngopt rank"] == 0]
+                comp_algo = comp_algo["algorithm"].values[0]
+            elif compare == "data":
+                comp_algo = comp_algo.loc[comp_algo["ngopt rank"]
+                                          == comp_algo["ngopt rank"].min()]
+                comp_algo = comp_algo["algorithm"].values[0]
+            else:
+                print("ERROR: Invalid 'compare' argument given to "
+                      "function plot_loss_gain_heatmap_test()")
+                sys.exit(-1)
+
+            # Determine the loss type
+            loss_type = "log" if log else "percent"
+            loss_type = f"{loss_type} loss"
+
+            # Take the percentage of problems covered by the best algorithm
+            best_data = perf_data.loc[
+                (perf_data["dimensions"] == dims)
+                & (perf_data["budget"] == budget)
+                & (perf_data["algorithm"] == best_algo)].copy()
+            best_perc = (best_data.loc[
+                best_data[loss_type] <= magnitude, loss_type].count()
+                / best_data[loss_type].count() * 100)
+
+            # Take the percentage of problems covered by the ngopt/data choice
+            comp_data = perf_data.loc[
+                (perf_data["dimensions"] == dims)
+                & (perf_data["budget"] == budget)
+                & (perf_data["algorithm"] == comp_algo)].copy()
+            comp_perc = (comp_data.loc[
+                comp_data[loss_type] <= magnitude, loss_type].count()
+                / comp_data[loss_type].count() * 100)
+
+            # Take the loss/gain of ngopt/data compared to the best algorithm
+            difference = comp_perc - best_perc
+            print(f"difference: {difference} for B{budget}D{dims} between best"
+                  f" {best_algo} ({best_perc}) and {compare} {comp_algo} "
+                  f"({comp_perc})")
+
+            # Store the difference for plotting
+            bud_diffs.append(difference)
+
+        diff_matrix[budget] = bud_diffs
+
+    diff_matrix.index = dimensionalities
+
+    # TODO: Plot the heatmap based on the differences
+    fig, ax = plt.subplots(figsize=(10.2, 5.6))
+    norm = TwoSlopeNorm(vmin=-20., vcenter=0., vmax=13.)
+    ax = sns.heatmap(
+        diff_matrix,
+        square=True,
+        annot=True,
+        cmap="vlag_r", norm=norm)
+    ax.set(xlabel="evaluation budget", ylabel="dimensions")
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position("top")
+    ax.tick_params(axis="x", labelrotation=90)
+
+    # Plot and save the figure
+    plt.tight_layout()
+    plt.show()
+    out_path = Path(
+        f"plots/heatmap/loss_gain_mag{magnitude}_{compare}.pdf")
+    # {file_name}_d{self.dim_multiplier}.pdf")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out_path)
 
     return
 
