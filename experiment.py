@@ -282,6 +282,13 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
         plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
                                 grid=False)
 
+    # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data choice
+    for magnitude in range(0, 6):
+        plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
+                                    compare="data", magnitude=magnitude)
+        plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
+                                    compare="ngopt", magnitude=magnitude)
+
     return
 
 
@@ -915,7 +922,7 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                                 rank_data: Path | pd.DataFrame,
                                 log: bool = True,
                                 compare: str = "data",
-                                magnitude: float = 2) -> None:
+                                magnitude: float = 0) -> None:
     """Plot a loss/gain heatmap compared to the best algorithm at 0 loss.
 
     The loss and gain compared to the best algorithm are computed by taking the
@@ -946,7 +953,6 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
     if isinstance(perf_data, PurePath):
         perf_data = pd.read_csv(perf_data)
 
-    # TODO: For each dimension-budget pair
     budgets = rank_data["budget"].unique()
     dimensionalities = rank_data["dimensions"].unique()
     diff_matrix = pd.DataFrame()
@@ -985,9 +991,11 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                 (perf_data["dimensions"] == dims)
                 & (perf_data["budget"] == budget)
                 & (perf_data["algorithm"] == best_algo)].copy()
+            # Divide by the total number of rows to include failed runs that
+            # have an empty entry in the loss_type column.
             best_perc = (best_data.loc[
                 best_data[loss_type] <= magnitude, loss_type].count()
-                / best_data[loss_type].count() * 100)
+                / len(best_data.index) * 100)
 
             # Take the percentage of problems covered by the ngopt/data choice
             comp_data = perf_data.loc[
@@ -996,7 +1004,7 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                 & (perf_data["algorithm"] == comp_algo)].copy()
             comp_perc = (comp_data.loc[
                 comp_data[loss_type] <= magnitude, loss_type].count()
-                / comp_data[loss_type].count() * 100)
+                / len(comp_data.index) * 100)
 
             # Take the loss/gain of ngopt/data compared to the best algorithm
             difference = comp_perc - best_perc
@@ -1011,24 +1019,27 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
 
     diff_matrix.index = dimensionalities
 
-    # TODO: Plot the heatmap based on the differences
-    fig, ax = plt.subplots(figsize=(10.2, 5.6))
-    norm = TwoSlopeNorm(vmin=-20., vcenter=0., vmax=13.)
+    # Plot the heatmap based on the differences
+    fig, ax = plt.subplots(figsize=(6.5, 5.6))
+    vmax = 37.
+    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0., vmax=vmax)
     ax = sns.heatmap(
         diff_matrix,
         square=True,
-        annot=True,
+        annot=True, annot_kws={"size": 6},
         cmap="vlag_r", norm=norm)
     ax.set(xlabel="evaluation budget", ylabel="dimensions")
     ax.xaxis.tick_top()
     ax.xaxis.set_label_position("top")
     ax.tick_params(axis="x", labelrotation=90)
-
+    ax.set_title(f"Difference in percentage of problems for a {loss_type} loss"
+                 f" of {magnitude}\nof the {compare} choice compared to the "
+                 "best algorithm at 0 loss.")
     # Plot and save the figure
     plt.tight_layout()
     plt.show()
     out_path = Path(
-        f"plots/heatmap/loss_gain_mag{magnitude}_{compare}.pdf")
+        f"plots/heatmap/loss_gain_{loss_type}_mag{magnitude}_{compare}.pdf")
     # {file_name}_d{self.dim_multiplier}.pdf")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
