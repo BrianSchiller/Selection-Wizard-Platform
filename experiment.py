@@ -1054,7 +1054,8 @@ class Experiment:
                  data_dir: Path,
                  per_budget_data_dir: Path = None,
                  dimensionalities: list[int] = const.DIMS_CONSIDERED,
-                 ng_version: str = "0.6.0") -> None:
+                 ng_version: str = "0.6.0",
+                 prob_set: str = "all") -> None:
         """Initialise the Experiment.
 
         Args:
@@ -1076,9 +1077,25 @@ class Experiment:
             ng_version: Version of Nevergrad. This influences which algorithms
                 are chosen by NGOpt, and therefore which algorithms are
                 included in the analysis.
+            prob_set: The problem set to use. Default is all. Other options are
+                ma-like_5 - BBOB problems most similar to MA-BBOB (based on 2D)
+                    Includes functions 1, 3, 5, 6, 7, 10, 13, 20, 22, 23
+                ma-like_4 - BBOB problems near similar to MA-BBOB (based on 2D)
+                    Includes functions ma-like_5 and 8, 18
+                ma-like_3 - BBOB problems somewhat like MA-BBOB (based on 2D)
+                    Includes functions ma-like_4 and 4, 9, 12, 14, 15, 16, 17
+                ma-like_2 - BBOB problems fairly unlike MA-BBOB (based on 2D)
+                    Includes functions ma-like_3 and 2, 11, 19, 21
+                ma-like_0 - BBOB problems unlike MA-BBOB (based on 2D)
+                    Includes functions ma-like_2 and 24
+                separable - BBOB problems 1-5 (separable)
+                low_cond - BBOB problems 6-9 (low or moderate conditioning)
+                high_cond - BBOB problems 10-14 (high conditioning, unimodal)
+                multi_glob - BBOB problems 15-19 (multimodal, global structure)
+                multi_weak - BBOB problems 20-24 (multimodal, weak g structure)
+                multimodal - BBOB problems 15-24 (multimodal)
         """
         self.data_dir = data_dir
-        self.problems = []
         self.algorithms = []
         self.dimensionalities = dimensionalities
         self.prob_scenarios = {}
@@ -1089,9 +1106,7 @@ class Experiment:
             dims * self.dim_multiplier for dims in self.dimensionalities]
         self.per_budget_data_dir = per_budget_data_dir
 
-        for prob_name, prob_id in zip(const.PROB_NAMES,
-                                      const.PROBS_CONSIDERED):
-            self.problems.append(Problem(prob_name, prob_id))
+        self.set_problems(prob_set)
 
         if ng_version == "0.5.0":
             algo_names = [
@@ -1107,6 +1122,83 @@ class Experiment:
 
         if self.per_budget_data_dir is not None:
             self.load_per_budget_data()
+
+        return
+
+    def set_problems(self: Experiment,
+                     prob_set: str) -> list[Problem]:
+        """Set the set of BBOB problems to consider in the analysis.
+
+        Args:
+            prob_set: The problem set to use. Default is all. Other options are
+                ma-like_5 - BBOB problems most similar to MA-BBOB (based on 2D)
+                    Includes functions 1, 3, 5, 6, 7, 10, 13, 20, 22, 23
+                ma-like_4 - BBOB problems near similar to MA-BBOB (based on 2D)
+                    Includes functions ma-like_5 and 8, 18
+                ma-like_3 - BBOB problems somewhat like MA-BBOB (based on 2D)
+                    Includes functions ma-like_4 and 4, 9, 12, 14, 15, 16, 17
+                ma-like_2 - BBOB problems fairly unlike MA-BBOB (based on 2D)
+                    Includes functions ma-like_3 and 2, 11, 19, 21
+                ma-like_0 - BBOB problems unlike MA-BBOB (based on 2D)
+                    Includes functions ma-like_2 and 24
+                separable - BBOB problems 1-5 (separable)
+                low_cond - BBOB problems 6-9 (low or moderate conditioning)
+                high_cond - BBOB problems 10-14 (high conditioning, unimodal)
+                multi_glob - BBOB problems 15-19 (multimodal, global structure)
+                multi_weak - BBOB problems 20-24 (multimodal, weak g structure)
+                multimodal - BBOB problems 15-24 (multimodal)
+
+        Returns:
+            A list of Problem objects.
+        """
+        self.prob_set = prob_set
+        self.problems = []
+
+        idxs_all = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                    17, 18, 19, 20, 21, 22, 23]
+        idxs_ma_like_5 = [0, 2, 4, 5, 6, 9, 12, 19, 21, 22]
+        idxs_ma_like_4 = idxs_ma_like_5 + [7, 17]
+        idxs_ma_like_3 = idxs_ma_like_4 + [3, 8, 11, 13, 14, 15, 16]
+        idxs_ma_like_2 = idxs_ma_like_3 + [1, 10, 18, 20]
+        idxs_ma_like_0 = idxs_ma_like_2 + [7, 17]
+        idxs_separable = [0, 1, 2, 3, 4]
+        idxs_low_cond = [5, 6, 7, 8]
+        idxs_high_cond = [9, 10, 11, 12, 13]
+        idxs_multi_glob = [14, 15, 16, 17, 18]
+        idxs_multi_weak = [19, 20, 21, 22, 23]
+        idxs_multimodal = idxs_multi_glob + idxs_multi_weak
+
+        # All indexes are 1 less than the associated function numbers
+        if prob_set == "all":
+            prob_idxs = idxs_all
+        elif prob_set == "ma-like_5":
+            prob_idxs = idxs_ma_like_5
+        elif prob_set == "ma-like_4":
+            prob_idxs = idxs_ma_like_4
+        elif prob_set == "ma-like_3":
+            prob_idxs = idxs_ma_like_3
+        elif prob_set == "ma-like_2":
+            prob_idxs = idxs_ma_like_2
+        elif prob_set == "ma-like_0":
+            prob_idxs = idxs_ma_like_0
+        elif prob_set == "separable":
+            prob_idxs = idxs_separable
+        elif prob_set == "low_cond":
+            prob_idxs = idxs_low_cond
+        elif prob_set == "high_cond":
+            prob_idxs = idxs_high_cond
+        elif prob_set == "multi_glob":
+            prob_idxs = idxs_multi_glob
+        elif prob_set == "multi_weak":
+            prob_idxs = idxs_multi_weak
+        elif prob_set == "multimodal":
+            prob_idxs = idxs_multimodal
+
+        prob_names = [const.PROB_NAMES[idx] for idx in prob_idxs]
+        prob_ids = [const.PROBS_CONSIDERED[idx] for idx in prob_idxs]
+
+        for prob_name, prob_id in zip(prob_names, prob_ids):
+            self.problems.append(Problem(prob_name, prob_id))
 
         return
 
@@ -1129,7 +1221,8 @@ class Experiment:
                                                  algorithm,
                                                  dims,
                                                  const.RUNS_PER_SCENARIO,
-                                                 const.EVAL_BUDGET)
+                                                 const.EVAL_BUDGET,
+                                                 verbose=verbose)
 
                 a_scenarios[algorithm] = d_scenarios
 
@@ -1761,8 +1854,9 @@ class Experiment:
         # Plot and save the figure
         plt.tight_layout()
         plt.show()
+        prob_set = f"_probs_{self.prob_set}" if self.prob_set != "all" else ""
         out_path = Path(
-            f"plots/heatmap/{file_name}_d{self.dim_multiplier}.pdf")
+            f"plots/heatmap/{file_name}{prob_set}_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
 
@@ -1836,7 +1930,9 @@ class Experiment:
         print(*top_algos, sep="\n")
 
         plt.show()
-        out_path = Path(f"plots/bar/{file_name}_d{self.dim_multiplier}.pdf")
+        prob_set = f"_probs_{self.prob_set}" if self.prob_set != "all" else ""
+        out_path = Path(
+            f"plots/bar/{file_name}{prob_set}_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path, facecolor=fig.get_facecolor())
 

@@ -468,6 +468,13 @@ if __name__ == "__main__":
         nargs="?",  # 0 or 1
         help="Directory of budget specific data to analyse additionally.")
     parser.add_argument(
+        "--per-prob-set",
+        required=False,
+        action="store_true",
+        help=("Do analysis of the BBOB results for different subsets of the "
+              "BBOB problems. E.g., only the multimodal problems, or the "
+              "problems most similar to MA-BBOB."))
+    parser.add_argument(
         "--ma",
         required=False,
         action="store_true",
@@ -497,19 +504,55 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # MA-BBOB analysis handling
+    prob_sets = [
+        # "all",
+        # "separable", "low_cond", "high_cond", "multi_glob", "multi_weak",
+        # "multimodal",
+        # "ma-like_5", "ma-like_4",
+        "ma-like_3", "ma-like_2",
+        # "ma-like_0"  # Same as all
+        ]
+
+    # Analyse MA-BBOB preprocessed data
     if args.ma is True:
         analyse_ma_csvs(args.data_dir, ngopt_vs_data=args.ma_vs,
                         plot=args.ma_plot)
         sys.exit()
+    # Plot MA-BBOB results from preprocessed data
     elif args.ma_plot is True:
         ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs,
                     perf_data=args.ma_loss)
         sys.exit()
+    # Plot BBOB results for all problems
+    else:
+        # Load NGOpt choices
+        nevergrad_version = "0.6.0"
+        hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
+                        f"{nevergrad_version}.hsv")
+        ngopt = NGOptChoice(hsv_file)
+
+        # Load experiment data
+        exp = Experiment(args.data_dir,
+                         ng_version=nevergrad_version)
+
+        # Plot heatmap for all problems
+        file_name = f"grid_data_{nevergrad_version}"
+        matrix = exp.get_scoring_matrix(ngopt=ngopt)
+        exp.plot_heatmap_data(matrix, ngopt, file_name)
+
+        # Also plot BBOB results per function group
+        if args.per_prob_set is True:
+            for prob_set in prob_sets:
+                exp.set_problems(prob_set)
+                exp.load_data(verbose=True)
+                matrix = exp.get_scoring_matrix(ngopt=ngopt)
+                exp.plot_heatmap_data(matrix, ngopt, file_name)
+
+        sys.exit()
 
     # read_ioh_results(args.data_dir, verbose = False)
 
-    nevergrad_version = "0.5.0"
+    nevergrad_version = "0.6.0"
     hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
                     f"{nevergrad_version}.hsv")
     ngopt = NGOptChoice(hsv_file)
