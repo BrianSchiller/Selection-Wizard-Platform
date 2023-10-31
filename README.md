@@ -24,10 +24,9 @@ Run `pip install -r requirements.txt`
 1. Analyse BBOB result data to plot a heatmap of the best algorithm per dimension and budget combination:  
 `./analyse_data.py data_seeds2_organised/`  
 Output:  
-    * `plots/heatmap/grid_data_0.6.0_d100.pdf`
-
+    * `plots/heatmap/grid_data_0.6.0_d100.pdf`  
 Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.  
-Output:
+Output:  
     * `plots/heatmap/grid_data_0.6.0_probs_separable_d100.pdf` - Separable functions
     * `plots/heatmap/grid_data_0.6.0_probs_low_cond_d100.pdf` - Low or moderate conditioning
     * `plots/heatmap/grid_data_0.6.0_probs_high_cond_d100.pdf` - High conditioning and unimodal
