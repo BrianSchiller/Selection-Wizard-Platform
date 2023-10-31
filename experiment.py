@@ -1094,6 +1094,9 @@ class Experiment:
                 multi_glob - BBOB problems 15-19 (multimodal, global structure)
                 multi_weak - BBOB problems 20-24 (multimodal, weak g structure)
                 multimodal - BBOB problems 15-24 (multimodal)
+                Further, there are also options for each individual function:
+                f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12
+                f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24
         """
         self.data_dir = data_dir
         self.algorithms = []
@@ -1147,6 +1150,9 @@ class Experiment:
                 multi_glob - BBOB problems 15-19 (multimodal, global structure)
                 multi_weak - BBOB problems 20-24 (multimodal, weak g structure)
                 multimodal - BBOB problems 15-24 (multimodal)
+                Further, there are also options for each individual function:
+                f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12
+                f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23, f24
 
         Returns:
             A list of Problem objects.
@@ -1154,46 +1160,50 @@ class Experiment:
         self.prob_set = prob_set
         self.problems = []
 
-        idxs_all = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                    17, 18, 19, 20, 21, 22, 23]
-        idxs_ma_like_5 = [0, 2, 4, 5, 6, 9, 12, 19, 21, 22]
-        idxs_ma_like_4 = idxs_ma_like_5 + [7, 17]
-        idxs_ma_like_3 = idxs_ma_like_4 + [3, 8, 11, 13, 14, 15, 16]
-        idxs_ma_like_2 = idxs_ma_like_3 + [1, 10, 18, 20]
-        idxs_ma_like_0 = idxs_ma_like_2 + [7, 17]
-        idxs_separable = [0, 1, 2, 3, 4]
-        idxs_low_cond = [5, 6, 7, 8]
-        idxs_high_cond = [9, 10, 11, 12, 13]
-        idxs_multi_glob = [14, 15, 16, 17, 18]
-        idxs_multi_weak = [19, 20, 21, 22, 23]
-        idxs_multimodal = idxs_multi_glob + idxs_multi_weak
-
         # All indexes are 1 less than the associated function numbers
-        if prob_set == "all":
-            prob_idxs = idxs_all
-        elif prob_set == "ma-like_5":
-            prob_idxs = idxs_ma_like_5
-        elif prob_set == "ma-like_4":
-            prob_idxs = idxs_ma_like_4
-        elif prob_set == "ma-like_3":
-            prob_idxs = idxs_ma_like_3
-        elif prob_set == "ma-like_2":
-            prob_idxs = idxs_ma_like_2
-        elif prob_set == "ma-like_0":
-            prob_idxs = idxs_ma_like_0
-        elif prob_set == "separable":
-            prob_idxs = idxs_separable
-        elif prob_set == "low_cond":
-            prob_idxs = idxs_low_cond
-        elif prob_set == "high_cond":
-            prob_idxs = idxs_high_cond
-        elif prob_set == "multi_glob":
-            prob_idxs = idxs_multi_glob
-        elif prob_set == "multi_weak":
-            prob_idxs = idxs_multi_weak
-        elif prob_set == "multimodal":
-            prob_idxs = idxs_multimodal
+        prob_sets = {
+            "all": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                    17, 18, 19, 20, 21, 22, 23],
+            "ma_like_5": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22],
+            "ma_like_4": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17],
+            "ma_like_3": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+                          3, 8, 11, 13, 14, 15, 16],
+            "ma_like_2": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+                          3, 8, 11, 13, 14, 15, 16, 1, 10, 18, 20],
+            "ma_like_0": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+                          3, 8, 11, 13, 14, 15, 16, 1, 10, 18, 20, 7, 17],
+            "separable": [0, 1, 2, 3, 4],
+            "low_cond": [5, 6, 7, 8],
+            "high_cond": [9, 10, 11, 12, 13],
+            "multi_glob": [14, 15, 16, 17, 18],
+            "multi_weak": [19, 20, 21, 22, 23],
+            "multimodal": [14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+            "f1": [0],
+            "f2": [1],
+            "f3": [2],
+            "f4": [3],
+            "f5": [4],
+            "f6": [5],
+            "f7": [6],
+            "f8": [7],
+            "f9": [8],
+            "f10": [9],
+            "f11": [10],
+            "f12": [11],
+            "f13": [12],
+            "f14": [13],
+            "f15": [14],
+            "f16": [15],
+            "f17": [16],
+            "f18": [17],
+            "f19": [18],
+            "f20": [19],
+            "f21": [20],
+            "f22": [21],
+            "f23": [22],
+            "f24": [23]}
 
+        prob_idxs = prob_sets[self.prob_set]
         prob_names = [const.PROB_NAMES[idx] for idx in prob_idxs]
         prob_ids = [const.PROBS_CONSIDERED[idx] for idx in prob_idxs]
 
@@ -1831,12 +1841,15 @@ class Experiment:
         colours_in_plot = [colours[i] for i in ids_in_plot]
 
         # Dict mapping short names to ints
+        algo_to_id = {algo: idx for idx, algo
+                      in zip(ids_in_plot, algos_in_plot)}
         algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
             best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+            annot=best_matrix.replace(algo_to_id), annot_kws={"size": 6},
             square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
@@ -1849,6 +1862,11 @@ class Experiment:
         n = len(algo_to_int)
         colorbar.set_ticks(
             [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+        # Update algo_to_int to include algorithm IDs for the legend
+        algos_in_plot = [f"{idx} {algo}" for idx, algo
+                         in zip(ids_in_plot, algos_in_plot)]
+        algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
+
         colorbar.set_ticklabels(list(algo_to_int.keys()))
 
         # Plot and save the figure
