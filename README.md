@@ -25,7 +25,8 @@ Run `pip install -r requirements.txt`
 `./analyse_data.py data_seeds2_organised/`  
 Output:  
     * `plots/heatmap/grid_data_0.6.0_d100.pdf`
-Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.
+
+Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.  
 Output:  
 
     * `plots/heatmap/grid_data_0.6.0_probs_separable_d100.pdf` - Separable functions
