@@ -506,17 +506,15 @@ if __name__ == "__main__":
 
     prob_sets = [
         # "all",
-        # "separable", "low_cond", "high_cond", "multi_glob", "multi_weak",
-        # "multimodal",
-        # "ma-like_5", "ma-like_4",
-        # "ma-like_3", "ma-like_2",
+        "separable", "low_cond", "high_cond", "multi_glob", "multi_weak",
+        "multimodal",
+        "ma-like_5", "ma-like_4",
+        "ma-like_3", "ma-like_2",
         # "ma-like_0",  # Same as all
-        # "f1",
-        "f2", "f3", "f4", "f5", "f6",
+        "f1", "f2", "f3", "f4", "f5", "f6",
         "f7", "f8", "f9", "f10", "f11", "f12",
         "f13", "f14", "f15", "f16", "f17", "f18",
-        "f19", "f20", "f21", "f22", "f23", "f24",
-        ]
+        "f19", "f20", "f21", "f22", "f23", "f24"]
 
     # Analyse MA-BBOB preprocessed data
     if args.ma is True:
@@ -538,7 +536,7 @@ if __name__ == "__main__":
 
         # Load experiment data
         exp = Experiment(args.data_dir,
-                         ng_version=nevergrad_version, prob_set="f1")
+                         ng_version=nevergrad_version, prob_set="all")
 
         # Plot heatmap for all problems
         file_name = f"grid_data_{nevergrad_version}"
@@ -549,7 +547,6 @@ if __name__ == "__main__":
         if args.per_prob_set is True:
             for prob_set in prob_sets:
                 exp.set_problems(prob_set)
-                exp.load_data(verbose=True)
                 matrix = exp.get_scoring_matrix(ngopt=ngopt)
                 exp.plot_heatmap_data(matrix, ngopt, file_name)
 

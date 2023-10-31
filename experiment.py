@@ -1108,8 +1108,10 @@ class Experiment:
         self.budgets = [
             dims * self.dim_multiplier for dims in self.dimensionalities]
         self.per_budget_data_dir = per_budget_data_dir
+        self.problems_all = {}
 
-        self.set_problems(prob_set)
+        # Start with all problems to load all data
+        self.set_problems(prob_set="all")
 
         if ng_version == "0.5.0":
             algo_names = [
@@ -1122,6 +1124,8 @@ class Experiment:
             self.algorithms.append(Algorithm(algo_name))
 
         self.load_data()
+        # Take the problem set given by the caller
+        self.set_problems(prob_set)
 
         if self.per_budget_data_dir is not None:
             self.load_per_budget_data()
@@ -1164,13 +1168,13 @@ class Experiment:
         prob_sets = {
             "all": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
                     17, 18, 19, 20, 21, 22, 23],
-            "ma_like_5": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22],
-            "ma_like_4": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17],
-            "ma_like_3": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+            "ma-like_5": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22],
+            "ma-like_4": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17],
+            "ma-like_3": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
                           3, 8, 11, 13, 14, 15, 16],
-            "ma_like_2": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+            "ma-like_2": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
                           3, 8, 11, 13, 14, 15, 16, 1, 10, 18, 20],
-            "ma_like_0": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
+            "ma-like_0": [0, 2, 4, 5, 6, 9, 12, 19, 21, 22, 7, 17,
                           3, 8, 11, 13, 14, 15, 16, 1, 10, 18, 20, 7, 17],
             "separable": [0, 1, 2, 3, 4],
             "low_cond": [5, 6, 7, 8],
@@ -1208,7 +1212,12 @@ class Experiment:
         prob_ids = [const.PROBS_CONSIDERED[idx] for idx in prob_idxs]
 
         for prob_name, prob_id in zip(prob_names, prob_ids):
-            self.problems.append(Problem(prob_name, prob_id))
+            # If the Problem was not previously created yet, do it now
+            if prob_id not in self.problems_all:
+                self.problems_all.update(
+                    {prob_id: Problem(prob_name, prob_id)})
+
+            self.problems.append(self.problems_all[prob_id])
 
         return
 
