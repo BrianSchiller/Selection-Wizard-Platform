@@ -282,12 +282,13 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
         plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
                                 grid=False)
 
-    # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data choice
-    for magnitude in range(0, 6):
-        plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
-                                    compare="data", magnitude=magnitude)
-        plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
-                                    compare="ngopt", magnitude=magnitude)
+        # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data
+        # choice
+        for magnitude in range(0, 6):
+            plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
+                                        compare="data", magnitude=magnitude)
+            plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
+                                        compare="ngopt", magnitude=magnitude)
 
     return
 
