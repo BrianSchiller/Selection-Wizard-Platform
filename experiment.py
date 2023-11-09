@@ -991,7 +991,7 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
 
             # Determine the loss type
             loss_type = "log" if log else "percent"
-            loss_type = f"{loss_type} loss"
+            loss_type_str = f"{loss_type} loss"
 
             # Take the percentage of problems covered by the best algorithm
             best_data = perf_data.loc[
@@ -999,9 +999,9 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                 & (perf_data["budget"] == budget)
                 & (perf_data["algorithm"] == best_algo)].copy()
             # Divide by the total number of rows to include failed runs that
-            # have an empty entry in the loss_type column.
+            # have an empty entry in the loss_type_str column.
             best_perc = (best_data.loc[
-                best_data[loss_type] <= magnitude, loss_type].count()
+                best_data[loss_type_str] <= magnitude, loss_type_str].count()
                 / len(best_data.index) * 100)
 
             # Take the percentage of problems covered by the ngopt/data choice
@@ -1010,7 +1010,7 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                 & (perf_data["budget"] == budget)
                 & (perf_data["algorithm"] == comp_algo)].copy()
             comp_perc = (comp_data.loc[
-                comp_data[loss_type] <= magnitude, loss_type].count()
+                comp_data[loss_type_str] <= magnitude, loss_type_str].count()
                 / len(comp_data.index) * 100)
 
             # Take the loss/gain of ngopt/data compared to the best algorithm
@@ -1045,10 +1045,8 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
     # Plot and save the figure
     plt.tight_layout()
     plt.show()
-    loss_type = f"{loss_type}_loss"  # Add underscore for filename
     out_path = Path(
-        f"plots/heatmap/loss_gain_{loss_type}_mag{magnitude}_{compare}.pdf")
-    # {file_name}_d{self.dim_multiplier}.pdf")
+        f"plots/heatmap/loss_gain_{loss_type}_loss_mag{magnitude}_{compare}.pdf")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
 
