@@ -283,12 +283,16 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
 #                               grid=False)
 
         # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data
-        # choice
-        for magnitude in range(0, 6):
-            plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
-                                        compare="data", magnitude=magnitude)
-            plot_loss_gain_heatmap_test(perf_data, ranking_csv, log=True,
-                                        compare="ngopt", magnitude=magnitude)
+        # choice. Only when not considering the 1v1 case, since we need the
+        # complete data.
+        if not ngopt_vs_data:
+            for magnitude in range(0, 6):
+                plot_loss_gain_heatmap_test(
+                    perf_data, ranking_csv, log=True,
+                    compare="data", magnitude=magnitude)
+                plot_loss_gain_heatmap_test(
+                    perf_data, ranking_csv, log=True,
+                    compare="ngopt", magnitude=magnitude)
 
     return
 
@@ -310,6 +314,11 @@ def plot_heatmap_data_test(ranking_csv: Path,
             plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         comp_approach: If True, compare approaches rather than algorithms.
     """
+    approach = "approach" if comp_approach else "algorithm"
+
+    print(f"Plot heatmap of test data showing best {approach} per "
+          "budget-dimension pair.")
+
     # Load data from csv
     algo_df = pd.read_csv(ranking_csv)
 
@@ -716,6 +725,14 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
         grid: If True plot a grid which each dimension-budget combination as
             subplot, otherwise create separate plots for each.
     """
+    loss_type = "log" if log else "percentage"
+    plot_type = "grid" if grid else "individual plot"
+    comp_type = "NGOpt and data best" if ngopt_vs_data else "all algorithms"
+
+    print(f"Plot cumulative percentage of problems over the {loss_type} loss "
+          f"for test data, comparing {comp_type}, with each budget-dimension "
+          f"pair in a(n) {plot_type}.")
+
     # If perf_data is None, do nothing
     if perf_data is None:
         return
@@ -952,6 +969,12 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
             or "ngopt", to compare to the choices they make.
         magnitude: The order of magnitude of loss to compare at.
     """
+    loss_type = "log" if log else "percentage"
+    comp_type = "train data" if compare == "data" else "NGOpt"
+
+    print(f"Plot a loss/gain heatmap for {comp_type} compared to the best "
+          f"algorithm at 0 loss ({loss_type} loss) on the test data.")
+
     # If rank_data is given as Path, first load the ranking data from csv
     if isinstance(rank_data, PurePath):
         rank_data = pd.read_csv(rank_data)
@@ -1046,7 +1069,8 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
     plt.tight_layout()
     plt.show()
     out_path = Path(
-        f"plots/heatmap/loss_gain_{loss_type}_loss_mag{magnitude}_{compare}.pdf")
+        f"plots/heatmap/loss_gain_{loss_type}_loss_mag{magnitude}_{compare}"
+        ".pdf")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
 
