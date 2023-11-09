@@ -277,10 +277,10 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
 
     if perf_data is not None:
         plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True)
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=False)
+#       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=False)
         plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False, grid=True)
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
-                                grid=False)
+#       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
+#                               grid=False)
 
         # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data
         # choice
