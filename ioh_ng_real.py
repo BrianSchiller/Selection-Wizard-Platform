@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import os
 import shutil
+import re
 
 import numpy as np
 import pandas as pd
@@ -318,9 +319,12 @@ def process_data(dir_name: Path,
                 csv_file.write(csv_row)
 
             # Add the raw data to a .zip
-            json_path = json_file
-            data_path = dir_name / f"data_{problem_name}"
-            zip_path = dir_name_out / "data.zip"
+            # Escape the used paths to avoid issues with special characters.
+            # Particularly the parentheses in:
+            # ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)
+            json_path = Path(re.escape(str(json_file)))
+            data_path = Path(re.escape(str(dir_name))) / f"data_{problem_name}"
+            zip_path = Path(re.escape(str(dir_name_out))) / "data.zip"
 
             # Options: -r recursive, -q quiet, -g grow (append to existing zip)
             if zip_path.exists():
