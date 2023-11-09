@@ -1045,6 +1045,7 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
     # Plot and save the figure
     plt.tight_layout()
     plt.show()
+    loss_type = f"{loss_type}_loss"  # Add underscore for filename
     out_path = Path(
         f"plots/heatmap/loss_gain_{loss_type}_mag{magnitude}_{compare}.pdf")
     # {file_name}_d{self.dim_multiplier}.pdf")
