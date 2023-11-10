@@ -36,7 +36,7 @@
 # Remove space after hash to run:
 # PBS -J 0-38:1
 
-# To run best algorithms and NGOpt choice on MA-BBOB problems:
+# To run best algorithms and NGOpt choice on MA-BBOB problems or new BBOB instances:
 # First 0-499
 # Second 500-999
 # Third 1000-1444
@@ -83,7 +83,9 @@ cd $PBS_ARRAY_INDEX
 # To run budget dependence test:
 #python3 ioh_ng_real.py --pbs-index-bud-dep $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run best algorithms and NGOpt choice on MA-BBOB problems:
-python3 ioh_ng_real.py --pbs-index-ma $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 ioh_ng_real.py --pbs-index-ma $PBS_ARRAY_INDEX 1> test.out 2> test.err
+# To run best algorithms and NGOpt choice on new BBOB instances:
+python3 ioh_ng_real.py --pbs-index-test $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 
