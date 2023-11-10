@@ -468,7 +468,8 @@ def pbs_index_to_ma_combo(index: int) -> (int, int, str, list[str], int):
     return dimensionality, budget, algorithm, problems, instance
 
 
-def pbs_index_to_bbob_test(index: int) -> (int, int, str, list[int], list[int]):
+def pbs_index_to_bbob_test(index: int) -> (
+        int, int, str, list[int], list[int]):
     """Get dimension, budget, algorithm, problems, and instances for a PBS idx.
 
     This is used to get performance data for algorithms chosen by NGOpt and
