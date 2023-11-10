@@ -222,6 +222,7 @@ def run_algos(algorithms: list[str],
             during execution.
     """
     problem_class = ioh.ProblemClass.REAL
+    n_instances = len(instances)
 
     for algname in algorithms:
         algname_short = const.get_short_algo_name(algname)
@@ -257,7 +258,7 @@ def run_algos(algorithms: list[str],
                 # Flush the logger to ensure files exist before processing
                 logger.close()
                 process_data(Path(dir_name), problem, algname, dimension,
-                             n_repetitions, eval_budget)
+                             n_repetitions, eval_budget, n_instances)
 
         logger.close()
 
@@ -269,7 +270,8 @@ def process_data(dir_name: Path,
                  algo_name: str,
                  dims: int,
                  n_runs: int,
-                 n_evals: int) -> None:
+                 n_evals: int,
+                 n_instances: int) -> None:
     """Extract final run performance and add data to .zip file.
 
     Args:
@@ -279,6 +281,7 @@ def process_data(dir_name: Path,
         dims: Dimensionality of the search space (number of variables).
         n_runs: Number of runs performed with these settings.
         n_evals: Number of evaluations per run.
+        n_instances: Number of instances per problem.
     """
     # Get all .json files in the output directory
     json_files = [json_file for json_file in dir_name.iterdir()
@@ -290,13 +293,14 @@ def process_data(dir_name: Path,
         problem = Problem(problem_name, prob_id)
         algorithm = Algorithm(algo_name)
         scenario = Scenario(dir_name, problem, algorithm, dims, n_runs,
-                            n_evals, json_file=json_file)
+                            n_evals, n_instances, json_file=json_file)
 
         for run in scenario.runs:
             # Get the performance data and metadata from the scenario
             # Desired data: problem, algorithm, dimensions, budget, seed,
-            # run status, performance
+            # instance, run status, performance
             seed = run.seed
+            instance = run.instance
             status = run.status
             performance = run.get_performance(n_evals)
 
@@ -306,34 +310,34 @@ def process_data(dir_name: Path,
 
             if not csv_path.exists():
                 dir_name_out.mkdir(parents=True, exist_ok=True)
-                csv_header = ("problem,algorithm,dimensions,budget,seed,status"
-                              ",performance")
+                csv_header = ("problem,algorithm,dimensions,budget,seed,"
+                              "instance,status,performance")
 
                 with csv_path.open("w") as csv_file:
                     csv_file.write(csv_header)
 
             csv_row = (f"\n{problem_name},{algorithm.name_short},{dims},"
-                       f"{n_evals},{seed},{status},{performance}")
+                       f"{n_evals},{seed},{instance},{status},{performance}")
 
             with csv_path.open("a") as csv_file:
                 csv_file.write(csv_row)
 
-            # Add the raw data to a .zip
-            # Escape the used paths to avoid issues with special characters.
-            # Particularly the parentheses in:
-            # ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)
-            json_path = Path(re.escape(str(json_file)))
-            data_path = Path(re.escape(str(dir_name))) / f"data_{problem_name}"
-            zip_path = Path(re.escape(str(dir_name_out))) / "data.zip"
+        # Add the raw data to a .zip
+        # Escape the used paths to avoid issues with special characters.
+        # Particularly the parentheses in:
+        # ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)
+        json_path = Path(re.escape(str(json_file)))
+        data_path = Path(re.escape(str(dir_name))) / f"data_{problem_name}"
+        zip_path = Path(re.escape(str(dir_name_out))) / "data.zip"
 
-            # Options: -r recursive, -q quiet, -g grow (append to existing zip)
-            if zip_path.exists():
-                os.system(f"zip -r -q -g {zip_path} {data_path} {json_path}")
-            else:
-                os.system(f"zip -r -q {zip_path} {data_path} {json_path}")
+        # Options: -r recursive, -q quiet, -g grow (append to existing zip)
+        if zip_path.exists():
+            os.system(f"zip -r -q -g {zip_path} {data_path} {json_path}")
+        else:
+            os.system(f"zip -r -q {zip_path} {data_path} {json_path}")
 
-            # Remove the uncompressed data
-            shutil.rmtree(dir_name)
+        # Remove the uncompressed data
+        shutil.rmtree(dir_name)
 
     return
 
@@ -426,7 +430,7 @@ def pbs_index_to_args_all_dims(index: int) -> (str, int):
 
 
 def pbs_index_to_ma_combo(index: int) -> (int, int, str, list[str], int):
-    """Get dimension, budget algorithm, problems, and instance for a PBS index.
+    """Get dimension, budget, algorithm, problems, and instance from PBS index.
 
     This is used to get performance data for algorithms chosen by NGOpt and
     for algorithms that rank high based on performance on training problems.
@@ -462,6 +466,44 @@ def pbs_index_to_ma_combo(index: int) -> (int, int, str, list[str], int):
     instance = 0
 
     return dimensionality, budget, algorithm, problems, instance
+
+
+def pbs_index_to_bbob_test(index: int) -> (int, int, str, list[int], list[int]):
+    """Get dimension, budget, algorithm, problems, and instances for a PBS idx.
+
+    This is used to get performance data for algorithms chosen by NGOpt and
+    for algorithms that rank high based on performance on training problems.
+    Algorithms are chosen based on the specific budget and dimensionality. They
+    are then executed on a set of testing instances of the BBOB problems.
+
+    Args:
+        index: The index of the PBS job to run. This should be in [0,1445).
+            This matches the index for the dimension-budget-algorithm
+            combination in the csvs/ma_algos.csv file.
+
+    Returns:
+        An int with the dimensionality.
+        An int with the budget.
+        A str with the algorithm name.
+        A list[int] with BBOB problem IDs.
+        A list[int] with the instance IDs.
+    """
+    csv_path = "csvs/ma_algos.csv"
+    run_settings = pd.read_csv(csv_path)
+
+    # Retrieve dimensionality
+    dimensionality = run_settings.at[index, "dimensions"]
+    # Retrieve budget
+    budget = run_settings.at[index, "budget"]
+    # Retrieve the algorithm for this dimensionality, budget and index
+    algo_id = run_settings.at[index, "algo ID"]
+    algorithm = const.ALGS_CONSIDERED[algo_id]
+    # Retrieve all BBOB problems
+    problems = const.PROBS_CONSIDERED
+    # Always use instances 2-26 for test BBOB problems
+    instances = list(range(2, 27))
+
+    return dimensionality, budget, algorithm, problems, instances
 
 
 if __name__ == "__main__":
@@ -526,6 +568,11 @@ if __name__ == "__main__":
         type=int,
         help=("PBS ID to convert to experiment settings for algorithms on "
               "MA-BBOB."))
+    parser.add_argument(
+        "--pbs-index-test",
+        type=int,
+        help=("PBS ID to convert to experiment settings for algorithms on "
+              "BBOB test instances."))
     args = parser.parse_args()
 
     if args.pbs_index_all_dims is not None:
@@ -550,6 +597,12 @@ if __name__ == "__main__":
         n_repetitions = 1
         run_algos([algorithm], problems, budget, [dimensionality],
                   n_repetitions, [instance], process_intermediate_data=True)
+    elif args.pbs_index_test is not None:
+        dimensionality, budget, algorithm, problems, instances = (
+            pbs_index_to_bbob_test(args.pbs_index_test))
+        n_repetitions = 1
+        run_algos([algorithm], problems, budget, [dimensionality],
+                  n_repetitions, instances, process_intermediate_data=True)
     else:
         run_algos(args.algorithms, args.problems, args.eval_budget,
                   args.dimensionalities,

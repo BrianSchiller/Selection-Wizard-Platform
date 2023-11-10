@@ -2384,6 +2384,7 @@ class Run:
                  idx: int,
                  seed: int,
                  status: int,
+                 instance: int,
                  eval_ids: list[int],
                  perf_vals: list[int],
                  expected_evals: int) -> None:
@@ -2398,6 +2399,7 @@ class Run:
                 mean something is likely to be wrong, e.g., a crash that was
                 not detected during execution can have a value like
                 4.6355715189945e-310.
+            instance: int indicating the instance used for the run.
             eval_ids: List of evaluation IDs where a performance improvement
                 was found during the run. The last evaluation is always
                 included for successful runs (i.e., this ID should be equal to
@@ -2409,6 +2411,7 @@ class Run:
         self.idx = idx
         self.seed = seed
         self.status = status
+        self.instance = instance
         self.eval_ids = eval_ids
         self.perf_vals = perf_vals
         self.complete = self.check_run_is_valid(expected_evals)
@@ -2465,6 +2468,7 @@ class Scenario:
                  dims: int,
                  n_runs: int,
                  n_evals: int,
+                 n_instances: int = 1,
                  per_budget: bool = False,
                  json_file: Path = None,
                  verbose: bool = False) -> None:
@@ -2483,6 +2487,7 @@ class Scenario:
             dims: Dimensionality of the search space (number of variables).
             n_runs: Number of runs performed with these settings.
             n_evals: Number of evaluations per run.
+            n_instances: Number of instances to run on.
             per_budget: If set to True, treat data_dir as being organised with
                 subdirectories named by algorithm-dimensionality-budget. These
                 should each be organised in IOH format, and contain both a
@@ -2498,6 +2503,8 @@ class Scenario:
         self.dims = dims
         self.n_runs = n_runs
         self.n_evals = n_evals
+        self.n_instances = n_instances
+        self.n_cases = self.n_runs * self.n_instances
         self.runs = []
 
         if per_budget:
@@ -2523,13 +2530,15 @@ class Scenario:
             json_file: Path to an IOH experiment metadata json file.
             verbose: If True print more detailed information.
         """
-        result_path, run_seeds, run_statuses = self._read_ioh_json(
+        result_path, run_seeds, run_statuses, instances = self._read_ioh_json(
             json_file, verbose)
-        self._read_ioh_dat(result_path, run_seeds, run_statuses, verbose)
+        self._read_ioh_dat(
+            result_path, run_seeds, run_statuses, instances, verbose)
 
     def _read_ioh_json(self: Scenario,
                        metadata_path: Path,
-                       verbose: bool = False) -> (Path, list[int], list[int]):
+                       verbose: bool = False) -> (
+                       Path, list[int], list[int], list[int]):
         """Read a .json metadata file from an experiment with IOH.
 
         Args:
@@ -2546,6 +2555,7 @@ class Scenario:
                 detected during execution can have a value like
                 4.6355715189945e-310. An empty list is returned if no file is
                 found.
+            instances: list of ints indicating the instance used for the run.
         """
         if verbose:
             print(f"Reading json file: {metadata_path}")
@@ -2558,20 +2568,22 @@ class Scenario:
                 data_path = Path(scenario["path"])
 
                 # Record per run the seed and whether it was successful
-                run_success = [-1] * self.n_runs
-                seeds = [-1] * self.n_runs
+                run_success = [-1] * self.n_cases
+                seeds = [-1] * self.n_cases
+                instances = [-1] * self.n_cases
 
-                for run, idx in zip(scenario["runs"], range(0, self.n_runs)):
+                for run, idx in zip(scenario["runs"], range(0, self.n_cases)):
                     run_success[idx] = run["run_success"]
                     seeds[idx] = run["algorithm_seed"]
+                    instances[idx] = run["instance"]
 
                 n_success = sum(
                     run_suc for run_suc in run_success if run_suc == 1)
 
-                if n_success != self.n_runs:
-                    print(f"Found {n_success} successful runs out of "
-                          f"{len(scenario['runs'])} instead of "
-                          f"{self.n_runs} runs for function "
+                if n_success != self.n_cases:
+                    print(f"Found {n_success} successful runs * instances out "
+                          f"of {len(scenario['runs'])} instead of "
+                          f"{self.n_cases} runs * instances for function "
                           f"{self.problem.name} with "
                           f"algorithm {self.algorithm.name_short} and "
                           f"dimensionality {self.dims}.")
@@ -2591,12 +2603,13 @@ class Scenario:
             data_path = Path()
             run_success = list()
 
-        return (data_path, seeds, run_success)
+        return (data_path, seeds, run_success, instances)
 
     def _read_ioh_dat(self: Scenario,
                       result_path: Path,
                       seeds: list[int],
                       run_statuses: list[int],
+                      instances: list[int],
                       verbose: bool = False) -> None:
         """Read a .dat result file with runs from an experiment with IOH.
 
@@ -2617,6 +2630,7 @@ class Scenario:
             seeds: list of ints indicating the seed used for the run
             run_statuses: list of run statuses to be stored with the runs read
                 from the .dat file.
+            instances: list of ints indicating the instance used for the run.
             verbose: If True print more detailed information.
         """
         if verbose:
@@ -2633,6 +2647,7 @@ class Scenario:
                     if run_id != 0:
                         run = Run(run_id, seeds[run_id - 1],
                                   run_statuses[run_id - 1],
+                                  instances[run_id - 1],
                                   eval_ids, perf_vals, self.n_evals)
                         self.runs.append(run)
 
@@ -2646,6 +2661,7 @@ class Scenario:
 
             run = Run(run_id, seeds[run_id - 1],
                       run_statuses[run_id - 1],
+                      instances[run_id - 1],
                       eval_ids, perf_vals, self.n_evals)
             self.runs.append(run)
 
