@@ -1837,12 +1837,15 @@ class Experiment:
         colours_in_plot = [colours[i] for i in ids_in_plot]
 
         # Dict mapping short names to ints, reduce to relevant algorithms
+        algo_to_id = {algo: idx for idx, algo
+                      in zip(ids_in_plot, algos_in_plot)}
         algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
 
         # Create heatmap
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
             best_matrix.replace(algo_to_int), cmap=colours_in_plot,
+            annot=best_matrix.replace(algo_to_id), annot_kws={"size": 6},
             square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
@@ -1855,6 +1858,10 @@ class Experiment:
         n = len(algo_to_int)
         colorbar.set_ticks(
             [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
+        # Update algo_to_int to include algorithm IDs for the legend
+        algos_in_plot = [f"{idx} {algo}" for idx, algo
+                         in zip(ids_in_plot, algos_in_plot)]
+        algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
         colorbar.set_ticklabels(list(algo_to_int.keys()))
 
         # Plot and save the figure

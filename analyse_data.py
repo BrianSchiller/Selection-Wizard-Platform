@@ -597,7 +597,6 @@ if __name__ == "__main__":
 #    exp.plot_hist_grid(matrix, ngopt, file_name)
 #    file_name = f"grid_data_{nevergrad_version}"
 #    exp.plot_heatmap_data(matrix, ngopt, file_name)
-#    exp.plot_heatmap_ngopt(ngopt)
 #    file_name = f"best_comparison_{nevergrad_version}"
 #    exp.write_performance_comparison_csv(file_name)
 #    file_name = f"grid_data_budget_specific_{nevergrad_version}"
