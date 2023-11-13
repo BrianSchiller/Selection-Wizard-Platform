@@ -1508,7 +1508,8 @@ class Experiment:
                          budget: int,
                          n_best: int,
                          score_per_prob: bool = False,
-                         ngopt: NGOptChoice = None) -> pd.DataFrame:
+                         ngopt: NGOptChoice = None,
+                         bud_specific: bool = False) -> pd.DataFrame:
         """Score algorithms based on their performance over multiple problems.
 
         Scores are based on the number of runs in the top n_best runs over all
@@ -1524,6 +1525,8 @@ class Experiment:
                 on that problem.
             ngopt: Instance of NGOptChoice to enable retrieving budget specific
                 data for the algorithm choice of NGOpt, if available.
+            bud_specific: Use budget specific data if available and set to
+                True.
 
         Returns:
             DataFrame with columns: algorithm, points. The algorithm column
@@ -1539,7 +1542,8 @@ class Experiment:
 
         for problem in self.problems:
             best_algos = self.get_best_runs_of_prob(
-                problem, budget, n_best, dims, ngopt=ngopt)
+                problem, budget, n_best, dims, ngopt=ngopt,
+                bud_specific=bud_specific)
 
             # Count occurrences of algorithm
             algo_scores_for_prob = best_algos["algorithm"].value_counts()
@@ -1559,7 +1563,8 @@ class Experiment:
 
     def write_medians_csv(self: Experiment,
                           file_name: str = "medians",
-                          with_ranks: bool = False) -> None:
+                          with_ranks: bool = False,
+                          bud_specific: bool = False) -> None:
         """Write a CSV file with the medians per algorithm.
 
         The CSV contains the columns:
@@ -1570,6 +1575,8 @@ class Experiment:
                 csvs/ directory with a .csv extension.
             with_ranks: If True, also include a column with the rank of the
                 algorithm for this problem, based on the scores.
+            bud_specific: Use budget specific data if available and set to
+                True.
         """
         col_names = ["dimensions", "budget", "problem", "algorithm", "median"]
 
@@ -1583,7 +1590,8 @@ class Experiment:
             for dims in self.dimensionalities:
                 if with_ranks:
                     prob_scores = self.score_algorithms(
-                        dims, budget, n_best, score_per_prob=True)
+                        dims, budget, n_best, score_per_prob=True,
+                        bud_specific=bud_specific)
 
                 for problem in self.problems:
                     medians = self.get_medians_of_prob(problem, budget, dims)
@@ -1628,7 +1636,8 @@ class Experiment:
         return
 
     def write_scoring_csv(self: Experiment,
-                          file_name: str = "scores") -> None:
+                          file_name: str = "scores",
+                          bud_specific: bool = False) -> None:
         """Write a CSV file with the algorithm scores.
 
         The CSV contains the columns:
@@ -1637,6 +1646,8 @@ class Experiment:
         Args:
             file_name: Name of the file to write to. Will be written in the
                 csvs/ directory with a .csv extension.
+            bud_specific: Use budget specific data if available and set to
+                True.
         """
         n_best = 25
         col_names = ["dimensions", "budget", "problem", "algorithm", "points"]
@@ -1645,7 +1656,8 @@ class Experiment:
         for budget in self.budgets:
             for dims in self.dimensionalities:
                 prob_scores = self.score_algorithms(
-                    dims, budget, n_best, score_per_prob=True)
+                    dims, budget, n_best, score_per_prob=True,
+                    bud_specific=bud_specific)
 
                 for _, row in prob_scores.iterrows():
                     row.drop("points", inplace=True)
@@ -1670,7 +1682,8 @@ class Experiment:
 
     def write_score_rank_csv(self: Experiment,
                              file_name: str = "score_rank",
-                             ngopt: NGOptChoice = None) -> None:
+                             ngopt: NGOptChoice = None,
+                             bud_specific: bool = False) -> None:
         """Write the algorithm rank based on scores over all problems to CVS.
 
         The CSV contains the columns:
@@ -1681,8 +1694,10 @@ class Experiment:
                 csvs/ directory with a .csv extension.
             ngopt: Instance of NGOptChoice to enable retrieving budget specific
                 data for the algorithm choice of NGOpt, if available.
+            bud_specific: Use budget specific data if available and set to
+                True.
         """
-        algo_matrix = self.get_scoring_matrix(ngopt)
+        algo_matrix = self.get_scoring_matrix(ngopt, bud_specific=bud_specific)
         col_names = ["dimensions", "budget", "algorithm", "points", "rank"]
         all_scores = []
 
@@ -1711,12 +1726,15 @@ class Experiment:
         return
 
     def get_scoring_matrix(self: Experiment,
-                           ngopt: NGOptChoice = None) -> pd.DataFrame:
+                           ngopt: NGOptChoice = None,
+                           bud_specific: bool = False) -> pd.DataFrame:
         """Get a matrix of algorithm scores for dimensionalities versus budget.
 
         Args:
             ngopt: Instance of NGOptChoice to enable retrieving budget specific
                 data for the algorithm choice of NGOpt, if available.
+            bud_specific: Use budget specific data if available and set to
+                True.
 
         Returns:
             DataFrame with rows representing different dimensionalities and
@@ -1730,7 +1748,8 @@ class Experiment:
 
             for dims in self.dimensionalities:
                 scores.append(
-                    self.score_algorithms(dims, budget, n_best, ngopt=ngopt))
+                    self.score_algorithms(dims, budget, n_best, ngopt=ngopt,
+                                          bud_specific=bud_specific))
 
             algo_matrix[budget] = scores
 
@@ -2089,8 +2108,13 @@ class Experiment:
                               budget: int,
                               n_best: int,
                               dims: int,
-                              ngopt: NGOptChoice = None) -> pd.DataFrame:
+                              ngopt: NGOptChoice = None,
+                              bud_specific: bool = False) -> pd.DataFrame:
         """Return the n_best runs for a problem, dimension, budget combination.
+
+        If we have budget-specific data available as well, and the bud_specific
+        option is set to True, the budget-specific data is used instead of the
+        full run data, if the algorithm is the NGOpt choice.
 
         Args:
             problem: A Problem object for which to get the data.
@@ -2100,6 +2124,8 @@ class Experiment:
             dims: int indicating the dimensionality for which to get the data.
             ngopt: Instance of NGOptChoice to enable retrieving budget specific
                 data for the algorithm choice of NGOpt, if available.
+            bud_specific: Use budget specific data if available and set to
+                True.
 
         Returns:
             DataFrame with n_best rows of algorithm, run ID, and performance.
@@ -2115,7 +2141,8 @@ class Experiment:
         for algo in self.algorithms:
             # If we have per budget data and the algorithm is the NGOpt choice,
             # we use the budget specific data here instead of the full run
-            if (self.per_budget_data_dir is not None
+            if (bud_specific
+                    and self.per_budget_data_dir is not None
                     and ngopt is not None
                     and budget < const.EVAL_BUDGET and
                     ngopt.get_ngopt_choice(dims, budget) == algo.name_short):

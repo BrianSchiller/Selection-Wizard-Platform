@@ -536,14 +536,26 @@ if __name__ == "__main__":
 
         # Load experiment data
         exp = Experiment(args.data_dir,
+                         args.per_budget_data_dir,
                          ng_version=nevergrad_version, prob_set="all")
 
-        # Plot heatmap for all problems
+        # Plot heatmap based on budget-specific BBOB data for all problems
+        # (Only the algorithms chosen by NGOpt have budget-specific runs.)
+        if args.per_budget_data_dir is not None:
+            matrix = exp.get_scoring_matrix(ngopt=ngopt, bud_specific=True)
+            file_name = f"grid_data_budget_specific_{nevergrad_version}"
+            exp.plot_heatmap_data(matrix, ngopt, file_name)
+
+        # Plot heatmap based on NGOpt choices
+        file_name = f"grid_ngopt_{nevergrad_version}"
+        exp.plot_heatmap_ngopt(ngopt, file_name)
+
+        # Plot heatmap based on BBOB data for all problems
         file_name = f"grid_data_{nevergrad_version}"
         matrix = exp.get_scoring_matrix(ngopt=ngopt)
         exp.plot_heatmap_data(matrix, ngopt, file_name)
 
-        # Also plot BBOB results per function group
+        # Also plot heatmaps on BBOB data per function and function group
         if args.per_prob_set is True:
             for prob_set in prob_sets:
                 exp.set_problems(prob_set)

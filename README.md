@@ -25,6 +25,12 @@ Run `pip install -r requirements.txt`
 `./analyse_data.py data_seeds2_organised/`  
 Output:  
     * `plots/heatmap/grid_data_0.6.0_d100.pdf`  
+    * `plots/heatmap/grid_ngopt_0.6.0_d100.pdf`  
+
+2. Add the path to budget-specific runs for the choices of NGOpt to also plot a heatmap taking this into account with:  
+`./analyse_data.py data_seeds2_organised/ data_seeds2_ngopt_organised/`  
+Output:  
+    * `plots/heatmap/grid_data_budget_specific_0.6.0_d100.pdf`  
 
 2. Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.  
 Output:  
