@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import ioh
 import nevergrad as ng
-from nevergrad.optimization.optimizerlib import ParametrizedMetaModel  # noqa: F401, E501
-from nevergrad.optimization.optimizerlib import MetaModel  # noqa: F401, E501
-from nevergrad.optimization.optimizerlib import CmaFmin2  # noqa: F401
+from nevergrad.optimization.optimizerlib import ParametrizedMetaModel
+from nevergrad.optimization.optimizerlib import MetaModel
+from nevergrad.optimization.optimizerlib import CmaFmin2
 
 
 class NGEvaluator:
