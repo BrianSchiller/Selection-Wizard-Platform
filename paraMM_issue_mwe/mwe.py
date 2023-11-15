@@ -2,6 +2,7 @@
 import ioh
 import nevergrad as ng
 from nevergrad.optimization.optimizerlib import ParametrizedMetaModel  # noqa: F401, E501
+from nevergrad.optimization.optimizerlib import MetaModel  # noqa: F401, E501
 from nevergrad.optimization.optimizerlib import CmaFmin2  # noqa: F401
 
 
@@ -17,6 +18,7 @@ class NGEvaluator:
         optimizer = eval(f"{self.alg}")(
             parametrization=parametrization,
             budget=self.eval_budget)
+        print(f"Result of {self.alg}:")
         print(optimizer.minimize(func))
 
 
@@ -40,7 +42,10 @@ if __name__ == "__main__":
     dimension = 25
     problem = 11
     instance = 1
-    algorithm = "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)"
     seed = 1
 
+    algorithm = "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)"
+    run_algos(algorithm, problem, eval_budget, dimension, instance, seed)
+
+    algorithm = "MetaModel"
     run_algos(algorithm, problem, eval_budget, dimension, instance, seed)
