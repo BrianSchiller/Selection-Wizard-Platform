@@ -1,7 +1,8 @@
 # AR4Opt: Algorithm recommendation for optimisation
 
 ## Installation with pip
-Run `pip install -r requirements.txt`
+0. Optionally first create an environment with `python3 -m venv venv` and activate it with `source venv/bin/activate`
+1. Run `pip install -r requirements.txt`
 
 ## Installation with conda
 > On the MeSU-Beta PBS cluster, first run `module load conda3-2020.02`
