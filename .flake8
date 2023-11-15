@@ -27,3 +27,4 @@ exclude =
     plots/
     csvs/
     ng_issue_mwe/
+    paraMM_issue_mwe/
