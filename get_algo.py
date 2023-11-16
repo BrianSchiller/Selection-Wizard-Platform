@@ -30,37 +30,43 @@ def get_optimiser(params: Array, budget: int, workers: int,
     if ngopt == NGOptVersion.NGOpt39:
         optimiser = ng.optimizers.NGOpt39(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt36:
         optimiser = ng.optimizers.NGOpt36(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt21:
         optimiser = ng.optimizers.NGOpt21(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt16:
         optimiser = ng.optimizers.NGOpt16(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt15:
         optimiser = ng.optimizers.NGOpt15(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt8:
         optimiser = ng.optimizers.NGOpt8(
             parametrization=(
-                ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)),
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
             budget=eval_budget,
             num_workers=n_workers)
 
@@ -120,7 +126,8 @@ eval_budget_max = const.EVAL_BUDGET
 
 # Print derived problem properties
 optimiser = ng.optimizers.NGOpt39(
-    parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(-1, 5),
+    parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(
+        const.LOWER_BOUND, const.UPPER_BOUND),
     budget=eval_budget_min,
     num_workers=n_workers)
 print("has_noise", optimiser.has_noise)
@@ -133,7 +140,8 @@ print("Algorithm#dimensionality#evaluation budget")
 
 for n_dimensions in range(n_dims_min, n_dims_max + 1):
     for eval_budget in range(eval_budget_min, eval_budget_max + 1):
-        params = ng.p.Array(shape=(1, n_dimensions)).set_bounds(-1, 5)
+        params = ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+            const.LOWER_BOUND, const.UPPER_BOUND)
         optimiser = get_optimiser(
             params, eval_budget, n_workers, NGOptVersion.NGOpt39)
         algorithm = optimiser._select_optimizer_cls()
