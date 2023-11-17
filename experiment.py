@@ -326,7 +326,7 @@ def plot_heatmap_data_test(ranking_csv: Path,
     if comp_approach:
         best_matrix = get_best_approach_test(algo_df)
         algo_names = [
-            "NGOpt (VBS)", "Data (VBS)", "VBS", "Same (All)",
+            "NGOpt", "Data", "VBS", "Same (All)",
             "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
             "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
         best_algos = best_matrix.values.flatten().tolist()
@@ -429,7 +429,7 @@ def plot_heatmap_data_test_funcs(perf_csv: Path,
     if comp_approach:
         best_matrix = get_best_approach_test(algo_df)
         algo_names = [
-            "NGOpt (VBS)", "Data (VBS)", "VBS", "Same (All)",
+            "NGOpt", "Data", "VBS", "Same (All)",
             "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
             "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
         best_algos = best_matrix.values.flatten().tolist()
@@ -696,10 +696,10 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
                 dims_best.append("Same (All)")
             # Otherwise, if ngopt rank is 0, this is a win for NGOpt (=VBS)
             elif 0 in algo_scores["ngopt rank"].values:
-                dims_best.append("NGOpt (VBS)")
+                dims_best.append("NGOpt")
             # Otherwise, if ngopt rank is -1, this is a win for Data (=VBS)
             elif -1 in algo_scores["ngopt rank"].values:
-                dims_best.append("Data (VBS)")
+                dims_best.append("Data")
             # Otherwise, the VBS wins
             else:
                 dims_best.append("VBS")
