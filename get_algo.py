@@ -17,6 +17,7 @@ class NGOptVersion(str, Enum):
     """Enum with different NGOpt versions."""
 
     NGOpt8 = "NGOpt8"
+    NGOpt14 = "NGOpt14"
     NGOpt15 = "NGOpt15"
     NGOpt16 = "NGOpt16"
     NGOpt21 = "NGOpt21"
@@ -56,6 +57,13 @@ def get_optimiser(params: Array, budget: int, workers: int,
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt15:
+        optimiser = ng.optimizers.NGOpt15(
+            parametrization=(
+                ng.p.Array(shape=(1, n_dimensions)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND)),
+            budget=eval_budget,
+            num_workers=n_workers)
+    elif ngopt == NGOptVersion.NGOpt14:
         optimiser = ng.optimizers.NGOpt15(
             parametrization=(
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(
