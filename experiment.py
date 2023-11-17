@@ -370,7 +370,8 @@ def plot_heatmap_data_test(ranking_csv: Path,
     fig, ax = plt.subplots(figsize=(10.2, 5.6))
     ax = sns.heatmap(
         best_matrix.replace(algo_to_int), cmap=colours_in_plot,
-        annot=best_matrix.replace(algo_to_id), annot_kws={"size": 6},
+        annot=best_matrix.replace(algo_to_id),
+        annot_kws={"size": const.FONT_SIZE_ALGO_ID},
         square=True)
     ax.set(xlabel="evaluation budget", ylabel="dimensions")
     ax.xaxis.tick_top()
@@ -1848,7 +1849,8 @@ class Experiment:
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
             best_matrix.replace(algo_to_int), cmap=colours_in_plot,
-            annot=best_matrix.replace(algo_to_id), annot_kws={"size": 6},
+            annot=best_matrix.replace(algo_to_id),
+            annot_kws={"size": const.FONT_SIZE_ALGO_ID},
             square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()
@@ -1917,7 +1919,8 @@ class Experiment:
         fig, ax = plt.subplots(figsize=(10.2, 5.6))
         ax = sns.heatmap(
             best_matrix.replace(algo_to_int), cmap=colours_in_plot,
-            annot=best_matrix.replace(algo_to_id), annot_kws={"size": 6},
+            annot=best_matrix.replace(algo_to_id),
+            annot_kws={"size": const.FONT_SIZE_ALGO_ID},
             square=True)
         ax.set(xlabel="evaluation budget", ylabel="dimensions")
         ax.xaxis.tick_top()

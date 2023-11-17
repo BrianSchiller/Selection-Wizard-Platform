@@ -114,6 +114,9 @@ PROB_NAMES = ["f1_Sphere",
               "f23_Katsuura",
               "f24_LunacekBiRastrigin"]
 
+# Plotting constants
+FONT_SIZE_ALGO_ID = 9
+
 
 def get_short_algo_name(algo_name: str) -> str:
     """Return a str with a short name for a given algorithm name.
