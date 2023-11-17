@@ -13,6 +13,7 @@ from matplotlib.colors import TwoSlopeNorm
 import seaborn as sns
 import numpy as np
 import scipy.stats as ss
+from cmcrameri import cm
 
 import constants as const
 
@@ -332,7 +333,9 @@ def plot_heatmap_data_test(ranking_csv: Path,
         ids_in_plot = [idx for idx, algo in enumerate(algo_names)
                        if algo in best_algos]
         algos_in_plot = [algo for algo in algo_names if algo in best_algos]
-        colours = const.ALGO_COLOURS
+        colours = cm.lipariS.colors[1::]  # Skip the first colour (black)
+        tmp = colours[10]
+        colours[8] = tmp  # Replace colour 8, too similar to 6
         colours_in_plot = [colours[i] for i in ids_in_plot]
     else:
         best_matrix = get_best_algorithms_test(algo_df)
