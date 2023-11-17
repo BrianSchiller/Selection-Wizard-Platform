@@ -384,7 +384,7 @@ def plot_heatmap_data_test(ranking_csv: Path,
     n = len(algo_to_int)
     colorbar.set_ticks(
         [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
-    algos_in_plot = [f"{idx} {algo}" for idx, algo
+    algos_in_plot = [f"{idx}. {algo}" for idx, algo
                      in zip(ids_in_plot, algos_in_plot)]
     algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
     colorbar.set_ticklabels(list(algo_to_int.keys()))
@@ -1864,7 +1864,7 @@ class Experiment:
         colorbar.set_ticks(
             [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
         # Update algo_to_int to include algorithm IDs for the legend
-        algos_in_plot = [f"{idx} {algo}" for idx, algo
+        algos_in_plot = [f"{idx}. {algo}" for idx, algo
                          in zip(ids_in_plot, algos_in_plot)]
         algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
         colorbar.set_ticklabels(list(algo_to_int.keys()))
@@ -1934,7 +1934,7 @@ class Experiment:
         colorbar.set_ticks(
             [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
         # Update algo_to_int to include algorithm IDs for the legend
-        algos_in_plot = [f"{idx} {algo}" for idx, algo
+        algos_in_plot = [f"{idx}. {algo}" for idx, algo
                          in zip(ids_in_plot, algos_in_plot)]
         algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
         colorbar.set_ticklabels(list(algo_to_int.keys()))
