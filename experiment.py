@@ -1055,13 +1055,21 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
 
     # Plot the heatmap based on the differences
     fig, ax = plt.subplots(figsize=(6.5, 5.6))
-    vmax = 37.
-    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0., vmax=vmax)
+    vmax = 38.
+    vmin = -vmax
+    vmax = vmax if magnitude > 0 else 0.
+    vcenter = 0. if magnitude > 0 else vmin / 2
+    norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+    cmap = sns.color_palette("vlag_r", as_cmap=True)
+    cmap2 = sns.light_palette(
+        cmap.get_under(), input="rgba", reverse=True, as_cmap=True)
+    cmap = cmap if magnitude > 0 else cmap2
+
     ax = sns.heatmap(
         diff_matrix,
         square=True,
         annot=True, annot_kws={"size": 6},
-        cmap="vlag_r", norm=norm)
+        cmap=cmap, norm=norm)
     ax.set(xlabel="evaluation budget", ylabel="dimensions")
     ax.xaxis.tick_top()
     ax.xaxis.set_label_position("top")
