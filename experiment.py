@@ -1055,8 +1055,10 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
 
     # Plot the heatmap based on the differences
     fig, ax = plt.subplots(figsize=(6.5, 5.6))
+    # First define the limit
     vmax = 38.
     vmin = -vmax
+    # Then adjust depending on whether we are in the 0 magnitude case
     vmax = vmax if magnitude > 0 else 0.
     vcenter = 0. if magnitude > 0 else vmin / 2
     norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
