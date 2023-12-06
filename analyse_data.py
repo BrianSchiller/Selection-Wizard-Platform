@@ -12,8 +12,8 @@ import sys
 import constants as const
 from experiment import Experiment
 from experiment import NGOptChoice
-from experiment import analyse_ma_csvs
-from experiment import ma_plot_all
+from experiment import analyse_test_csvs
+from experiment import test_plot_all
 
 
 def read_ioh_json(metadata_path: Path, dims: int, verbose: bool = False) -> (
@@ -480,26 +480,40 @@ if __name__ == "__main__":
         action="store_true",
         help="Analyse data_dir as being MA-BBOB preprocessed data.")
     parser.add_argument(
-        "--ma-vs",
+        "--test-bbob",
         required=False,
         action="store_true",
-        help=("If set in addition to --ma, compare only the NGOpt choice"
-              " and the data choice instead of all algorithms."))
+        help="Analyse data_dir as being BBOB preprocessed test data.")
+    parser.add_argument(
+        "--test-vs",
+        required=False,
+        action="store_true",
+        help=("If set in addition to --ma or --test-bbob, compare only the"
+              " NGOpt choice and the data choice instead of all algorithms."))
     parser.add_argument(
         "--ma-plot",
         required=False,
         action="store_true",
         help=("Generate all plot(s) for the MA-BBOB data. If no other --ma "
               "argument is given, data_dir should be the path to the ranked "
-              "MA-BBOB csv file. Use --ma-vs to indicate which algorithms are"
-              "compared (controls the output file names)."))
+              "MA-BBOB csv file. Use --test-vs to indicate which algorithms "
+              "are compared (controls the output file names)."))
     parser.add_argument(
-        "--ma-loss",
+        "--test-plot",
+        required=False,
+        action="store_true",
+        help=("Use alone or with --test-bbob. Generate all plot(s) for the "
+              "BBOB test data. If no other --test"
+              "argument is given, data_dir should be the path to the ranked "
+              "BBOB test csv file. Use --test-vs to indicate which algorithms"
+              " are compared (controls the output file names)."))
+    parser.add_argument(
+        "--test-loss",
         required=False,
         default=None,
         type=Path,
-        help=("Path to dataframe with loss data per "
-              "dimension-budget-algorithm-problem combination. If given "
+        help=("Use with --ma or --test-bbob. Path to dataframe with loss data "
+              "per dimension-budget-algorithm-problem combination. If given "
               "plot lineplots with loss of algorithms per dimension-budget."))
 
     args = parser.parse_args()
@@ -518,13 +532,23 @@ if __name__ == "__main__":
 
     # Analyse MA-BBOB preprocessed data
     if args.ma is True:
-        analyse_ma_csvs(args.data_dir, ngopt_vs_data=args.ma_vs,
-                        plot=args.ma_plot)
+        analyse_test_csvs(args.data_dir, ngopt_vs_data=args.test_vs,
+                          plot=args.ma_plot, test_bbob=False)
         sys.exit()
     # Plot MA-BBOB results from preprocessed data
     elif args.ma_plot is True:
-        ma_plot_all(args.data_dir, ngopt_vs_data=args.ma_vs,
-                    perf_data=args.ma_loss)
+        test_plot_all(args.data_dir, ngopt_vs_data=args.test_vs,
+                      perf_data=args.test_loss, test_bbob=False)
+        sys.exit()
+    # Analyse test BBOB preprocessed data
+    elif args.test_bbob is True:
+        analyse_test_csvs(args.data_dir, ngopt_vs_data=args.test_vs,
+                          plot=args.test_plot, test_bbob=args.test_bbob)
+        sys.exit()
+    # Plot test BBOB results from preprocessed data
+    elif args.test_plot is True:
+        test_plot_all(args.data_dir, ngopt_vs_data=args.test_vs,
+                      perf_data=args.test_loss, test_bbob=args.test_plot)
         sys.exit()
     # Plot BBOB results for all problems
     else:

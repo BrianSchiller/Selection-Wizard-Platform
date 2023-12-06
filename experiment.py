@@ -18,6 +18,26 @@ from cmcrameri import cm
 import constants as const
 
 
+def analyse_bbob_csvs(data_dir: Path, ngopt_vs_data: bool = False,
+                      plot: bool = True) -> None:
+    """Read and analyse preprocessed .csv files with BBOB test instance data.
+
+    Args:
+        data_dir: Path to the data directory. This should have .csv files per
+            algorithm-dimension-budget combination. Each of these files should
+            have the columns: problem, algorithm, dimensions, budget, seed,
+            instance, status, performance; and 600 rows, one per BBOB test
+            problem-instance pair (24 problems, 25 instances).
+        ngopt_vs_data: If True, compare only the NGOpt choice and the data
+            choice; if False, compare NGOpt choice and top 4 from the data.
+        plot: If True, also generate all available plots for the BBOB test data
+            after the analysis.
+    """
+    analyse_test_csvs(data_dir, ngopt_vs_data, plot, test_bbob=True)
+
+    return
+
+
 def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                     plot: bool = True) -> None:
     """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
@@ -32,6 +52,32 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         plot: If True, also generate all available plots for the MA-BBOB data
             after the analysis.
     """
+    analyse_test_csvs(data_dir, ngopt_vs_data, plot, test_bbob=False)
+
+    return
+
+
+def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
+                      plot: bool = True, test_bbob: bool = False) -> None:
+    """Read and analyse preprocessed .csv files with performance data.
+
+    Args:
+        data_dir: Path to the data directory. This should have .csv files per
+            algorithm-dimension-budget combination. Each of these files should
+            have the columns: problem, algorithm, dimensions, budget, seed,
+            status, performance, and if BBOB also instance; and 600 or 828
+            rows (one per problem-instance pair for BBOB test data, or one per
+            MA-BBOB problem).
+        ngopt_vs_data: If True, compare only the NGOpt choice and the data
+            choice; if False, compare NGOpt choice and top 4 from the data.
+        plot: If True, also generate all available plots after the analysis.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
+    """
+    csv_dir = Path("csvs")
+    out_dir = csv_dir / ("bbob_test" if test_bbob else "ma-bbob")
+    out_dir.mkdir(parents=True, exist_ok=True)
     ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
     # Get all .csv files in the data directory
@@ -56,7 +102,7 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     perf_data["log loss"] = None
 
     # Add algorithm IDs
-    names_csv = "csvs/ngopt_algos_0.6.0.csv"
+    names_csv = csv_dir / "ngopt_algos_0.6.0.csv"
     names_df = pd.read_csv(names_csv)
 
     for _, algo in names_df.iterrows():
@@ -69,11 +115,12 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     dimensionalities = const.DIMS_CONSIDERED
     dim_multiplier = 100
     budgets = [dims * dim_multiplier for dims in dimensionalities]
-    probs_csv = "csvs/ma_prob_names.csv"
-    problems = pd.read_csv(probs_csv)["problem"].to_list()
+    probs_csv = csv_dir / "ma_prob_names.csv"
+    problems = (const.PROB_NAMES
+                if test_bbob else pd.read_csv(probs_csv)["problem"].to_list())
 
     # Create a DataFrame to store points per dimension-budget-algorithm combo
-    ma_algos_csv = "csvs/ma_algos_ng+data.csv"
+    ma_algos_csv = csv_dir / "ma_algos_ng+data.csv"
     ranking = pd.read_csv(ma_algos_csv)
     ranking["in data"] = False
     ranking["points test"] = 0
@@ -87,9 +134,9 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
 
     # Prepare and check output paths
-    failed_csv_path = Path(f"csvs/ma_ranking{ngopt_v_data}_failed.csv")
-    perf_csv_path = Path(f"csvs/ma_perf_data{ngopt_v_data}.csv")
-    rank_csv_path = Path(f"csvs/ma_ranking{ngopt_v_data}.csv")
+    failed_csv_path = out_dir / f"ranking{ngopt_v_data}_failed.csv"
+    perf_csv_path = out_dir / f"perf_data{ngopt_v_data}.csv"
+    rank_csv_path = out_dir / f"ranking{ngopt_v_data}.csv"
     csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path]
     csv_paths = [csv_path for csv_path in csv_paths if csv_path.is_file()]
 
@@ -99,6 +146,40 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
               f"{new_csv_path}")
         csv_path.rename(new_csv_path)
 
+    assign_points_test(
+        dimensionalities, budgets, problems, perf_data, ranking,
+        perf_csv_path, failed_csv_path, rank_csv_path, test_bbob)
+
+    if plot:
+        test_plot_all(rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob)
+
+    return
+
+
+def assign_points_test(dimensionalities: list[int],
+                       budgets: list[int],
+                       problems: list[str],
+                       perf_data: pd.DataFrame,
+                       ranking: pd.DataFrame,
+                       perf_csv_path: Path,
+                       failed_csv_path: Path,
+                       rank_csv_path: Path,
+                       test_bbob: bool = False) -> None:
+    """Assign points for test data.
+
+    Args:
+        dimensionalities: List of dimensionalities to consider.
+        budgets: List of budgets to consider.
+        problems: List of problems to consider.
+        perf_data: Performance data.
+        ranking: Ranking data.
+        perf_csv_path: Output path for performance data for all combinations.
+        failed_csv_path: Output path for failed runs.
+        rank_csv_path: Output path for algorithm rankings.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
+    """
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
@@ -161,9 +242,12 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 for _, run in failed.iterrows():
                     error = run["status"]
-                    print(f"Run FAILED with error code: {error} for algorithm "
-                          f"{run['algorithm']} on D{dimension}B{budget} on "
-                          f"problem {problem}")
+                    err_str = (f"Run FAILED with error code: {error} for "
+                               f"algorithm {run['algorithm']} on D{dimension}"
+                               f"B{budget} on problem {problem}")
+                    err_str = (f"{err_str}, instance {run['instance']}"
+                               if test_bbob else err_str)
+                    print(err_str)
 
                 # Get performance and indices
                 perfs = perf_algos["performance"].values
@@ -171,15 +255,20 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
                 # Rank the algorithms by performance on this
                 # dimension-budget-problem combination
+                # The "min" method resolves ties by assigning the
+                # minimum of the ranks of all tied methods. E.g., if
+                # the best two are tied, they get the minimum of rank 1
+                # and 2 = 1.
                 ranks.extend(
                     ss.rankdata(perfs, method="min", nan_policy="omit"))
 
-                # Compute loss to best percentage (and handle case where best
+                # Compute percentage loss to best (and handle case where best
                 # is 0)
                 perfs_1 = perfs + 1
                 best = min(perfs_1)
                 loss_percent.extend((perfs_1 - best) / best * 100)
 
+                # Compute log loss to best
                 minimum = 0.00000000001
                 perfs_min = np.maximum(perfs, minimum)
                 best = min(perfs_min)
@@ -200,13 +289,21 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 header=not perf_csv_path.exists(),
                 index=False)
 
-            # Assign one point for each row where an algorithms has rank 1
-            first_ranks = perf_data.loc[
-                (perf_data["dimensions"] == dimension)
-                & (perf_data["budget"] == budget)
-                & (perf_data["rank"] == 1), "algorithm"].values
+            # BBOB test: Assign points for each row where an algorithm has
+            # rank 25 or lower.
+            if test_bbob:
+                top_ranks = perf_data.loc[
+                    (perf_data["dimensions"] == dimension)
+                    & (perf_data["budget"] == budget)
+                    & (perf_data["rank"] <= 25), "algorithm"].values
+            # MA-BBOB: Assign one point per row where an algorithms has rank 1
+            else:
+                top_ranks = perf_data.loc[
+                    (perf_data["dimensions"] == dimension)
+                    & (perf_data["budget"] == budget)
+                    & (perf_data["rank"] == 1), "algorithm"].values
 
-            algos, counts = np.unique(first_ranks, return_counts=True)
+            algos, counts = np.unique(top_ranks, return_counts=True)
 
             for algo, count in zip(algos, counts):
                 ranking.loc[(ranking["dimensions"] == dimension)
@@ -244,19 +341,15 @@ def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 header=not Path(rank_csv_path).exists(),
                 index=False)
 
-    if plot:
-        ma_plot_all(rank_csv_path, ngopt_vs_data, perf_csv_path)
 
-    return
-
-
-def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
-                perf_data: Path | pd.DataFrame = None) -> None:
-    """Generate all plots for the MA-BBOB data.
+def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
+                  perf_data: Path | pd.DataFrame = None,
+                  test_bbob: bool = False) -> None:
+    """Generate all plots for test data on MA-BBOB or BBOB.
 
     Args:
         ranking_csv: Path to a csv file with algorithms ranked based on their
-            performance on the MA-BBOB problems for each dimension-budget
+            performance on the test problems for each dimension-budget
             combination.
         ngopt_vs_data: If True, change output file names to indicate that the
             comparison only considers the NGOpt choice and the data choice; if
@@ -265,6 +358,9 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
         perf_data: Path to the performance data csv with loss values per
             dimension-budget-algorithm-problem combination, or a pd.DataFrame
             with the same data. If None, don't plot cumulative loss plots.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
     file_name = "grid_test"
 
@@ -272,14 +368,16 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
         file_name = f"{file_name}_1v1"
 
     plot_heatmap_data_test(ranking_csv, file_name=file_name,
-                           comp_approach=False)
+                           comp_approach=False, test_bbob=test_bbob)
     plot_heatmap_data_test(ranking_csv, file_name=file_name,
-                           comp_approach=True)
+                           comp_approach=True, test_bbob=test_bbob)
 
     if perf_data is not None:
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True)
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True,
+                                test_bbob=test_bbob)
 #       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=False)
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False, grid=True)
+        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False, grid=True,
+                                test_bbob=test_bbob)
 #       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
 #                               grid=False)
 
@@ -290,17 +388,18 @@ def ma_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
             for magnitude in range(0, 6):
                 plot_loss_gain_heatmap_test(
                     perf_data, ranking_csv, log=True,
-                    compare="data", magnitude=magnitude)
+                    compare="data", magnitude=magnitude, test_bbob=test_bbob)
                 plot_loss_gain_heatmap_test(
                     perf_data, ranking_csv, log=True,
-                    compare="ngopt", magnitude=magnitude)
+                    compare="ngopt", magnitude=magnitude, test_bbob=test_bbob)
 
     return
 
 
 def plot_heatmap_data_test(ranking_csv: Path,
                            file_name: str = "grid_test",
-                           comp_approach: bool = False) -> None:
+                           comp_approach: bool = False,
+                           test_bbob: bool = False) -> None:
     """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
     In case of a tie, if one of the top ranking algorithms matches with the
@@ -314,11 +413,15 @@ def plot_heatmap_data_test(ranking_csv: Path,
         file_name: Name of the file to write to. Will be written in the
             plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         comp_approach: If True, compare approaches rather than algorithms.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
     approach = "approach" if comp_approach else "algorithm"
+    prob_set = "BBOB test" if test_bbob else "MA-BBOB"
 
     print(f"Plot heatmap of test data showing best {approach} per "
-          "budget-dimension pair.")
+          f"budget-dimension pair for {prob_set}.")
 
     # Load data from csv
     algo_df = pd.read_csv(ranking_csv)
@@ -394,106 +497,13 @@ def plot_heatmap_data_test(ranking_csv: Path,
     plt.show()
     dim_multiplier = 100
 
-    if comp_approach:
-        out_path = Path(
-            f"plots/heatmap/{file_name}_approach_d{dim_multiplier}.pdf")
-    else:
-        out_path = Path(
-            f"plots/heatmap/{file_name}_algos_d{dim_multiplier}.pdf")
-
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_path)
-
-    return
-
-
-def plot_heatmap_data_test_funcs(perf_csv: Path,
-                                 file_name: str = "func_comp",
-                                 comp_approach: bool = False) -> None:
-    """Plot a heatmap showing the best algorithm per budget-function pair.
-
-    In case of a tie, if one of the top ranking algorithms matches with the
-    choice of NGOpt, this one is shown. If none of the tied algorithms
-    match NGOpt, the one that happens to be on top is shown.
-
-    Args:
-        perf_csv: Path to a csv file with performance of algorithms on
-            the MA-BBOB problems for each dimension-budget combination.
-        file_name: Name of the file to write to. Will be written in the
-            plots/heatmap/ directory with a _d{multiplier}.pdf extension.
-        comp_approach: If True, compare approaches rather than algorithms.
-    """
-    # Load data from csv
-    algo_df = pd.read_csv(perf_csv)
+    out_dir = Path("plots/heatmap/")
+    out_dir = out_dir / ("bbob_test" if test_bbob else "ma-bbob")
 
     if comp_approach:
-        best_matrix = get_best_approach_test(algo_df)
-        algo_names = [
-            "NGOpt", "Data", "VBS", "Same (All)",
-            "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
-            "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
-        best_algos = best_matrix.values.flatten().tolist()
-        ids_in_plot = [idx for idx, algo in enumerate(algo_names)
-                       if algo in best_algos]
-        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
-        colours = const.ALGO_COLOURS
-        colours_in_plot = [colours[i] for i in ids_in_plot]
+        out_path = out_dir / f"{file_name}_approach_d{dim_multiplier}.pdf"
     else:
-        best_matrix = get_best_algorithms_test(algo_df)
-
-        algorithms = []
-        algo_names = [const.ALGS_CONSIDERED[idx] for idx in const.ALGS_0_6_0]
-
-        for algo_name in algo_names:
-            algorithms.append(Algorithm(algo_name))
-
-        algo_names = [algo.name_short for algo in algorithms]
-        algo_ids = [algo.id for algo in algorithms]
-        best_algos = best_matrix.values.flatten().tolist()
-
-        if "Missing" in best_algos:
-            algo_names.append("Missing")
-            algo_ids.append(14)  # Colour not used for const.ALGS_0_6_0
-
-        # Get indices for algorithms relevant for the plot
-        ids_in_plot = [idx for idx, algo in zip(algo_ids, algo_names)
-                       if algo in best_algos]
-        algos_in_plot = [algo for algo in algo_names if algo in best_algos]
-        colours = const.ALGO_COLOURS
-        colours_in_plot = [colours[i] for i in ids_in_plot]
-
-    # Dict mapping short names to ints
-    algo_to_int = {algo: i for i, algo in enumerate(algos_in_plot)}
-
-    # Create heatmap
-    fig, ax = plt.subplots(figsize=(10.2, 4.6))
-    ax = sns.heatmap(
-        best_matrix.replace(algo_to_int), cmap=colours_in_plot,
-        square=True)
-    ax.set(xlabel="function", ylabel="evaluation budget")
-    ax.xaxis.tick_top()
-    ax.xaxis.set_label_position("top")
-    ax.tick_params(axis="x", labelrotation=90)
-
-    # Add algorithm names to colour bar
-    colorbar = ax.collections[0].colorbar
-    r = colorbar.vmax - colorbar.vmin
-    n = len(algo_to_int)
-    colorbar.set_ticks(
-        [colorbar.vmin + r / n * (0.5 + i) for i in range(n)])
-    colorbar.set_ticklabels(list(algo_to_int.keys()))
-
-    # Plot and save the figure
-    plt.tight_layout()
-    plt.show()
-    dim_multiplier = 100
-
-    if comp_approach:
-        out_path = Path(
-            f"plots/heatmap/{file_name}_approach_d{dim_multiplier}.pdf")
-    else:
-        out_path = Path(
-            f"plots/heatmap/{file_name}_algos_d{dim_multiplier}.pdf")
+        out_path = out_dir / f"{file_name}_algos_d{dim_multiplier}.pdf"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
@@ -714,7 +724,8 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
 def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
                             ngopt_vs_data: bool,
                             log: bool = True,
-                            grid: bool = True) -> None:
+                            grid: bool = True,
+                            test_bbob: bool = False) -> None:
     """Plot the cumulative percentage of problems over the loss.
 
     Args:
@@ -728,14 +739,25 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
         log: If True plot the log loss, otherwise print the percentage loss.
         grid: If True plot a grid which each dimension-budget combination as
             subplot, otherwise create separate plots for each.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
+    if test_bbob:
+        # Not clear it makes sense to make these plots over multiple instances
+        # of the same problem (for BBOB test instances), should think about it.
+        print("Cumulative percentage of problems over the loss plots are not "
+              "implemented for BBOB test instances.")
+        return
+
     loss_type = "log" if log else "percentage"
     plot_type = "grid" if grid else "individual plot"
     comp_type = "NGOpt and data best" if ngopt_vs_data else "all algorithms"
+    prob_set = "BBOB test" if test_bbob else "MA-BBOB"
 
     print(f"Plot cumulative percentage of problems over the {loss_type} loss "
           f"for test data, comparing {comp_type}, with each budget-dimension "
-          f"pair in a(n) {plot_type}.")
+          f"pair in a(n) {plot_type} for {prob_set}.")
 
     # If perf_data is None, do nothing
     if perf_data is None:
@@ -950,7 +972,8 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
                                 rank_data: Path | pd.DataFrame,
                                 log: bool = True,
                                 compare: str = "data",
-                                magnitude: float = 0) -> None:
+                                magnitude: float = 0,
+                                test_bbob: bool = False) -> None:
     """Plot a loss/gain heatmap compared to the best algorithm at 0 loss.
 
     The loss and gain compared to the best algorithm are computed by taking the
@@ -972,12 +995,24 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
         compare: The selector to compare with the best algorithm. Can be "data"
             or "ngopt", to compare to the choices they make.
         magnitude: The order of magnitude of loss to compare at.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
+    if test_bbob:
+        # Not clear it makes sense to make these plots over multiple instances
+        # of the same problem (for BBOB test instances), should think about it.
+        print("Loss/gain heatmaps compared to the best algorithm are not "
+              "implemented for BBOB test instances.")
+        return
+
     loss_type = "log" if log else "percentage"
     comp_type = "train data" if compare == "data" else "NGOpt"
+    prob_set = "BBOB test" if test_bbob else "MA-BBOB"
 
     print(f"Plot a loss/gain heatmap for {comp_type} compared to the best "
-          f"algorithm at 0 loss ({loss_type} loss) on the test data.")
+          f"algorithm at 0 loss ({loss_type} loss) on the test data"
+          f"for {prob_set}.")
 
     # If rank_data is given as Path, first load the ranking data from csv
     if isinstance(rank_data, PurePath):

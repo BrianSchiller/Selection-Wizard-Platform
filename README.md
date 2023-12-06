@@ -76,17 +76,37 @@ Output:
 1. Analyse MA-BBOB preprocessed data comparing all algorithms:  
 `./analyse_data.py data_seeds2_ma_organised/ --ma`  
 Add `--ma-plot` to immediately generate all possible plots after analysis.  
-Output: `csvs/ma_ranking.csv`, `csvs/ma_ranking_failed.csv` (only if any runs, partially, failed)
+Output: `csvs/ma-bbob/ranking.csv`, `csvs/ma-bbob/ranking_failed.csv` (only if any runs, partially, failed)
 
 2. Analyse MA-BBOB preprocessed data comparing only the NGOpt choice and the data based choice:  
-`./analyse_data.py data_seeds2_ma_organised/ --ma --ma-vs`  
+`./analyse_data.py data_seeds2_ma_organised/ --ma --test-vs`  
 Add `--ma-plot` to immediately generate all possible plots after analysis.  
-Output: `csvs/ma_ranking_1v1.csv`, `csvs/ma_ranking_1v1_failed.csv` (only if any runs, partially, failed)
+Output: `csvs/ma-bbob/ranking_1v1.csv`, `csvs/ma-bbob/ranking_1v1_failed.csv` (only if any runs, partially, failed)
 
 3. Plot MA-BBOB results comparing all algorithms:  
-`./analyse_data.py csvs/ma_ranking.csv --ma-plot --ma-loss csvs/ma_perf_data.csv`  
-Output: `plots/heatmap/grid_test_algos_d100.pdf`, `plots/heatmap/grid_test_approach_d100.pdf`, `plots/line/loss_log_grid.pdf`, `plots/line/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
+`./analyse_data.py csvs/ma-bbob/ranking.csv --ma-plot --test-loss csvs/ma-bbob/perf_data.csv`  
+Output: `plots/heatmap/ma-bbob/grid_test_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_approach_d100.pdf`, `plots/line/loss_log_grid.pdf`, `plots/line/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
 
 4. Plot MA-BBOB results comparing only the NGOpt choice and the data based choice:  
-`./analyse_data.py csvs/ma_ranking_1v1.csv --ma-plot --ma-vs --ma-loss csvs/ma_perf_data_1v1.csv`  
-Output: `plots/heatmap/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/grid_test_1v1_approach_d100.pdf`, `plots/line/loss_log_1v1_grid.pdf`, `plots/line/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
+`./analyse_data.py csvs/ma-bbob/ranking_1v1.csv --ma-plot --test-vs --test-loss csvs/ma-bbob/perf_data_1v1.csv`  
+Output: `plots/heatmap/ma-bbob/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_1v1_approach_d100.pdf`, `plots/line/loss_log_1v1_grid.pdf`, `plots/line/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
+
+## Analyse BBOB test instances preprocessed results
+1. Analyse BBOB test preprocessed data comparing all algorithms:  
+`./analyse_data.py data_seeds2_bbob_test_organised/ --test-bbob`  
+Add `--test-plot` to immediately generate all possible plots after analysis.  
+Output: `csvs/bbob_test/ranking.csv`, `csvs/bbob_test/ranking_failed.csv` (only if any runs, partially, failed)
+
+2. Analyse BBOB test preprocessed data comparing only the NGOpt choice and the data based choice:  
+`./analyse_data.py data_seeds2_bbob_test_organised/ --test-bbob --test-vs`  
+Add `--test-plot` to immediately generate all possible plots after analysis.  
+Output: `csvs/bbob_test/ranking_1v1.csv`, `csvs/bbob_test/ranking_1v1_failed.csv` (only if any runs, partially, failed)
+
+3. Plot BBOB test results comparing all algorithms:  
+`./analyse_data.py csvs/bbob_test/ranking.csv --test-plot --test-loss csvs/bbob_test/perf_data.csv`  
+Output: `plots/heatmap/bbob_test/grid_test_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_approach_d100.pdf`
+
+4. Plot BBOB test results comparing only the NGOpt choice and the data based choice:  
+`./analyse_data.py csvs/bbob_test/ranking_1v1.csv --test-plot --test-vs --test-loss csvs/bbob_test/perf_data_1v1.csv`  
+Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_1v1_approach_d100.pdf`
+
