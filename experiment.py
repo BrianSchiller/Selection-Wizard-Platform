@@ -18,45 +18,6 @@ from cmcrameri import cm
 import constants as const
 
 
-def analyse_bbob_csvs(data_dir: Path, ngopt_vs_data: bool = False,
-                      plot: bool = True) -> None:
-    """Read and analyse preprocessed .csv files with BBOB test instance data.
-
-    Args:
-        data_dir: Path to the data directory. This should have .csv files per
-            algorithm-dimension-budget combination. Each of these files should
-            have the columns: problem, algorithm, dimensions, budget, seed,
-            instance, status, performance; and 600 rows, one per BBOB test
-            problem-instance pair (24 problems, 25 instances).
-        ngopt_vs_data: If True, compare only the NGOpt choice and the data
-            choice; if False, compare NGOpt choice and top 4 from the data.
-        plot: If True, also generate all available plots for the BBOB test data
-            after the analysis.
-    """
-    analyse_test_csvs(data_dir, ngopt_vs_data, plot, test_bbob=True)
-
-    return
-
-
-def analyse_ma_csvs(data_dir: Path, ngopt_vs_data: bool = False,
-                    plot: bool = True) -> None:
-    """Read and analyse preprocessed .csv files with data on MA-BBOB problems.
-
-    Args:
-        data_dir: Path to the data directory. This should have .csv files per
-            algorithm-dimension-budget combination. Each of these files should
-            have the columns: problem, algorithm, dimensions, budget, seed,
-            status, performance; and 828 rows, one per MA-BBOB problem.
-        ngopt_vs_data: If True, compare only the NGOpt choice and the data
-            choice; if False, compare NGOpt choice and top 4 from the data.
-        plot: If True, also generate all available plots for the MA-BBOB data
-            after the analysis.
-    """
-    analyse_test_csvs(data_dir, ngopt_vs_data, plot, test_bbob=False)
-
-    return
-
-
 def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                       plot: bool = True, test_bbob: bool = False) -> None:
     """Read and analyse preprocessed .csv files with performance data.
@@ -226,53 +187,65 @@ def assign_points_test(dimensionalities: list[int],
             loss_log = []
 
             for problem in problems:
-                perf_algos = perf_data.loc[
-                    (perf_data["dimensions"] == dimension)
-                    & (perf_data["budget"] == budget)
-                    & (perf_data["problem"] == problem)]
+                instances = const.TEST_INSTANCES if test_bbob else [1]
 
-                # Check for each run whether it was successful
-                failed = perf_algos.loc[perf_algos["status"] != 1]
+                for instance in instances:
+                    if instance == 1:
+                        perf_algos = perf_data.loc[
+                            (perf_data["dimensions"] == dimension)
+                            & (perf_data["budget"] == budget)
+                            & (perf_data["problem"] == problem)]
+                    else:
+                        perf_algos = perf_data.loc[
+                            (perf_data["dimensions"] == dimension)
+                            & (perf_data["budget"] == budget)
+                            & (perf_data["problem"] == problem)
+                            & (perf_data["instance"] == instance)]
 
-                # Add failed runs to csv
-                if len(failed.index) > 0:
-                    failed.to_csv(failed_csv_path, mode="a",
-                                  header=not Path(failed_csv_path).exists(),
-                                  index=False)
+                    # Check for each run whether it was successful
+                    failed = perf_algos.loc[perf_algos["status"] != 1]
 
-                for _, run in failed.iterrows():
-                    error = run["status"]
-                    err_str = (f"Run FAILED with error code: {error} for "
-                               f"algorithm {run['algorithm']} on D{dimension}"
-                               f"B{budget} on problem {problem}")
-                    err_str = (f"{err_str}, instance {run['instance']}"
-                               if test_bbob else err_str)
-                    print(err_str)
+                    # Add failed runs to csv
+                    if len(failed.index) > 0:
+                        failed.to_csv(
+                            failed_csv_path, mode="a",
+                            header=not Path(failed_csv_path).exists(),
+                            index=False)
 
-                # Get performance and indices
-                perfs = perf_algos["performance"].values
-                indices.extend(list(perf_algos["performance"].index))
+                    for _, run in failed.iterrows():
+                        error = run["status"]
+                        err_str = (f"Run FAILED with error code: {error} for "
+                                   f"algorithm {run['algorithm']} on "
+                                   f"D{dimension}B{budget} on problem "
+                                   f"{problem}")
+                        err_str = (f"{err_str}, instance {run['instance']}"
+                                   if test_bbob else err_str)
+                        print(err_str)
 
-                # Rank the algorithms by performance on this
-                # dimension-budget-problem combination
-                # The "min" method resolves ties by assigning the
-                # minimum of the ranks of all tied methods. E.g., if
-                # the best two are tied, they get the minimum of rank 1
-                # and 2 = 1.
-                ranks.extend(
-                    ss.rankdata(perfs, method="min", nan_policy="omit"))
+                    # Get performance and indices
+                    perfs = perf_algos["performance"].values
+                    indices.extend(list(perf_algos["performance"].index))
 
-                # Compute percentage loss to best (and handle case where best
-                # is 0)
-                perfs_1 = perfs + 1
-                best = min(perfs_1)
-                loss_percent.extend((perfs_1 - best) / best * 100)
+                    # Rank the algorithms by performance on this
+                    # dimension-budget-problem combination
+                    # The "min" method resolves ties by assigning the
+                    # minimum of the ranks of all tied methods. E.g., if
+                    # the best two are tied, they get the minimum of rank 1
+                    # and 2 = 1.
+                    ranks.extend(
+                        ss.rankdata(perfs, method="min", nan_policy="omit"))
 
-                # Compute log loss to best
-                minimum = 0.00000000001
-                perfs_min = np.maximum(perfs, minimum)
-                best = min(perfs_min)
-                loss_log.extend(np.log10(perfs_min) - np.log10(best))
+                    # Compute percentage loss to best (and handle case where
+                    # best is 0)
+                    perfs_1 = perfs + 1
+                    best = min(perfs_1)
+                    loss_percent.extend((perfs_1 - best) / best * 100)
+
+                    # Compute log loss to best
+                    minimum = 0.00000000001
+                    perfs_min = np.maximum(perfs, minimum)
+                    best = min(perfs_min)
+                    loss_log.extend(np.log10(perfs_min) - np.log10(best))
 
             # Update DataFrame for this dimension-budget combination
             perf_data.loc[indices, "rank"] = ranks
@@ -289,19 +262,11 @@ def assign_points_test(dimensionalities: list[int],
                 header=not perf_csv_path.exists(),
                 index=False)
 
-            # BBOB test: Assign points for each row where an algorithm has
-            # rank 25 or lower.
-            if test_bbob:
-                top_ranks = perf_data.loc[
-                    (perf_data["dimensions"] == dimension)
-                    & (perf_data["budget"] == budget)
-                    & (perf_data["rank"] <= 25), "algorithm"].values
-            # MA-BBOB: Assign one point per row where an algorithms has rank 1
-            else:
-                top_ranks = perf_data.loc[
-                    (perf_data["dimensions"] == dimension)
-                    & (perf_data["budget"] == budget)
-                    & (perf_data["rank"] == 1), "algorithm"].values
+            # Assign one point per row where an algorithms has rank 1
+            top_ranks = perf_data.loc[
+                (perf_data["dimensions"] == dimension)
+                & (perf_data["budget"] == budget)
+                & (perf_data["rank"] == 1), "algorithm"].values
 
             algos, counts = np.unique(top_ranks, return_counts=True)
 
@@ -743,13 +708,6 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
             data from BBOB test instances. If False, handle everything as
             MA-BBOB data.
     """
-    if test_bbob:
-        # Not clear it makes sense to make these plots over multiple instances
-        # of the same problem (for BBOB test instances), should think about it.
-        print("Cumulative percentage of problems over the loss plots are not "
-              "implemented for BBOB test instances.")
-        return
-
     loss_type = "log" if log else "percentage"
     plot_type = "grid" if grid else "individual plot"
     comp_type = "NGOpt and data best" if ngopt_vs_data else "all algorithms"
@@ -770,16 +728,18 @@ def plot_cum_loss_data_test(perf_data: Path | pd.DataFrame,
     ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
     if grid:
-        plot_cum_loss_data_test_grid(perf_data, ngopt_v_data, log)
+        plot_cum_loss_data_test_grid(perf_data, ngopt_v_data, log, test_bbob)
     else:
-        plot_cum_loss_data_test_separate(perf_data, ngopt_v_data, log)
+        plot_cum_loss_data_test_separate(
+            perf_data, ngopt_v_data, log, test_bbob)
 
     return
 
 
 def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
                                  ngopt_v_data: str,
-                                 log: bool = True) -> None:
+                                 log: bool = True,
+                                 test_bbob: bool = False) -> None:
     """Plot the cumulative percentage of problems over the loss in a grid.
 
     Args:
@@ -788,6 +748,9 @@ def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
         ngopt_v_data: String to use for the output Path. Either empty or 1v1 to
             indicate only the NGOpt and Data choices are compared.
         log: If True plot the log loss, otherwise print the percentage loss.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
     # For each dimension-budget combination
     budgets = perf_data["budget"].unique()
@@ -867,7 +830,11 @@ def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
     for ax in axs.flatten():
         ax.grid(visible=True)
 
-    file_name = f"plots/line/loss_{loss_type}{ngopt_v_data}_grid.pdf"
+    out_dir = Path("plots/line/")
+    out_dir = out_dir / ("bbob_test" if test_bbob else "ma-bbob")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    file_name = f"{out_dir}/loss_{loss_type}{ngopt_v_data}_grid.pdf"
     plt.savefig(file_name, bbox_inches="tight")
     plt.close()
 
@@ -876,7 +843,8 @@ def plot_cum_loss_data_test_grid(perf_data: pd.DataFrame,
 
 def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
                                      ngopt_v_data: str,
-                                     log: bool = True) -> None:
+                                     log: bool = True,
+                                     test_bbob: bool = False) -> None:
     """Plot the cumulative percentage of problems over the loss per pair.
 
     Each pair has a budget and number of dimensions.
@@ -887,6 +855,9 @@ def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
         ngopt_v_data: String to use for the output Path. Either empty or 1v1 to
             indicate only the NGOpt and Data choices are compared.
         log: If True plot the log loss, otherwise print the percentage loss.
+        test_bbob: If True, adjust names and variables to handle everything as
+            data from BBOB test instances. If False, handle everything as
+            MA-BBOB data.
     """
     # For each dimension-budget combination
     budgets = perf_data["budget"].unique()
@@ -960,7 +931,11 @@ def plot_cum_loss_data_test_separate(perf_data: pd.DataFrame,
             # Set grid lines
             plt.grid()
 
-            file_name = (f"plots/line/single/loss_{loss_type}{ngopt_v_data}"
+            out_dir = Path("plots/line/")
+            out_dir = out_dir / ("bbob_test" if test_bbob else "ma-bbob")
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            file_name = (f"{out_dir}/single/loss_{loss_type}{ngopt_v_data}"
                          f"_D{dims}B{budget}.pdf")
             plt.savefig(file_name, bbox_inches="tight")
             plt.close()
@@ -999,13 +974,6 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
             data from BBOB test instances. If False, handle everything as
             MA-BBOB data.
     """
-    if test_bbob:
-        # Not clear it makes sense to make these plots over multiple instances
-        # of the same problem (for BBOB test instances), should think about it.
-        print("Loss/gain heatmaps compared to the best algorithm are not "
-              "implemented for BBOB test instances.")
-        return
-
     loss_type = "log" if log else "percentage"
     comp_type = "train data" if compare == "data" else "NGOpt"
     prob_set = "BBOB test" if test_bbob else "MA-BBOB"
@@ -1117,9 +1085,12 @@ def plot_loss_gain_heatmap_test(perf_data: Path | pd.DataFrame,
     # Plot and save the figure
     plt.tight_layout()
     plt.show()
+
+    out_dir = Path("plots/heatmap/")
+    out_dir = out_dir / ("bbob_test" if test_bbob else "ma-bbob")
+
     out_path = Path(
-        f"plots/heatmap/loss_gain_{loss_type}_loss_mag{magnitude}_{compare}"
-        ".pdf")
+        f"{out_dir}/loss_gain_{loss_type}_loss_mag{magnitude}_{compare}.pdf")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
 

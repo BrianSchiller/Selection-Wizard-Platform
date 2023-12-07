@@ -85,11 +85,11 @@ Output: `csvs/ma-bbob/ranking_1v1.csv`, `csvs/ma-bbob/ranking_1v1_failed.csv` (o
 
 3. Plot MA-BBOB results comparing all algorithms:  
 `./analyse_data.py csvs/ma-bbob/ranking.csv --ma-plot --test-loss csvs/ma-bbob/perf_data.csv`  
-Output: `plots/heatmap/ma-bbob/grid_test_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_approach_d100.pdf`, `plots/line/loss_log_grid.pdf`, `plots/line/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
+Output: `plots/heatmap/ma-bbob/grid_test_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_approach_d100.pdf`, `plots/line/ma-bbob/loss_log_grid.pdf`, `plots/line/ma-bbob/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/ma-bbob/single/`
 
 4. Plot MA-BBOB results comparing only the NGOpt choice and the data based choice:  
 `./analyse_data.py csvs/ma-bbob/ranking_1v1.csv --ma-plot --test-vs --test-loss csvs/ma-bbob/perf_data_1v1.csv`  
-Output: `plots/heatmap/ma-bbob/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_1v1_approach_d100.pdf`, `plots/line/loss_log_1v1_grid.pdf`, `plots/line/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/single/`
+Output: `plots/heatmap/ma-bbob/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/ma-bbob/grid_test_1v1_approach_d100.pdf`, `plots/line/ma-bbob/loss_log_1v1_grid.pdf`, `plots/line/ma-bbob/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/ma-bbob/single/`
 
 ## Analyse BBOB test instances preprocessed results
 1. Analyse BBOB test preprocessed data comparing all algorithms:  
@@ -104,9 +104,9 @@ Output: `csvs/bbob_test/ranking_1v1.csv`, `csvs/bbob_test/ranking_1v1_failed.csv
 
 3. Plot BBOB test results comparing all algorithms:  
 `./analyse_data.py csvs/bbob_test/ranking.csv --test-plot --test-loss csvs/bbob_test/perf_data.csv`  
-Output: `plots/heatmap/bbob_test/grid_test_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_approach_d100.pdf`
+Output: `plots/heatmap/bbob_test/grid_test_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_approach_d100.pdf`, `plots/line/bbob_test/loss_log_grid.pdf`, `plots/line/bbob_test/loss_percent_grid.pdf`, individual plots per dimension-budget combination under `plots/line/bbob_test/single/`
 
 4. Plot BBOB test results comparing only the NGOpt choice and the data based choice:  
 `./analyse_data.py csvs/bbob_test/ranking_1v1.csv --test-plot --test-vs --test-loss csvs/bbob_test/perf_data_1v1.csv`  
-Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_1v1_approach_d100.pdf`
+Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_1v1_approach_d100.pdf`, `plots/line/bbob_test/loss_log_1v1_grid.pdf`, `plots/line/bbob_test/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/bbob_test/single/`
 
