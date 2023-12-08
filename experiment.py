@@ -346,7 +346,7 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
 #       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
 #                               grid=False)
 
-        # Plot loss/gain heatmaps comparing best on MA-BBOB with NGopt/Data
+        # Plot loss/gain heatmaps comparing best on MA-BBOB with NGOpt/Data
         # choice. Only when not considering the 1v1 case, since we need the
         # complete data.
         if not ngopt_vs_data:
@@ -395,7 +395,7 @@ def plot_heatmap_data_test(ranking_csv: Path,
         best_matrix = get_best_approach_test(algo_df)
         algo_names = [
             "NGOpt", "Data", "VBS", "Same (All)",
-            "Tie (three-way)", "Tie (NGopt-Data)", "Tie (NGOpt-VBS)",
+            "Tie (three-way)", "Tie (NGOpt-Data)", "Tie (NGOpt-VBS)",
             "Tie (Data-VBS)", "Tie (VBS-VBS)", "Missing"]
         best_algos = best_matrix.values.flatten().tolist()
         ids_in_plot = [idx for idx, algo in enumerate(algo_names)
@@ -611,7 +611,8 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
     same algorithm), Missing (no results available).
 
     If additional options are considered, these additional outcomes are
-    included: VBS (Virtual Best Solver)
+    included: VBS (Virtual Best Solver), Tie (three-way), Tie (NGOpt-Data),
+    Tie (NGOpt-VBS), Tie (Data-VBS), Tie (VBS-VBS).
 
     Args:
         algo_df: DataFrame with rows representing different combinations of
@@ -641,39 +642,46 @@ def get_best_approach_test(algo_df: pd.DataFrame) -> pd.DataFrame:
                 continue
 
             # Retrieve all algorithms that are tied for first place
-            algo_scores = algo_scores.loc[algo_scores["rank test"] == 1]
+            algo_wins = algo_scores.loc[algo_scores["rank test"] == 1]
+            train_wins = algo_scores.loc[algo_scores["rank"] == 1]
+
+            # In the "ngopt rank" column -1 indicates the data-driven choice,
+            # 0 indicates the NGOpt choice, and all other values will be a
+            # positive integer equal to the "rank" column.
 
             # If all of 0, -1, >0 appear in ngopt rank, it is a three way Tie
-            if (0 in algo_scores["ngopt rank"].values
-                    and -1 in algo_scores["ngopt rank"].values
-                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
+            if (0 in algo_wins["ngopt rank"].values
+                    and -1 in algo_wins["ngopt rank"].values
+                    and any(r > 0 for r in algo_wins["ngopt rank"].values)):
                 dims_best.append("Tie (three-way)")
             # If both 0, -1 appear in ngopt rank, it is a ngopt-data Tie
-            elif (0 in algo_scores["ngopt rank"].values
-                    and -1 in algo_scores["ngopt rank"].values):
-                dims_best.append("Tie (NGopt-Data)")
+            elif (0 in algo_wins["ngopt rank"].values
+                    and -1 in algo_wins["ngopt rank"].values):
+                dims_best.append("Tie (NGOpt-Data)")
             # If both 0, >0 appear in ngopt rank, it is a ngopt-VBS Tie
-            elif (0 in algo_scores["ngopt rank"].values
-                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
+            elif (0 in algo_wins["ngopt rank"].values
+                    and any(r > 0 for r in algo_wins["ngopt rank"].values)):
                 dims_best.append("Tie (NGOpt-VBS)")
             # If both -1, >0 appear in ngopt rank, it is a data-VBS Tie
-            elif (-1 in algo_scores["ngopt rank"].values
-                    and any(r > 0 for r in algo_scores["ngopt rank"].values)):
+            elif (-1 in algo_wins["ngopt rank"].values
+                    and any(r > 0 for r in algo_wins["ngopt rank"].values)):
                 dims_best.append("Tie (Data-VBS)")
-            # If algo_scores still has more than 1 entry, this is a VBS-VSB Tie
-            elif len(algo_scores.index) > 1:
+            # If algo_wins still has more than 1 entry, this is a VBS-VBS Tie
+            elif len(algo_wins.index) > 1:
                 dims_best.append("Tie (VBS-VBS)")
-            # If ngopt rank is 0 and rank is 1, all use the Same algorithm.
+            # If ngopt rank is 0, rank is 1, and there was only one algorithm
+            # ranked first on the training set, all use the Same algorithm.
             # rank is 1 only checks it is the same as Data, but since this is
             # the set of algorithms ranked 1 on test, it is also the VBS.
-            elif (0 in algo_scores["ngopt rank"].values
-                  and 1 in algo_scores["rank"].values):
+            elif (0 in algo_wins["ngopt rank"].values
+                  and 1 in algo_wins["rank"].values
+                  and len(train_wins.index) == 1):
                 dims_best.append("Same (All)")
             # Otherwise, if ngopt rank is 0, this is a win for NGOpt (=VBS)
-            elif 0 in algo_scores["ngopt rank"].values:
+            elif 0 in algo_wins["ngopt rank"].values:
                 dims_best.append("NGOpt")
             # Otherwise, if ngopt rank is -1, this is a win for Data (=VBS)
-            elif -1 in algo_scores["ngopt rank"].values:
+            elif -1 in algo_wins["ngopt rank"].values:
                 dims_best.append("Data")
             # Otherwise, the VBS wins
             else:
