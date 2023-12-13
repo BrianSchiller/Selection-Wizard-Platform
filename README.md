@@ -27,6 +27,8 @@
 Output:  
     * `plots/heatmap/grid_data_0.6.0_d100.pdf`  
     * `plots/heatmap/grid_ngopt_0.6.0_d100.pdf`  
+    * `csvs/ngopt_algos_0.6.0.csv`
+    * `csvs/score_rank_0.6.0.csv`  
 
 2. Add the path to budget-specific runs for the choices of NGOpt to also plot a heatmap taking this into account with:  
 `./analyse_data.py data_seeds2_organised/ data_seeds2_ngopt_organised/`  
@@ -72,14 +74,18 @@ Output:
     * `plots/heatmap/grid_data_0.6.0_probs_f23_d100.pdf`
     * `plots/heatmap/grid_data_0.6.0_probs_f24_d100.pdf`
 
+## Prepare MA-BBOB experiments
+1. Analyse the BBOB results as described above  
+2. Run `gen_ma_probs.py`  
+
 ## Analyse MA-BBOB preprocessed results
 1. Analyse MA-BBOB preprocessed data comparing all algorithms:  
-`./analyse_data.py data_seeds2_ma_organised/ --ma`  
+`./analyse_data.py data_seeds2_ma_complete_organised/ --ma`  
 Add `--ma-plot` to immediately generate all possible plots after analysis.  
 Output: `csvs/ma-bbob/ranking.csv`, `csvs/ma-bbob/ranking_failed.csv` (only if any runs, partially, failed)
 
 2. Analyse MA-BBOB preprocessed data comparing only the NGOpt choice and the data based choice:  
-`./analyse_data.py data_seeds2_ma_organised/ --ma --test-vs`  
+`./analyse_data.py data_seeds2_ma_complete_organised/ --ma --test-vs`  
 Add `--ma-plot` to immediately generate all possible plots after analysis.  
 Output: `csvs/ma-bbob/ranking_1v1.csv`, `csvs/ma-bbob/ranking_1v1_failed.csv` (only if any runs, partially, failed)
 

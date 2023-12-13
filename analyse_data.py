@@ -558,6 +558,10 @@ if __name__ == "__main__":
                         f"{nevergrad_version}.hsv")
         ngopt = NGOptChoice(hsv_file)
 
+        # Write NGOpt algorithm names, short names, ID mapping
+        file_name = f"ngopt_algos_{nevergrad_version}"
+        ngopt.write_unique_ngopt_algos_csv(file_name)
+
         # Load experiment data
         exp = Experiment(args.data_dir,
                          args.per_budget_data_dir,
@@ -578,6 +582,11 @@ if __name__ == "__main__":
         file_name = f"grid_data_{nevergrad_version}"
         matrix = exp.get_scoring_matrix(ngopt=ngopt)
         exp.plot_heatmap_data(matrix, ngopt, file_name)
+
+        # Write a CSV file with points and ranks of algorithms per dimension-
+        # budget combination
+        file_name = f"score_rank_{nevergrad_version}"
+        exp.write_score_rank_csv(file_name, ngopt)
 
         # Also plot heatmaps on BBOB data per function and function group
         if args.per_prob_set is True:

@@ -81,7 +81,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 if test_bbob else pd.read_csv(probs_csv)["problem"].to_list())
 
     # Create a DataFrame to store points per dimension-budget-algorithm combo
-    ma_algos_csv = csv_dir / "ma_algos_ng+data.csv"
+    ma_algos_csv = csv_dir / "ma_algos.csv"
     ranking = pd.read_csv(ma_algos_csv)
     ranking["in data"] = False
     ranking["points test"] = 0
@@ -1715,7 +1715,7 @@ class Experiment:
         """Write the algorithm rank based on scores over all problems to CVS.
 
         The CSV contains the columns:
-        dimensions, budget, algorithm, points, rank
+        dimensions, budget, algorithm, points, rank, ngopt rank
 
         Args:
             file_name: Name of the file to write to. Will be written in the
@@ -1726,8 +1726,20 @@ class Experiment:
                 True.
         """
         algo_matrix = self.get_scoring_matrix(ngopt, bud_specific=bud_specific)
-        col_names = ["dimensions", "budget", "algorithm", "points", "rank"]
+        best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
+        col_names = ["dimensions", "budget", "algorithm", "points", "rank",
+                     "ngopt rank", "ID"]
         all_scores = []
+
+        # Get algorithm IDs
+        names_csv = Path("csvs/ngopt_algos_0.6.0.csv")
+        names_df = pd.read_csv(names_csv)
+        name_dict = {}
+
+        for _, algo in names_df.iterrows():
+            algo_name = algo["short name"]
+            algo_id = algo["ID"]
+            name_dict[algo_name] = algo_id
 
         for budget in self.budgets:
             for dims in self.dimensionalities:
@@ -1742,8 +1754,29 @@ class Experiment:
                 # descending order since more points is better.
                 neg_points = [-1 * point for point in points]
                 ranks = ss.rankdata(neg_points, method="min")
+                ngopt_ranks = ranks
+                algo_ids = [name_dict[algo] for algo in algos]
                 algo_ranks = pd.DataFrame(
-                    zip(dim, buds, algos, points, ranks), columns=col_names)
+                    zip(dim, buds, algos, points, ranks,
+                        ngopt_ranks, algo_ids),
+                    columns=col_names)
+
+                # Set "ngopt rank" to 0 for the NGOpt choice, and -1 for the
+                # data choice if it is different from the NGOpt choice
+                ngopt_choice = ngopt.get_ngopt_choice(dims, budget)
+                data_choice = best_matrix.loc[dims, budget]
+
+                algo_ranks.loc[
+                    algo_ranks["algorithm"] == ngopt_choice, "ngopt rank"] = 0
+
+                if ngopt_choice != data_choice:
+                    algo_ranks.loc[algo_ranks["algorithm"] == data_choice,
+                                   "ngopt rank"] = -1
+
+                # Sort by algorithm ID for historical consistency
+                algo_ranks.sort_values("ID", inplace=True)
+                algo_ranks.drop(columns="ID", inplace=True)
+
                 all_scores.append(algo_ranks)
 
         csv = pd.concat(all_scores)
@@ -1824,9 +1857,11 @@ class Experiment:
 
                 # Prefer the NGOptChoice in case of a tie
                 if ngopt_algo in algo_scores["algorithm"].values:
-                    dims_best.append(ngopt_algo)
+                    best = ngopt_algo
                 else:
-                    dims_best.append(algo_scores["algorithm"].values[0])
+                    best = algo_scores["algorithm"].values[0]
+
+                dims_best.append(best)
 
             best_matrix[budget] = dims_best
 

@@ -96,7 +96,7 @@ def write_algo_combos_csvs() -> None:
             ngopt_choice = ngopt.get_ngopt_choice(dims, budget)
             ngopt_algo = bud_dim_df.loc[
                 bud_dim_df["algorithm"] == ngopt_choice].copy()
-            ngopt_algo["ngopt rank"] = 0
+            ngopt_algo["ngopt rank old"] = 0
             bud_dim_df.drop(bud_dim_df[
                 bud_dim_df["algorithm"] == ngopt_choice].index, inplace=True)
 
@@ -107,7 +107,7 @@ def write_algo_combos_csvs() -> None:
             bud_dim_df.sort_values("rank", inplace=True)
             best_n = 4
             best_algos = bud_dim_df.head(best_n).copy()
-            best_algos["ngopt rank"] = best_algos["rank"]
+            best_algos["ngopt rank old"] = best_algos["rank"]
 
             # Add NGOpt choice and best algorithms to the to run data frame
             algos_to_run = pd.concat([algos_to_run, best_algos, ngopt_algo])
@@ -121,7 +121,8 @@ def write_algo_combos_csvs() -> None:
     algos_to_run["algo ID"] = algo_ids
 
     # Sort to prioritise NGOpt choice and higher ranked algorithms
-    algos_to_run.sort_values(by=["ngopt rank"], inplace=True)
+    algos_to_run.sort_values(by=["ngopt rank old"], inplace=True)
+    algos_to_run.drop(columns="ngopt rank old", inplace=True)
 
     # Write the CSV
     out_path = Path("csvs/ma_algos.csv")

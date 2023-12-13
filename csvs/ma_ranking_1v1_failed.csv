@@ -1,3 +1,0 @@
-problem,algorithm,dimensions,budget,seed,status,performance,algo ID,rank,percent loss,log loss
-f617_MA557_F11-W0.9_F12_W0.1,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,9000,1,-4,,5,,,
-f652_MA592_F11-W0.5_F24_W0.5,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,9000,1,-4,,5,,,

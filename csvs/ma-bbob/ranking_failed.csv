@@ -1,0 +1,11 @@
+problem,algorithm,dimensions,budget,seed,status,performance,algo ID,rank,percent loss,log loss
+f634_MA574_F11-W0.5_F18_W0.5,MetaModel,30,7000,1,-4,,3,,,
+f634_MA574_F11-W0.5_F18_W0.5,MetaModel,30,8000,1,-4,,3,,,
+f617_MA557_F11-W0.9_F12_W0.1,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,9000,1,-4,,5,,,
+f634_MA574_F11-W0.5_F18_W0.5,MetaModel,30,9000,1,-4,,3,,,
+f652_MA592_F11-W0.5_F24_W0.5,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),30,9000,1,-4,,5,,,
+f634_MA574_F11-W0.5_F18_W0.5,MetaModel,30,10000,1,-4,,3,,,
+f532_MA472_F9-W0.5_F11_W0.5,MetaModel,35,9000,1,-4,,3,,,
+f626_MA566_F11-W0.9_F15_W0.1,MetaModel,35,9000,1,-4,,3,,,
+f532_MA472_F9-W0.5_F11_W0.5,MetaModel,35,10000,1,-4,,3,,,
+f626_MA566_F11-W0.9_F15_W0.1,MetaModel,35,10000,1,-4,,3,,,
