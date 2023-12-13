@@ -552,8 +552,17 @@ if __name__ == "__main__":
         sys.exit()
     # Plot BBOB results for all problems
     else:
-        # Load NGOpt choices
         nevergrad_version = "0.6.0"
+
+        # Plot heatmap based on NGOpt14 choices using a dummy experiment
+        hsv_file = Path("ngopt_choices/ngopt14_dims1-100evals1-10000_separator"
+                        f"_{nevergrad_version}.hsv")
+        ngopt = NGOptChoice(hsv_file)
+        file_name = f"grid_ngopt14_{nevergrad_version}"
+        exp = Experiment(None, None, ng_version=nevergrad_version)  # Dummy
+        exp.plot_heatmap_ngopt(ngopt, file_name)
+
+        # Load NGOpt choices
         hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
                         f"{nevergrad_version}.hsv")
         ngopt = NGOptChoice(hsv_file)

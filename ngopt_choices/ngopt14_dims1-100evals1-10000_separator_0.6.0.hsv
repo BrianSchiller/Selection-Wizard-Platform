@@ -1,7 +1,4 @@
-has_noise False
-fully_continuous True
-fully_bounded True
-Algorithm#dimensionality#evaluation budget
+algorithm#dimensionality#budget
 MetaModelOnePlusOne#1#1
 MetaModel#1#2
 MetaModelOnePlusOne#2#1
@@ -213,3 +210,6 @@ ChainMetaModelPowell#69#9522
 MetaModelOnePlusOne#70#1
 ChainMetaModelPowell#70#9800
 MetaModelOnePlusOne#71#1
+MetaModelOnePlusOne#80#1
+MetaModelOnePlusOne#90#1
+MetaModelOnePlusOne#100#1

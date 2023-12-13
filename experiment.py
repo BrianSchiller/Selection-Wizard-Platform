@@ -1109,7 +1109,7 @@ class Experiment:
     """Holds an experiment and its properties."""
 
     def __init__(self: Experiment,
-                 data_dir: Path,
+                 data_dir: Path = None,
                  per_budget_data_dir: Path = None,
                  dimensionalities: list[int] = const.DIMS_CONSIDERED,
                  ng_version: str = "0.6.0",
@@ -1181,7 +1181,9 @@ class Experiment:
         for algo_name in algo_names:
             self.algorithms.append(Algorithm(algo_name))
 
-        self.load_data()
+        if self.data_dir is not None:
+            self.load_data()
+
         # Take the problem set given by the caller
         self.set_problems(prob_set)
 
