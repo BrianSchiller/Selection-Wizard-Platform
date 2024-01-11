@@ -1822,7 +1822,8 @@ class Experiment:
 
     def _get_best_algorithms(self: Experiment,
                              algo_matrix: pd.DataFrame,
-                             ngopt: NGOptChoice) -> pd.DataFrame:
+                             ngopt: NGOptChoice,
+                             blank_ngopt: bool = False) -> pd.DataFrame:
         """Retrieve the top ranked algorithms per budget-dimensionality pair.
 
         In case of a tie, if one of the top ranking algorithms matches with the
@@ -1836,6 +1837,8 @@ class Experiment:
                 columns: algorithm, points
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
+            blank_ngopt: If True, set cells with the same choice as NGOpt
+                to an empty str.
 
         Returns:
             A DataFrame of short Algorithm names with rows representing
@@ -1859,7 +1862,7 @@ class Experiment:
 
                 # Prefer the NGOptChoice in case of a tie
                 if ngopt_algo in algo_scores["algorithm"].values:
-                    best = ngopt_algo
+                    best = "" if blank_ngopt else ngopt_algo
                 else:
                     best = algo_scores["algorithm"].values[0]
 
@@ -1941,6 +1944,7 @@ class Experiment:
     def plot_heatmap_data(self: Experiment,
                           algo_matrix: pd.DataFrame,
                           ngopt: NGOptChoice,
+                          blank_ngopt: bool = False,
                           file_name: str = "grid_data") -> None:
         """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
@@ -1955,10 +1959,15 @@ class Experiment:
                 columns: algorithm, points
             ngopt: Instance of NGOptChoice to enable retrieving algorithm
                 choice of NGOpt for plotted dimensionalities and budgets.
+            blank_ngopt: If True, leave cells with the same choice as NGOpt
+                blank.
             file_name: Name of the file to write to. Will be written in the
                 plots/heatmap/ directory with a _d{multiplier}.pdf extension.
         """
-        best_matrix = self._get_best_algorithms(algo_matrix, ngopt)
+        best_matrix = self._get_best_algorithms(
+            algo_matrix, ngopt, blank_ngopt)
+        # If blank_ngopt is True, empty strings may exist, treat them as NaN
+        best_matrix.replace("", np.nan, inplace=True)
 
         algorithms = [algo.name_short for algo in self.algorithms]
         algo_ids = [algo.id for algo in self.algorithms]

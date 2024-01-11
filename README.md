@@ -35,7 +35,7 @@ Output:
 Output:  
     * `plots/heatmap/grid_data_budget_specific_0.6.0_d100.pdf`  
 
-2. Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.  
+3. Add `--per-prob-set` to also plot heatmaps for different subsets of/individual problems.  
 Output:  
     * `plots/heatmap/grid_data_0.6.0_probs_separable_d100.pdf` - Separable functions
     * `plots/heatmap/grid_data_0.6.0_probs_low_cond_d100.pdf` - Low or moderate conditioning

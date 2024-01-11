@@ -591,6 +591,10 @@ if __name__ == "__main__":
         file_name = f"grid_data_{nevergrad_version}"
         matrix = exp.get_scoring_matrix(ngopt=ngopt)
         exp.plot_heatmap_data(matrix, ngopt, file_name)
+        # Also plot a version with cells left blank if it is the same as NGOpt
+        file_name = f"{file_name}_ngopt_blank"
+        exp.plot_heatmap_data(
+            matrix, ngopt, blank_ngopt=True, file_name=file_name)
 
         # Write a CSV file with points and ranks of algorithms per dimension-
         # budget combination
