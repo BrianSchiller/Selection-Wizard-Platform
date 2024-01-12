@@ -592,7 +592,7 @@ if __name__ == "__main__":
         matrix = exp.get_scoring_matrix(ngopt=ngopt)
         exp.plot_heatmap_data(matrix, ngopt, file_name)
         # Also plot a version with cells left blank if it is the same as NGOpt
-        file_name = f"{file_name}_ngopt_blank"
+        file_name = f"{file_name}"
         exp.plot_heatmap_data(
             matrix, ngopt, blank_ngopt=True, file_name=file_name)
 

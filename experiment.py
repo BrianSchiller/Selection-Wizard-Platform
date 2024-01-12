@@ -2013,8 +2013,10 @@ class Experiment:
         plt.tight_layout()
         plt.show()
         prob_set = f"_probs_{self.prob_set}" if self.prob_set != "all" else ""
+        blank = "_ngopt_blank" if blank_ngopt else ""
         out_path = Path(
-            f"plots/heatmap/{file_name}{prob_set}_d{self.dim_multiplier}.pdf")
+            f"plots/heatmap/{file_name}{blank}{prob_set}"
+            f"_d{self.dim_multiplier}.pdf")
         out_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(out_path)
 
