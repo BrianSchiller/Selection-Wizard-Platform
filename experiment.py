@@ -337,6 +337,12 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
     plot_heatmap_data_test(ranking_csv, file_name=file_name,
                            comp_approach=True, test_bbob=test_bbob)
 
+    # In the 1vs1 case, also plot a heatmap version with NGOpt choices blanked
+    if ngopt_vs_data:
+        plot_heatmap_data_test(
+            ranking_csv, file_name=file_name,
+            comp_approach=True, test_bbob=test_bbob, blank_ngopt=True)
+
     if perf_data is not None:
         plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True,
                                 test_bbob=test_bbob)
@@ -364,7 +370,8 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
 def plot_heatmap_data_test(ranking_csv: Path,
                            file_name: str = "grid_test",
                            comp_approach: bool = False,
-                           test_bbob: bool = False) -> None:
+                           test_bbob: bool = False,
+                           blank_ngopt: bool = False) -> None:
     """Plot a heatmap showing the best algorithm per budget-dimension pair.
 
     In case of a tie, if one of the top ranking algorithms matches with the
@@ -381,6 +388,8 @@ def plot_heatmap_data_test(ranking_csv: Path,
         test_bbob: If True, adjust names and variables to handle everything as
             data from BBOB test instances. If False, handle everything as
             MA-BBOB data.
+        blank_ngopt: If True, leave cells with the same choice as NGOpt
+            blank.
     """
     approach = "approach" if comp_approach else "algorithm"
     prob_set = "BBOB test" if test_bbob else "MA-BBOB"
@@ -393,6 +402,11 @@ def plot_heatmap_data_test(ranking_csv: Path,
 
     if comp_approach:
         best_matrix = get_best_approach_test(algo_df)
+
+        # If blank_ngopt is True, treat Same (All) as NaN
+        if blank_ngopt:
+            best_matrix.replace("Same (All)", np.nan, inplace=True)
+
         algo_names = [
             "NGOpt", "Data", "VBS", "Same (All)",
             "Tie (three-way)", "Tie (NGOpt-Data)", "Tie (NGOpt-VBS)",
@@ -465,10 +479,9 @@ def plot_heatmap_data_test(ranking_csv: Path,
     out_dir = Path("plots/heatmap/")
     out_dir = out_dir / ("bbob_test" if test_bbob else "ma-bbob")
 
-    if comp_approach:
-        out_path = out_dir / f"{file_name}_approach_d{dim_multiplier}.pdf"
-    else:
-        out_path = out_dir / f"{file_name}_algos_d{dim_multiplier}.pdf"
+    comp = "approach" if comp_approach else "algos"
+    blank = "_ngopt_blank" if blank_ngopt else ""
+    out_path = out_dir / f"{file_name}_{comp}{blank}_d{dim_multiplier}.pdf"
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path)
