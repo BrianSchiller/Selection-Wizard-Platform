@@ -24,11 +24,12 @@
 ## Analyse BBOB results
 1. Analyse BBOB result data to plot a heatmap of the best algorithm per dimension and budget combination:  
 `./analyse_data.py data_seeds2_organised/`  
+Add the flag `--all-budgets` to instead generate only `csvs/score_rank_all_buds_0.6.0.csv` which uses all budgets in the BBOB results (1-10000) instead of the 17 selected for the further experiments and the paper. NOTE: The code for this flag is not optimised and takes a long time to run, e.g., ~10 hours.  
 Output:  
-    * `plots/heatmap/grid_data_0.6.0_d100.pdf`  
-    * `plots/heatmap/grid_ngopt_0.6.0_d100.pdf`  
-    * `csvs/ngopt_algos_0.6.0.csv`
-    * `csvs/score_rank_0.6.0.csv`  
+    * Heatmap plot showing algorithms that are selected by the data-driven method: `plots/heatmap/grid_data_0.6.0_d100.pdf`  
+    * Heatmap plot showing algorithms that are selected by NGOpt39 in Nevergrad version 0.6.0: `plots/heatmap/grid_ngopt_0.6.0_d100.pdf`  
+    * CSV with algorithms used by NGOpt39 in Nevergrad version 0.6.0, including the ID, short name, and full name we use internally: `csvs/ngopt_algos_0.6.0.csv`
+    * CSV with score and ranking of the considered algorithms per considered budget-dimension combination: `csvs/score_rank_0.6.0.csv`  
 
 2. Add the path to budget-specific runs for the choices of NGOpt to also plot a heatmap taking this into account with:  
 `./analyse_data.py data_seeds2_organised/ data_seeds2_ngopt_organised/`  
@@ -116,3 +117,6 @@ Output: `plots/heatmap/bbob_test/grid_test_algos_d100.pdf`, `plots/heatmap/bbob_
 `./analyse_data.py csvs/bbob_test/ranking_1v1.csv --test-plot --test-vs --test-loss csvs/bbob_test/perf_data_1v1.csv`  
 Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_1v1_approach_d100.pdf`, `plots/line/bbob_test/loss_log_1v1_grid.pdf`, `plots/line/bbob_test/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/bbob_test/single/`
 
+# Run the data-driven selector
+1. Make sure `csvs/score_rank_0.6.0.csv` and/or `csvs/score_rank_all_buds_0.6.0.csv` exist (i.e., run the first command under "Analyse BBOB results").  
+2. Call the selector as `./run_selector.py <budget> <dimensions>`, e.g., `./run_selector.py 2500 15`. If the given budget or dimensionality does not exist in the ranking data csv file, the closest available are used instead. Use the flag `--full` to use the full range of budgets (1-10000, this only works if the `csvs/score_rank_all_buds_0.6.0.csv` file exists).  

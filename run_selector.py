@@ -7,16 +7,30 @@ import numpy as np
 from pathlib import Path
 import sys
 
+# Dimensions 2, 3, 5, 10, ..., 50, 60, ..., 100, budgets 100*dims
+BUD_DIMS_PAPER_CSV = "score_rank_0.6.0.csv"
+# Dimensions 2, 3, 5, 15, ..., 50, 60, ..., 100, budgets 1-10000
+BUD_1K_DIMS_CSV = "score_rank_all_buds_0.6.0.csv"
 
-def load_rank_data() -> pd.DataFrame:
-    """Load ranking data.
+
+def load_rank_data(full: bool = False) -> pd.DataFrame:
+    """Load ranking data for 17 different dimensions and budgets.
+
+    This uses the dimensionalities: 2, 3, 5, 10, ..., 50, 60, ..., 100 and the
+    budgets 100*dimensionality.
+
+    Args:
+        full: If True load the ranking for the full set of budgets (1-10000).
+              If False, load only the budgets 200, 300, 500, 1000, ..., 5000,
+              6000, ..., 10000
 
     Returns:
         Pandas DataFrame with columns: dimensions, budget, algorithm, points,
-        rank,ngopt rank
+        rank, ngopt rank
     """
     csv_dir = Path("csvs")
-    rank_csv = csv_dir / "score_rank_0.6.0.csv"
+    csv_file = BUD_1K_DIMS_CSV if full else BUD_DIMS_PAPER_CSV
+    rank_csv = csv_dir / csv_file
     rank_df = pd.read_csv(rank_csv)
 
     return rank_df
@@ -92,14 +106,17 @@ def validate_budget(budget: int, buds_pos: int) -> int:
     return budget
 
 
-def select_algorithm(budget: int, dims: int) -> None:
+def select_algorithm(budget: int, dims: int, full: bool = False) -> None:
     """Write the chosen algorithm to the terminal.
 
     Args:
         budget: Evaluation budget to select an algorithm for
         dims: Number of dimensions to select an algorithm for
+        full: If True use the ranking for the full set of budgets (1-10000).
+              If False, use only the budgets 200, 300, 500, 1000, ..., 5000,
+              6000, ..., 10000
     """
-    rank_df = load_rank_data()
+    rank_df = load_rank_data(full)
     algorithm = ""
     buds_pos = rank_df["budget"].unique()
     dims_pos = rank_df["dimensions"].unique()
@@ -127,14 +144,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        "bud_dim",
+        "budget",
+        metavar="BUDGET",
         default=argparse.SUPPRESS,
         type=int,
-        nargs=2,
-        help="Budget and dimensionality for which to select an algorithm.")
+        help="Budget for which to select an algorithm.")
+    parser.add_argument(
+        "dimensionality",
+        metavar="DIMENSIONALITY",
+        default=argparse.SUPPRESS,
+        type=int,
+        help="Dimensionality for which to select an algorithm.")
+    parser.add_argument(
+        "--full",
+        required=False,
+        action="store_true",
+        help="If given use the ranking for the full set of budgets (1-10000)."
+             "If not given, use only the budgets 200, 300, 500, 1000, ..., "
+             "5000, 6000, ..., 10000")
 
     args = parser.parse_args()
 
-    select_algorithm(args.bud_dim[0], args.bud_dim[1])
+    select_algorithm(args.budget, args.dimensionality, args.full)
 
     sys.exit()
