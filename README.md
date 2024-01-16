@@ -120,3 +120,9 @@ Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/b
 # Run the data-driven selector
 1. Make sure `csvs/score_rank_0.6.0.csv` and/or `csvs/score_rank_all_buds_0.6.0.csv` exist (i.e., run the first command under "Analyse BBOB results").  
 2. Call the selector as `./run_selector.py <budget> <dimensions>`, e.g., `./run_selector.py 2500 15`. If the given budget or dimensionality does not exist in the ranking data csv file, the closest available are used instead. Use the flag `--full` to use the full range of budgets (1-10000, this only works if the `csvs/score_rank_all_buds_0.6.0.csv` file exists).  
+
+# Collect data for other algorithms
+
+## Other algorithms implemented in Nevergrad
+1. Import the algorithm in ``. E.g., for TwoPointDE add a line to the imports like: `from nevergrad.optimization.optimizerlib import TwoPointsDE`.
+2. Simply run: `./ioh_ng_real.py --algorithms TwoPointsDE` (with other options as desired). NOTE: Some algorithms may need to be wrapped in `"` quotes when calling them. E.g., `ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)` should be called as `./ioh_ng_real.py --algorithms "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)"`.
