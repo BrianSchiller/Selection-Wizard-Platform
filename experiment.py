@@ -1125,6 +1125,7 @@ class Experiment:
                  data_dir: Path = None,
                  per_budget_data_dir: Path = None,
                  dimensionalities: list[int] = const.DIMS_CONSIDERED,
+                 budgets: list[int] = None,
                  ng_version: str = "0.6.0",
                  prob_set: str = "all") -> None:
         """Initialise the Experiment.
@@ -1145,6 +1146,8 @@ class Experiment:
                 dimensionality and budget combination for this subdirectory.
             dimensionalities (optional): List of ints indicating which
                 dimensionalities to handle for the Experiment.
+            budgets (optional): List of ints indicating which budgets to handle
+                for the Experiment.
             ng_version: Version of Nevergrad. This influences which algorithms
                 are chosen by NGOpt, and therefore which algorithms are
                 included in the analysis.
@@ -1176,8 +1179,13 @@ class Experiment:
         self.prob_scenarios_per_b = {}
         self.prob_scenarios_comp = {}
         self.dim_multiplier = 100
-        self.budgets = [
-            dims * self.dim_multiplier for dims in self.dimensionalities]
+
+        if budgets is None:
+            self.budgets = [
+                dims * self.dim_multiplier for dims in self.dimensionalities]
+        else:
+            self.budgets = budgets
+
         self.per_budget_data_dir = per_budget_data_dir
         self.problems_all = {}
 

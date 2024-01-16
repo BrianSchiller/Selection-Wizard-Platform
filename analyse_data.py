@@ -515,6 +515,13 @@ if __name__ == "__main__":
         help=("Use with --ma or --test-bbob. Path to dataframe with loss data "
               "per dimension-budget-algorithm-problem combination. If given "
               "plot lineplots with loss of algorithms per dimension-budget."))
+    parser.add_argument(
+        "--all-budgets",
+        required=False,
+        action="store_true",
+        help=("Compute algorithm ranks for all budgets and the available "
+              "dimensionalities on the BBOB training data, and write these to "
+              "a csv file."))
 
     args = parser.parse_args()
 
@@ -549,6 +556,29 @@ if __name__ == "__main__":
     elif args.test_plot is True:
         test_plot_all(args.data_dir, ngopt_vs_data=args.test_vs,
                       perf_data=args.test_loss, test_bbob=args.test_plot)
+        sys.exit()
+    # Analyse BBOB training data and create csv ranking for all buds and dims
+    elif args.all_budgets is True:
+        print("Creating a ranking csv for all available budgets + dimensios.")
+        print("WARNING: This takes a very long time!")
+        nevergrad_version = "0.6.0"
+
+        # Load NGOpt choices
+        hsv_file = Path("ngopt_choices/dims1-100evals1-10000_separator_"
+                        f"{nevergrad_version}.hsv")
+        ngopt = NGOptChoice(hsv_file)
+
+        # Load experiment data considering all possible budgets and dimensions
+        exp = Experiment(args.data_dir,
+                         args.per_budget_data_dir,
+                         ng_version=nevergrad_version, prob_set="all",
+                         budgets=list(range(1, 10001)))
+
+        # Write a CSV file with points and ranks of algorithms per dimension-
+        # budget combination
+        file_name = f"score_rank_all_buds_{nevergrad_version}"
+        exp.write_score_rank_csv(file_name, ngopt)
+
         sys.exit()
     # Plot BBOB results for all problems
     else:
