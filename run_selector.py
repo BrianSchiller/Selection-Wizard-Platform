@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Run the data-driven selector based on performance data."""
-
 import argparse
 import pandas as pd
 import numpy as np

@@ -1,5 +1,5 @@
 """Module with class definitions to describe an experiment and its data."""
-from __future__ import annotations
+from __future__ import annotations  # For self annotations
 
 from pathlib import Path
 from pathlib import PurePath

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Module to run Nevergrad algorithm implementations with IOH profiler."""
-from __future__ import annotations
+from __future__ import annotations  # For self annotations
 import ioh
 import argparse
 import math
@@ -24,17 +24,28 @@ from nevergrad.optimization.optimizerlib import MetaModelOnePlusOne  # noqa: F40
 from nevergrad.optimization.optimizerlib import ConfPortfolio  # noqa: F401
 from nevergrad.optimization.optimizerlib import Rescaled  # noqa: F401
 from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
+from nevergrad.optimization.optimizerlib import NGOptBase
+from nevergrad.optimization.base import OptCls
 
 import constants as const
 from experiment import Problem
 from experiment import Algorithm
 from experiment import Scenario
+import run_selector
 
 # SCALE_FACTORS adapted from:
 # https://github.com/Dvermetten/Many-affine-BBOB/blob/1c144ff5fda2e68227bd56ccdb7d55ec696bdfcf/affine_barebones.py#L4
 SCALE_FACTORS = [
     11., 17.5, 12.3, 12.6, 11.5, 15.3, 12.1, 15.3, 15.2, 17.4, 13.4, 20.4,
     12.9, 10.4, 12.3, 10.3, 9.8, 10.6, 10., 14.7, 10.7, 10.8, 9., 12.1]
+
+
+class DDS(NGOptBase):
+    """Data-driven selector."""
+
+    def _select_optimizer_cls(self: DDS) -> OptCls:
+        """Return an optimizer class."""
+        return eval(run_selector.select_algorithm(self.budget, self.dimension))
 
 
 class NGEvaluator:
