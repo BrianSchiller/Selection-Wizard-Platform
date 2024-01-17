@@ -13,23 +13,23 @@ BUD_DIMS_PAPER_CSV = "score_rank_0.6.0.csv"
 BUD_1K_DIMS_CSV = "score_rank_all_buds_0.6.0.csv"
 
 
-def load_rank_data(full: bool = False) -> pd.DataFrame:
+def load_rank_data(all_data: bool = False) -> pd.DataFrame:
     """Load ranking data for 17 different dimensions and budgets.
 
     This uses the dimensionalities: 2, 3, 5, 10, ..., 50, 60, ..., 100 and the
     budgets 100*dimensionality.
 
     Args:
-        full: If True load the ranking for the full set of budgets (1-10000).
-              If False, load only the budgets 200, 300, 500, 1000, ..., 5000,
-              6000, ..., 10000
+        all_data: If True load the ranking for the full set of budgets
+            (1-10000). If False, load only the budgets 200, 300, 500, 1000,
+            ..., 5000, 6000, ..., 10000
 
     Returns:
         Pandas DataFrame with columns: dimensions, budget, algorithm, points,
         rank, ngopt rank
     """
     csv_dir = Path("csvs")
-    csv_file = BUD_1K_DIMS_CSV if full else BUD_DIMS_PAPER_CSV
+    csv_file = BUD_1K_DIMS_CSV if all_data else BUD_DIMS_PAPER_CSV
     rank_csv = csv_dir / csv_file
     rank_df = pd.read_csv(rank_csv)
 
@@ -106,17 +106,23 @@ def validate_budget(budget: int, buds_pos: int) -> int:
     return budget
 
 
-def select_algorithm(budget: int, dims: int, full: bool = False) -> None:
-    """Write the chosen algorithm to the terminal.
+def select_algorithm(budget: int, dims: int, all_data: bool = False,
+                     full_name: bool = True) -> str:
+    """Return the chosen algorithm name and write it to the terminal.
 
     Args:
         budget: Evaluation budget to select an algorithm for
         dims: Number of dimensions to select an algorithm for
-        full: If True use the ranking for the full set of budgets (1-10000).
-              If False, use only the budgets 200, 300, 500, 1000, ..., 5000,
-              6000, ..., 10000
+        all_data: If True use the ranking for the full set of budgets
+            (1-10000). If False, use only the budgets 200, 300, 500, 1000,
+            ..., 5000, 6000, ..., 10000
+        full_name: If True return the full name of the algorithm. If False
+            return a shortened version of the name for long algorithm names.
+
+    Returns:
+        A str with the name of the algorithm.
     """
-    rank_df = load_rank_data(full)
+    rank_df = load_rank_data(all_data)
     algorithm = ""
     buds_pos = rank_df["budget"].unique()
     dims_pos = rank_df["dimensions"].unique()
@@ -135,9 +141,16 @@ def select_algorithm(budget: int, dims: int, full: bool = False) -> None:
     else:
         algorithm = algos["algorithm"].values[0]
 
+    # Retrieve the full algorithm name if needed
+    if full_name:
+        names_csv = Path("csvs/ngopt_algos_0.6.0.csv")
+        names_df = pd.read_csv(names_csv)
+        algorithm = names_df.loc[
+            names_df["short name"] == algorithm, "full name"].values[0]
+
     print(algorithm)
 
-    return
+    return algorithm
 
 
 if __name__ == "__main__":
@@ -156,7 +169,7 @@ if __name__ == "__main__":
         type=int,
         help="Dimensionality for which to select an algorithm.")
     parser.add_argument(
-        "--full",
+        "--all-data",
         required=False,
         action="store_true",
         help="If given use the ranking for the full set of budgets (1-10000)."
@@ -165,6 +178,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    select_algorithm(args.budget, args.dimensionality, args.full)
+    select_algorithm(args.budget, args.dimensionality, args.all_data)
 
     sys.exit()

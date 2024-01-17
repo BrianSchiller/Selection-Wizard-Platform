@@ -118,7 +118,7 @@ Output: `plots/heatmap/bbob_test/grid_test_algos_d100.pdf`, `plots/heatmap/bbob_
 Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/bbob_test/grid_test_1v1_approach_d100.pdf`, `plots/line/bbob_test/loss_log_1v1_grid.pdf`, `plots/line/bbob_test/loss_percent_1v1_grid.pdf`, individual plots per dimension-budget combination under `plots/line/bbob_test/single/`
 
 # Run the data-driven selector
-1. Make sure `csvs/score_rank_0.6.0.csv` and/or `csvs/score_rank_all_buds_0.6.0.csv` exist (i.e., run the first command under "Analyse BBOB results").  
+1. Make sure `csvs/score_rank_0.6.0.csv` (and/or `csvs/score_rank_all_buds_0.6.0.csv`) and `csvs/ngopt_algos_0.6.0.csv` exist (i.e., run the first command under "Analyse BBOB results").  
 2. Call the selector as `./run_selector.py <budget> <dimensions>`, e.g., `./run_selector.py 2500 15`. If the given budget or dimensionality does not exist in the ranking data csv file, the closest available are used instead. Use the flag `--full` to use the full range of budgets (1-10000, this only works if the `csvs/score_rank_all_buds_0.6.0.csv` file exists).  
 
 # Collect data for other algorithms
