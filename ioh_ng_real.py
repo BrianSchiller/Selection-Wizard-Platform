@@ -84,6 +84,7 @@ class NGEvaluator:
         upper_bound = const.UPPER_BOUND
         self.algorithm_seed = seed
         np.random.seed(self.algorithm_seed)
+        # Generate an initial solution within the bounds uniformly at random
         parametrization = ng.p.Array(init=np.random.uniform(
             lower_bound, upper_bound, (func.meta_data.n_variables,)))
         parametrization.set_bounds(lower_bound, upper_bound)
