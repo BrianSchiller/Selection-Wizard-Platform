@@ -125,5 +125,5 @@ Output: `plots/heatmap/bbob_test/grid_test_1v1_algos_d100.pdf`, `plots/heatmap/b
 # Collect data for other algorithms
 
 ## Other algorithms implemented in Nevergrad
-1. Import the algorithm in ``. E.g., for TwoPointDE add a line to the imports like: `from nevergrad.optimization.optimizerlib import TwoPointsDE`.
+1. Import the algorithm in `ioh_ng_real.py`. E.g., for TwoPointDE add a line to the imports like: `from nevergrad.optimization.optimizerlib import TwoPointsDE`.
 2. Run: `./ioh_ng_real.py --algorithms TwoPointsDE` (with other options as desired). NOTE: Some algorithms may need to be wrapped in `"` quotes when calling them. E.g., `ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)` should be called as `./ioh_ng_real.py --algorithms "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)"`.
