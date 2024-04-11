@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # To submit the job:
-# qsub ioh_on_pbs.sh
+# qsub run_on_pbs.sh
 
 # To watch to the job status:
 # qstat [-u <username>]
@@ -66,7 +66,7 @@ cd $SCRATCH/$PROJECT
 mkdir $PBS_ARRAY_INDEX
 
 # Copy input files to scratch
-cp $PBS_O_WORKDIR/ioh_ng_real.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
+cp $PBS_O_WORKDIR/run_ng_on_ioh.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 cp $PBS_O_WORKDIR/constants.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 # For NGOpt choices and best algorithms on MA-BBOB problems:
 cp -r $PBS_O_WORKDIR/csvs/ $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
@@ -77,15 +77,15 @@ cp $PBS_O_WORKDIR/experiment.py $SCRATCH/$PROJECT/$PBS_ARRAY_INDEX
 cd $PBS_ARRAY_INDEX
 
 # To run the main experiment:
-#python3 ioh_ng_real.py --pbs-index-all-dims $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 run_ng_on_ioh.py --pbs-index-all-dims $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run NGOpt choices:
-#python3 ioh_ng_real.py --pbs-index-ngopt $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 run_ng_on_ioh.py --pbs-index-ngopt $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run budget dependence test:
-#python3 ioh_ng_real.py --pbs-index-bud-dep $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 run_ng_on_ioh.py --pbs-index-bud-dep $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run best algorithms and NGOpt choice on MA-BBOB problems:
-#python3 ioh_ng_real.py --pbs-index-ma $PBS_ARRAY_INDEX 1> test.out 2> test.err
+#python3 run_ng_on_ioh.py --pbs-index-ma $PBS_ARRAY_INDEX 1> test.out 2> test.err
 # To run best algorithms and NGOpt choice on new BBOB instances:
-python3 ioh_ng_real.py --pbs-index-test $PBS_ARRAY_INDEX 1> test.out 2> test.err
+python3 run_ng_on_ioh.py --pbs-index-test $PBS_ARRAY_INDEX 1> test.out 2> test.err
 
 cd ..
 
