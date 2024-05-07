@@ -64,7 +64,7 @@ def get_optimiser(params: Array, budget: int, workers: int,
             budget=eval_budget,
             num_workers=n_workers)
     elif ngopt == NGOptVersion.NGOpt14:
-        optimiser = ng.optimizers.NGOpt15(
+        optimiser = ng.optimizers.NGOpt14(
             parametrization=(
                 ng.p.Array(shape=(1, n_dimensions)).set_bounds(
                     const.LOWER_BOUND, const.UPPER_BOUND)),
