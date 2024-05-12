@@ -10,15 +10,15 @@ UPPER_BOUND = 5
 # Affine combination constants
 N_MA_PROBLEMS = 828
 
-# 6 algorithms
+# 6 algorithms + 1 behind the scenes used by NGOpt14
 # 33 ConfPortfolios in nevergrad 0.5.0
 # 28 ConfPortfolios in nevergrad 0.6.0
 ALGS_0_5_0 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
               18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
-              34, 35, 36, 37, 38]
+              34, 35, 36, 37, 38, 39]
 ALGS_0_6_0 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
               18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
-              34, 35, 36, 37, 38]
+              34, 35, 36, 37, 38, 39]
 ALGS_CONSIDERED = [
     # Algorithms relevant for both versions:
     "CMA",
@@ -64,6 +64,9 @@ ALGS_CONSIDERED = [
     "ConfPortfolio(optimizers=[Rescaled(base_optimizer=NGOpt14, scale=1.0), Rescaled(base_optimizer=NGOpt14, scale=1.3), Rescaled(base_optimizer=NGOpt14, scale=1.6900000000000002)], warmup_ratio=0.5)",  # noqa: E501
     "ConfPortfolio(optimizers=[Rescaled(base_optimizer=NGOpt14, scale=1.0), Rescaled(base_optimizer=NGOpt14, scale=1.3)], warmup_ratio=0.5)",  # noqa: E501
     "ConfPortfolio(optimizers=[Rescaled(base_optimizer=NGOpt14, scale=1.0)], warmup_ratio=0.5)",  # noqa: E501
+
+    # Algorithms only used internally by NGOpt14:
+    "OnePlusOne",
     ]
 # Get 39 colours for the 39 algorithms
 ALGO_COLOURS = cm.batlowS.colors[:len(ALGS_CONSIDERED)]
@@ -84,6 +87,10 @@ ALGO_COLOURS[5] = tmp
 tmp = ALGO_COLOURS[7].copy()
 ALGO_COLOURS[7] = ALGO_COLOURS[25]
 ALGO_COLOURS[25] = tmp
+# Take colour from 21 for OnePlusOne
+tmp = ALGO_COLOURS[21].copy()
+ALGO_COLOURS[21] = ALGO_COLOURS[39]
+ALGO_COLOURS[39] = tmp
 
 DIMS_CONSIDERED = [2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80,
                    90, 100]

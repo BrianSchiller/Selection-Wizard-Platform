@@ -19,6 +19,17 @@
 ### Remove conda environment
 `conda env remove -n ar4opt`
 
+# Generate NGOpt choices data
+To analyse and compare results with what NGOpt does, some data is needed about which algorithms NGOpt chooses for different scenarios. This is how this data is obtained:
+
+1. Run `./get_algos.py` (fairly inefficient and may take, e.g., half an hour)  
+Output:  
+    * Plain text file with which algorithms are used when by NGOpt39 in Nevergrad 0.6.0 for dimensions 1 to 100 and budgets 1 to 10000 for continuous problems without noise. All portfolio methods are shortened to 'ConfPortfolio' (and thus not distinguishable): `ngopt_choices/0.6.0/dims1-100evals1-10000.txt`  
+    * As above, but all portfolio methods have their full name (and are thus distinguishable): `ngopt_choices/0.6.0/dims1-100evals1-10000_full.txt`  
+    * As above, but output in '.hsv' format (hex separated values): `ngopt_choices/dims1-100evals1-10000_separator_0.6.0.hsv`  
+    * As above, but for NGOpt14 instead of NGOpt39: `ngopt_choices/ngopt14_dims1-100evals1-10000_separator_0.6.0.hsv`  
+    * Heatmap plot of which algorithm NGOpt14 uses for each dimension (in 1 to 100) and budget (in 1 to 10000): `plots/heatmap/grid_ngopt14_0.6.0_d100.pdf`
+
 # Analyse data
 
 ## Analyse BBOB results

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Module to retrieve the optimisers recommended by NGOpt."""
 
+from experiment import Experiment
+from experiment import NGOptChoice
+
 from enum import Enum
 from typing import Union
 from pathlib import Path
@@ -118,11 +121,9 @@ def output_ngopt_algos(output_properties: bool,
                        output_header: bool,
                        hsv_format: bool,
                        full_algo_name: bool,
-                       out_file: None) -> None:
+                       out_file: None,
+                       ngopt: NGOptVersion) -> None:
     """Print NGOpt algorithms to standard output or file."""
-    # Tracking variables
-    latest_algortihm = ""
-
     # Fixed properties
     n_workers = 1
 
@@ -134,11 +135,19 @@ def output_ngopt_algos(output_properties: bool,
 
     # Output derived problem properties
     if output_properties:
-        optimiser = ng.optimizers.NGOpt39(
-            parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(
-                const.LOWER_BOUND, const.UPPER_BOUND),
-            budget=eval_budget_min,
-            num_workers=n_workers)
+        if ngopt == NGOptVersion.NGOpt39:
+            optimiser = ng.optimizers.NGOpt39(
+                parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND),
+                budget=eval_budget_min,
+                num_workers=n_workers)
+        elif ngopt == NGOptVersion.NGOpt14:
+            optimiser = ng.optimizers.NGOpt14(
+                parametrization=ng.p.Array(shape=(1, n_dims_min)).set_bounds(
+                    const.LOWER_BOUND, const.UPPER_BOUND),
+                budget=eval_budget_min,
+                num_workers=n_workers)
+
         print("has_noise", optimiser.has_noise, file=out_file)
         print("fully_continuous", optimiser.fully_continuous, file=out_file)
         print("fully_bounded", ng.parametrization.parameter.helpers.Normalizer(
@@ -147,19 +156,26 @@ def output_ngopt_algos(output_properties: bool,
     # Output header
     if output_header:
         if hsv_format:
-            print("Algorithm#dimensionality#evaluation budget", file=out_file)
+            print("algorithm#dimensionality#budget", file=out_file)
         else:
             print("Algorithm, dimensionality, evaluation budget",
                   file=out_file)
 
     for n_dimensions in range(n_dims_min, n_dims_max + 1):
+        latest_algortihm = ""  # Tracking variable
         params = ng.p.Array(shape=(1, n_dimensions)).set_bounds(
             const.LOWER_BOUND, const.UPPER_BOUND)
 
         for eval_budget in range(eval_budget_min, eval_budget_max + 1):
-            optimiser = get_optimiser(
-                params, eval_budget, n_workers, n_dimensions,
-                NGOptVersion.NGOpt39)
+            if ngopt == NGOptVersion.NGOpt39:
+                optimiser = get_optimiser(
+                    params, eval_budget, n_workers, n_dimensions,
+                    NGOptVersion.NGOpt39)
+            elif ngopt == NGOptVersion.NGOpt14:
+                optimiser = get_optimiser(
+                    params, eval_budget, n_workers, n_dimensions,
+                    NGOptVersion.NGOpt14)
+
             algorithm = optimiser._select_optimizer_cls()
             algorithm = get_algorithm_for_ngopt(algorithm, params, eval_budget,
                                                 n_workers, n_dimensions)
@@ -183,19 +199,63 @@ output_properties = True
 output_header = False
 hsv_format = False
 full_algo_name = False
+ngopt = NGOptVersion.NGOpt39
+
 
 # Don't distinguish between different ConfPortfolio's (use short names)
 out_path = Path("ngopt_choices/0.6.0/dims1-100evals1-10000.txt")
 
 with out_path.open("w") as out_file:
     output_ngopt_algos(output_properties, output_header, hsv_format,
-                       full_algo_name, out_file)
+                       full_algo_name, out_file, ngopt)
 
 
 # Distinguish between different ConfPortfolio's (use full names)
+output_properties = True
+output_header = False
+hsv_format = False
 full_algo_name = True
+ngopt = NGOptVersion.NGOpt39
 out_path = Path("ngopt_choices/0.6.0/dims1-100evals1-10000_full.txt")
 
 with out_path.open("w") as out_file:
     output_ngopt_algos(output_properties, output_header, hsv_format,
-                       full_algo_name, out_file)
+                       full_algo_name, out_file, ngopt)
+
+# Distinguish between different ConfPortfolio's (use full names), output hex
+# separated values file with header
+output_properties = False
+output_header = True
+hsv_format = True
+full_algo_name = True
+ngopt = NGOptVersion.NGOpt39
+
+out_path = Path("ngopt_choices/dims1-100evals1-10000_separator_0.6.0.hsv")
+
+with out_path.open("w") as out_file:
+    output_ngopt_algos(output_properties, output_header, hsv_format,
+                       full_algo_name, out_file, ngopt)
+
+# Distinguish between different ConfPortfolio's (use full names), output hex
+# separated values file with header, for NGOpt14
+output_properties = False
+output_header = True
+hsv_format = True
+full_algo_name = True
+ngopt = NGOptVersion.NGOpt14
+out_path = Path(
+    "ngopt_choices/ngopt14_dims1-100evals1-10000_separator_0.6.0.hsv")
+
+with out_path.open("w") as out_file:
+    output_ngopt_algos(output_properties, output_header, hsv_format,
+                       full_algo_name, out_file, ngopt)
+
+# Plot heatmap based on NGOpt14 choices using a dummy experiment
+nevergrad_version = "0.6.0"
+
+hsv_file = Path("ngopt_choices/ngopt14_dims1-100evals1-10000_separator"
+                f"_{nevergrad_version}.hsv")
+ngopt = NGOptChoice(hsv_file)
+file_name = f"grid_ngopt14_{nevergrad_version}"
+exp = Experiment(None, None, ng_version=nevergrad_version)  # Dummy
+exp.plot_heatmap_ngopt(ngopt, file_name)
