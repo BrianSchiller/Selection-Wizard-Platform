@@ -1,6 +1,7 @@
 __pycache__/
 venv/
 OUTPUT/
+Output/
 data_*/
 *.swp
 *.zip

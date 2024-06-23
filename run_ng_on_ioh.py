@@ -14,24 +14,27 @@ import numpy as np
 import pandas as pd
 
 import nevergrad as ng
-from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
-from nevergrad.optimization.optimizerlib import MetaModel  # noqa: F401
-from nevergrad.optimization.optimizerlib import CMA  # noqa: F401
+# from nevergrad.optimization.optimizerlib import Cobyla  # noqa: F401
+# from nevergrad.optimization.optimizerlib import MetaModel  # noqa: F401
+# from nevergrad.optimization.optimizerlib import CMA  # noqa: F401
 from nevergrad.optimization.optimizerlib import ParametrizedMetaModel  # noqa: F401, E501
 from nevergrad.optimization.optimizerlib import CmaFmin2  # noqa: F401
-from nevergrad.optimization.optimizerlib import ChainMetaModelPowell  # noqa: F401, E501
-from nevergrad.optimization.optimizerlib import MetaModelOnePlusOne  # noqa: F401, E501
+# from nevergrad.optimization.optimizerlib import ChainMetaModelPowell  # noqa: F401, E501
+# from nevergrad.optimization.optimizerlib import MetaModelOnePlusOne  # noqa: F401, E501
 from nevergrad.optimization.optimizerlib import ConfPortfolio  # noqa: F401
 from nevergrad.optimization.optimizerlib import Rescaled  # noqa: F401
 from nevergrad.optimization.optimizerlib import NGOpt14  # noqa: F401
 from nevergrad.optimization.optimizerlib import NGOptBase
-from nevergrad.optimization.base import OptCls
+from nevergrad.optimization.base import OptCls, ConfiguredOptimizer
+
 
 import constants as const
 from experiment import Problem
 from experiment import Algorithm
 from experiment import Scenario
 import run_selector
+from models import MetaModelFmin2, MetaModel, MetaModelOnePlusOne, ChainMetaModelPowell, CMA, Cobyla
+from configurations import get_config
 
 # SCALE_FACTORS adapted from:
 # https://github.com/Dvermetten/Many-affine-BBOB/blob/1c144ff5fda2e68227bd56ccdb7d55ec696bdfcf/affine_barebones.py#L4
@@ -54,7 +57,7 @@ class NGEvaluator:
     algorithm_seed = 1
     run_success = -1  # "UNKNOWN"
 
-    def __init__(self: NGEvaluator, optimizer: str, eval_budget: int) -> None:
+    def __init__(self: NGEvaluator, optimizer: str | ConfiguredOptimizer, eval_budget: int) -> None:
         """Initialise the NGEvaluator.
 
         Args:
@@ -88,9 +91,13 @@ class NGEvaluator:
         parametrization = ng.p.Array(init=np.random.uniform(
             lower_bound, upper_bound, (func.meta_data.n_variables,)))
         parametrization.set_bounds(lower_bound, upper_bound)
-        optimizer = eval(f"{self.alg}")(
-            parametrization=parametrization,
-            budget=self.eval_budget)
+        
+        if type(self.alg) == str:
+            optimizer = eval(f"{self.alg}")(
+                parametrization=parametrization,
+                budget=self.eval_budget)
+        else:
+            optimizer = self.alg(parametrization=parametrization, budget = self.eval_budget)
 
         try:
             optimizer.minimize(func)
@@ -212,7 +219,7 @@ def prepare_affine_problem(ma_problem_id: int,
     return ma_name
 
 
-def run_algos(algorithms: list[str],
+def run_algos(algorithms: list[str | ConfiguredOptimizer],
               problems: list[int],
               eval_budget: int,
               dimensionalities: list[int],
@@ -236,22 +243,25 @@ def run_algos(algorithms: list[str],
     problem_class = ioh.ProblemClass.REAL
     n_instances = len(instances)
 
-    for algname in algorithms:
-        algname_short = const.get_short_algo_name(algname)
-        algorithm = NGEvaluator(algname, eval_budget)
+    for alg in algorithms:
+        if type(alg) == str:
+            alg_name = const.get_short_algo_name(alg)
+        else:
+            alg_name = alg.name
+        algorithm = NGEvaluator(alg.get_optimizer(), eval_budget)
 
         if not process_intermediate_data:
-            logger = ioh.logger.Analyzer(folder_name=algname_short,
-                                         algorithm_name=algname_short)
+            logger = ioh.logger.Analyzer(folder_name=f"Output/{alg_name}",
+                                         algorithm_name=alg_name)
             logger.add_run_attributes(algorithm,
                                       ["algorithm_seed", "run_success"])
 
         for problem in problems:
             for dimension in dimensionalities:
                 if process_intermediate_data:
-                    dir_name = f"{algname_short}_D{dimension}_B{eval_budget}"
+                    dir_name = f"Output/{alg_name}_D{dimension}_B{eval_budget}"
                     logger = ioh.logger.Analyzer(folder_name=dir_name,
-                                                 algorithm_name=algname_short)
+                                                 algorithm_name=alg_name)
                     logger.add_run_attributes(
                         algorithm, ["algorithm_seed", "run_success"])
 
@@ -269,7 +279,7 @@ def run_algos(algorithms: list[str],
             if process_intermediate_data:
                 # Flush the logger to ensure files exist before processing
                 logger.close()
-                process_data(Path(dir_name), problem, algname, dimension,
+                process_data(Path(dir_name), problem, alg_name, dimension,
                              n_repetitions, eval_budget, n_instances)
 
         logger.close()
@@ -520,103 +530,132 @@ def pbs_index_to_bbob_test(index: int) -> (
 
 
 if __name__ == "__main__":
-    DEFAULT_EVAL_BUDGET = 10000
-    DEFAULT_N_REPETITIONS = 25
+    DEFAULT_EVAL_BUDGET = 100
+    DEFAULT_N_REPETITIONS = 3
     DEFAULT_DIMS = [2]
     DEFAULT_PROBLEMS = list(range(1, 2))
     DEFAULT_INSTANCES = [1]
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "--algorithms",
-        default=argparse.SUPPRESS,
-        nargs="+",
-        type=str,
-        help="Algorithms to run.")
-    parser.add_argument(
-        "--eval-budget",
-        default=DEFAULT_EVAL_BUDGET,
-        type=int,
-        help="Budget in function evaluations.")
-    parser.add_argument(
-        "--n-repetitions",
-        default=DEFAULT_N_REPETITIONS,
-        type=int,
-        help=("Number of repetitions for an algorithm-problem-dimension "
-              "combination."))
-    parser.add_argument(
-        "--dimensionalities",
-        default=DEFAULT_DIMS,
-        nargs="+",
-        type=int,
-        help=("List of variable space dimensionalities to consider for the "
-              "problem."))
-    parser.add_argument(
-        "--problems",
-        default=DEFAULT_PROBLEMS,
-        nargs="+",
-        type=int,
-        help="List of BBOB problems.")
-    parser.add_argument(
-        "--instances",
-        default=DEFAULT_INSTANCES,
-        nargs="+",
-        type=int,
-        help="List of BBOB problem instances.")
-    parser.add_argument(
-        "--pbs-index-all-dims",
-        type=int,
-        help="PBS index to convert to algorithm and problem IDs.")
-    parser.add_argument(
-        "--pbs-index-ngopt",
-        type=int,
-        help="PBS index to convert to dimensionality, budget, and algorithm.")
-    parser.add_argument(
-        "--pbs-index-bud-dep",
-        type=int,
-        help="PBS ID to convert to dimension, budget, algorithm, problem.")
-    parser.add_argument(
-        "--pbs-index-ma",
-        type=int,
-        help=("PBS ID to convert to experiment settings for algorithms on "
-              "MA-BBOB."))
-    parser.add_argument(
-        "--pbs-index-test",
-        type=int,
-        help=("PBS ID to convert to experiment settings for algorithms on "
-              "BBOB test instances."))
-    args = parser.parse_args()
+    Cobyla_Def = Cobyla() 
+    CMA_Def = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "CMA") 
+    ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ChainMetaModelPowell") 
+    MetaModel_Def = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModel") 
+    MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelOnePlusOne") 
+    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelFmin2") 
 
-    if args.pbs_index_all_dims is not None:
-        algorithm, problem = (
-            pbs_index_to_args_all_dims(args.pbs_index_all_dims))
-        run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
-                  const.DIMS_CONSIDERED,
-                  DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    elif args.pbs_index_ngopt is not None:
-        dimensionality, budget, algorithm = (
-            pbs_index_to_args_ngopt(args.pbs_index_ngopt))
-        run_algos([algorithm], const.PROBS_CONSIDERED, budget,
-                  [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    elif args.pbs_index_bud_dep is not None:
-        dimensionality, budget, algorithm, problem = (
-            pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
-        run_algos([algorithm], [problem], budget,
-                  [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    elif args.pbs_index_ma is not None:
-        dimensionality, budget, algorithm, problems, instance = (
-            pbs_index_to_ma_combo(args.pbs_index_ma))
-        n_repetitions = 1
-        run_algos([algorithm], problems, budget, [dimensionality],
-                  n_repetitions, [instance], process_intermediate_data=True)
-    elif args.pbs_index_test is not None:
-        dimensionality, budget, algorithm, problems, instances = (
-            pbs_index_to_bbob_test(args.pbs_index_test))
-        n_repetitions = 1
-        run_algos([algorithm], problems, budget, [dimensionality],
-                  n_repetitions, instances, process_intermediate_data=True)
-    else:
-        run_algos(args.algorithms, args.problems, args.eval_budget,
-                  args.dimensionalities,
-                  args.n_repetitions, args.instances)
+    CMA_Conf = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+    ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+    MetaModel_Conf = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+    MetaModelOnePlusOne_Conf = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+    MetaModelFmin2_Conf = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+
+    DEFAULT_ALGS =[
+        Cobyla_Def,
+        CMA_Def,
+        ChainMetaModelPowell_Def,
+        MetaModel_Def,
+        MetaModelOnePlusOne_Def,
+        MetaModelFmin2_Def,
+        CMA_Conf,
+        ChainMetaModelPowell_Conf,
+        MetaModel_Conf,
+        MetaModelOnePlusOne_Conf,
+        MetaModelFmin2_Conf
+    ]
+
+    run_algos(DEFAULT_ALGS, DEFAULT_PROBLEMS, DEFAULT_EVAL_BUDGET, DEFAULT_DIMS, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+
+    # parser = argparse.ArgumentParser(
+    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # parser.add_argument(
+    #     "--algorithms",
+    #     default=argparse.SUPPRESS,
+    #     nargs="+",
+    #     type=str,
+    #     help="Algorithms to run.")
+    # parser.add_argument(
+    #     "--eval-budget",
+    #     default=DEFAULT_EVAL_BUDGET,
+    #     type=int,
+    #     help="Budget in function evaluations.")
+    # parser.add_argument(
+    #     "--n-repetitions",
+    #     default=DEFAULT_N_REPETITIONS,
+    #     type=int,
+    #     help=("Number of repetitions for an algorithm-problem-dimension "
+    #           "combination."))
+    # parser.add_argument(
+    #     "--dimensionalities",
+    #     default=DEFAULT_DIMS,
+    #     nargs="+",
+    #     type=int,
+    #     help=("List of variable space dimensionalities to consider for the "
+    #           "problem."))
+    # parser.add_argument(
+    #     "--problems",
+    #     default=DEFAULT_PROBLEMS,
+    #     nargs="+",
+    #     type=int,
+    #     help="List of BBOB problems.")
+    # parser.add_argument(
+    #     "--instances",
+    #     default=DEFAULT_INSTANCES,
+    #     nargs="+",
+    #     type=int,
+    #     help="List of BBOB problem instances.")
+    # parser.add_argument(
+    #     "--pbs-index-all-dims",
+    #     type=int,
+    #     help="PBS index to convert to algorithm and problem IDs.")
+    # parser.add_argument(
+    #     "--pbs-index-ngopt",
+    #     type=int,
+    #     help="PBS index to convert to dimensionality, budget, and algorithm.")
+    # parser.add_argument(
+    #     "--pbs-index-bud-dep",
+    #     type=int,
+    #     help="PBS ID to convert to dimension, budget, algorithm, problem.")
+    # parser.add_argument(
+    #     "--pbs-index-ma",
+    #     type=int,
+    #     help=("PBS ID to convert to experiment settings for algorithms on "
+    #           "MA-BBOB."))
+    # parser.add_argument(
+    #     "--pbs-index-test",
+    #     type=int,
+    #     help=("PBS ID to convert to experiment settings for algorithms on "
+    #           "BBOB test instances."))
+    # args = parser.parse_args()
+
+    # if args.pbs_index_all_dims is not None:
+    #     algorithm, problem = (
+    #         pbs_index_to_args_all_dims(args.pbs_index_all_dims))
+    #     run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
+    #               const.DIMS_CONSIDERED,
+    #               DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    # elif args.pbs_index_ngopt is not None:
+    #     dimensionality, budget, algorithm = (
+    #         pbs_index_to_args_ngopt(args.pbs_index_ngopt))
+    #     run_algos([algorithm], const.PROBS_CONSIDERED, budget,
+    #               [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    # elif args.pbs_index_bud_dep is not None:
+    #     dimensionality, budget, algorithm, problem = (
+    #         pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
+    #     run_algos([algorithm], [problem], budget,
+    #               [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    # elif args.pbs_index_ma is not None:
+    #     dimensionality, budget, algorithm, problems, instance = (
+    #         pbs_index_to_ma_combo(args.pbs_index_ma))
+    #     n_repetitions = 1
+    #     run_algos([algorithm], problems, budget, [dimensionality],
+    #               n_repetitions, [instance], process_intermediate_data=True)
+    # elif args.pbs_index_test is not None:
+    #     dimensionality, budget, algorithm, problems, instances = (
+    #         pbs_index_to_bbob_test(args.pbs_index_test))
+    #     n_repetitions = 1
+    #     run_algos([algorithm], problems, budget, [dimensionality],
+    #               n_repetitions, instances, process_intermediate_data=True)
+    # else:
+    #     run_algos(args.algorithms, args.problems, args.eval_budget,
+    #               args.dimensionalities,
+    #               args.n_repetitions, args.instances)
