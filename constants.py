@@ -67,6 +67,11 @@ ALGS_CONSIDERED = [
 
     # Algorithms only used internally by NGOpt14:
     "OnePlusOne",
+    "CMA_Conf",
+    "ChainMetaModelPowell_Conf",
+    "MetaModel_Conf",
+    "MetaModelOnePlusOne_Conf",
+    "MetaModelFmin2_Conf"
     ]
 # Get 39 colours for the 39 algorithms
 ALGO_COLOURS = cm.batlowS.colors[:len(ALGS_CONSIDERED)]

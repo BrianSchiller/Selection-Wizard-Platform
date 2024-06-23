@@ -541,7 +541,7 @@ if __name__ == "__main__":
     ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ChainMetaModelPowell") 
     MetaModel_Def = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModel") 
     MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelOnePlusOne") 
-    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelFmin2") 
+    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)") 
 
     CMA_Conf = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
     ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
@@ -563,7 +563,7 @@ if __name__ == "__main__":
         MetaModelFmin2_Conf
     ]
 
-    run_algos(DEFAULT_ALGS, DEFAULT_PROBLEMS, DEFAULT_EVAL_BUDGET, DEFAULT_DIMS, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
+    run_algos(DEFAULT_ALGS, DEFAULT_PROBLEMS, DEFAULT_EVAL_BUDGET, DEFAULT_DIMS, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, True)
 
     # parser = argparse.ArgumentParser(
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
