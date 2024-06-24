@@ -9,6 +9,7 @@ from pathlib import Path
 import os
 import shutil
 import re
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -225,7 +226,8 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
               dimensionalities: list[int],
               n_repetitions: int,
               instances: list[int] = None,
-              process_intermediate_data: bool = False) -> None:
+              process_intermediate_data: bool = False,
+              output_dir: str = "") -> None:
     """Run the given algorithms on the given problem set.
 
     Args:
@@ -251,7 +253,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
         algorithm = NGEvaluator(alg.get_optimizer(), eval_budget)
 
         if not process_intermediate_data:
-            logger = ioh.logger.Analyzer(folder_name=f"Output/{alg_name}",
+            logger = ioh.logger.Analyzer(folder_name=f"Output/{output_dir}/{alg_name}",
                                          algorithm_name=alg_name)
             logger.add_run_attributes(algorithm,
                                       ["algorithm_seed", "run_success"])
@@ -259,7 +261,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
         for problem in problems:
             for dimension in dimensionalities:
                 if process_intermediate_data:
-                    dir_name = f"Output/{alg_name}_D{dimension}_B{eval_budget}"
+                    dir_name = f"Output/{output_dir}/{alg_name}_D{dimension}_B{eval_budget}"
                     logger = ioh.logger.Analyzer(folder_name=dir_name,
                                                  algorithm_name=alg_name)
                     logger.add_run_attributes(
@@ -275,12 +277,12 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
                         algorithm(function, seed)
                         function.reset()
 
-            # Process all .json files in the output directory
-            if process_intermediate_data:
-                # Flush the logger to ensure files exist before processing
-                logger.close()
-                process_data(Path(dir_name), problem, alg_name, dimension,
-                             n_repetitions, eval_budget, n_instances)
+                # Process all .json files in the output directory
+                if process_intermediate_data:
+                    # Flush the logger to ensure files exist before processing
+                    logger.close()
+                    process_data(Path(dir_name), problem, alg_name, dimension,
+                                n_repetitions, eval_budget, n_instances)
 
         logger.close()
 
@@ -531,7 +533,7 @@ def pbs_index_to_bbob_test(index: int) -> (
 
 if __name__ == "__main__":
     DEFAULT_EVAL_BUDGET = 100
-    DEFAULT_N_REPETITIONS = 3
+    DEFAULT_N_REPETITIONS = 2
     DEFAULT_DIMS = [2]
     DEFAULT_PROBLEMS = list(range(1, 2))
     DEFAULT_INSTANCES = [1]
@@ -556,14 +558,19 @@ if __name__ == "__main__":
         MetaModel_Def,
         MetaModelOnePlusOne_Def,
         MetaModelFmin2_Def,
-        CMA_Conf,
-        ChainMetaModelPowell_Conf,
-        MetaModel_Conf,
-        MetaModelOnePlusOne_Conf,
-        MetaModelFmin2_Conf
+        # CMA_Conf,
+        # ChainMetaModelPowell_Conf,
+        # MetaModel_Conf,
+        # MetaModelOnePlusOne_Conf,
+        # MetaModelFmin2_Conf
     ]
 
-    run_algos(DEFAULT_ALGS, DEFAULT_PROBLEMS, DEFAULT_EVAL_BUDGET, DEFAULT_DIMS, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, True)
+    # Directory name
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
+
+    for budget in const.BUDGETS_CONSIDERED:
+        run_algos(DEFAULT_ALGS, const.PROBS_CONSIDERED, budget, const.DIMS_CONSIDERED, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, True, timestamp)
+        print(f"Finished Budget: {budget}")
 
     # parser = argparse.ArgumentParser(
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)

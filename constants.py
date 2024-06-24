@@ -67,6 +67,7 @@ ALGS_CONSIDERED = [
 
     # Algorithms only used internally by NGOpt14:
     "OnePlusOne",
+
     "CMA_Conf",
     "ChainMetaModelPowell_Conf",
     "MetaModel_Conf",
@@ -97,36 +98,40 @@ tmp = ALGO_COLOURS[21].copy()
 ALGO_COLOURS[21] = ALGO_COLOURS[39]
 ALGO_COLOURS[39] = tmp
 
-DIMS_CONSIDERED = [2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80,
-                   90, 100]
-PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-                    18, 19, 20, 21, 22, 23, 24]
+# DIMS_CONSIDERED = [2, 3, 5, 10, 15]
+DIMS_CONSIDERED = [2,3,5]
+BUDGETS_CONSIDERED = [200, 300, 500]
+# PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+#                     18, 19, 20, 21, 22, 23, 24]
+PROBS_CONSIDERED = [1, 2]
 PROB_NAMES = ["f1_Sphere",
               "f2_Ellipsoid",
-              "f3_Rastrigin",
-              "f4_BuecheRastrigin",
-              "f5_LinearSlope",
-              "f6_AttractiveSector",
-              "f7_StepEllipsoid",
-              "f8_Rosenbrock",
-              "f9_RosenbrockRotated",
-              "f10_EllipsoidRotated",
-              "f11_Discus",
-              "f12_BentCigar",
-              "f13_SharpRidge",
-              "f14_DifferentPowers",
-              "f15_RastriginRotated",
-              "f16_Weierstrass",
-              "f17_Schaffers10",
-              "f18_Schaffers1000",
-              "f19_GriewankRosenBrock",
-              "f20_Schwefel",
-              "f21_Gallagher101",
-              "f22_Gallagher21",
-              "f23_Katsuura",
-              "f24_LunacekBiRastrigin"]
-TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-                  18, 19, 20, 21, 22, 23, 24, 25, 26]
+            #   "f3_Rastrigin",
+            #   "f4_BuecheRastrigin",
+            #   "f5_LinearSlope",
+            #   "f6_AttractiveSector",
+            #   "f7_StepEllipsoid",
+            #   "f8_Rosenbrock",
+            #   "f9_RosenbrockRotated",
+            #   "f10_EllipsoidRotated",
+            #   "f11_Discus",
+            #   "f12_BentCigar",
+            #   "f13_SharpRidge",
+            #   "f14_DifferentPowers",
+            #   "f15_RastriginRotated",
+            #   "f16_Weierstrass",
+            #   "f17_Schaffers10",
+            #   "f18_Schaffers1000",
+            #   "f19_GriewankRosenBrock",
+            #   "f20_Schwefel",
+            #   "f21_Gallagher101",
+            #   "f22_Gallagher21",
+            #   "f23_Katsuura",
+            #   "f24_LunacekBiRastrigin"
+              ]
+# TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+#                   18, 19, 20, 21, 22, 23, 24, 25, 26]
+TEST_INSTANCES = [1]
 
 # Plotting constants
 FONT_SIZE_ALGO_ID = 9

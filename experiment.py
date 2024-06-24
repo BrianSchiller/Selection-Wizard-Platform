@@ -42,8 +42,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
     # Get all .csv files in the data directory
-    csv_files = [csv_file for csv_file in data_dir.iterdir()
-                 if str(csv_file).endswith(".csv")]
+    csv_files = data_dir.rglob('*.csv')
 
     # Read the data and collect it into a single DataFrame
     csv_dfs = list()
@@ -63,7 +62,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     perf_data["log loss"] = None
 
     # Add algorithm IDs
-    names_csv = csv_dir / "ngopt_algos_0.6.0.csv"
+    names_csv = csv_dir / "configured_algos.csv"
     names_df = pd.read_csv(names_csv)
 
     for _, algo in names_df.iterrows():
@@ -74,8 +73,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
     # Create variables for all problem-dimension-budget combinations
     dimensionalities = const.DIMS_CONSIDERED
-    dim_multiplier = 100
-    budgets = [dims * dim_multiplier for dims in dimensionalities]
+    budgets = const.BUDGETS_CONSIDERED
     probs_csv = csv_dir / "ma_prob_names.csv"
     problems = (const.PROB_NAMES
                 if test_bbob else pd.read_csv(probs_csv)["problem"].to_list())
@@ -144,32 +142,32 @@ def assign_points_test(dimensionalities: list[int],
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
-            # Check all algorithms we expect for this dimension-budget
-            # combination are there; remove extras; report missing ones.
-            algos_real = perf_data.loc[
-                (perf_data["dimensions"] == dimension)
-                & (perf_data["budget"] == budget)]
-            algos_need = ranking.loc[
-                (ranking["dimensions"] == dimension)
-                & (ranking["budget"] == budget)]
+            # # Check all algorithms we expect for this dimension-budget
+            # # combination are there; remove extras; report missing ones.
+            # algos_real = perf_data.loc[
+            #     (perf_data["dimensions"] == dimension)
+            #     & (perf_data["budget"] == budget)]
+            # algos_need = ranking.loc[
+            #     (ranking["dimensions"] == dimension)
+            #     & (ranking["budget"] == budget)]
 
-            for algorithm in algos_real["algorithm"].unique():
-                if algorithm in algos_need["algorithm"].values:
-                    # Set in data column to True
-                    ranking.loc[(ranking["dimensions"] == dimension)
-                                & (ranking["budget"] == budget)
-                                & (ranking["algorithm"] == algorithm),
-                                "in data"] = True
-                else:
-                    # Remove algorithm from pref_data DataFrame
-                    print(f"Found unexpected algorithm {algorithm} for "
-                          f"D{dimension}B{budget}, excluding it from analysis")
-                    perf_data.drop(
-                        perf_data[
-                            (perf_data["dimensions"] == dimension)
-                            & (perf_data["budget"] == budget)
-                            & (perf_data["algorithm"] == algorithm)].index,
-                        inplace=True)
+            # for algorithm in algos_real["algorithm"].unique():
+            #     if algorithm in algos_need["algorithm"].values:
+            #         # Set in data column to True
+            #         ranking.loc[(ranking["dimensions"] == dimension)
+            #                     & (ranking["budget"] == budget)
+            #                     & (ranking["algorithm"] == algorithm),
+            #                     "in data"] = True
+            #     else:
+            #         # Remove algorithm from pref_data DataFrame
+            #         print(f"Found unexpected algorithm {algorithm} for "
+            #               f"D{dimension}B{budget}, excluding it from analysis")
+            #         perf_data.drop(
+            #             perf_data[
+            #                 (perf_data["dimensions"] == dimension)
+            #                 & (perf_data["budget"] == budget)
+            #                 & (perf_data["algorithm"] == algorithm)].index,
+            #             inplace=True)
 
             # Check whether any data remains for this dim-bud combination
             perf_algos = perf_data.loc[
@@ -237,6 +235,9 @@ def assign_points_test(dimensionalities: list[int],
 
                     # Compute percentage loss to best (and handle case where
                     # best is 0)
+                    if len(perfs) == 0:
+                        print('ERROR: Empty performance list. Check that the problem instance settings are correct.')
+                        sys.exit(-1)
                     perfs_1 = perfs + 1
                     best = min(perfs_1)
                     loss_percent.extend((perfs_1 - best) / best * 100)
@@ -297,7 +298,6 @@ def assign_points_test(dimensionalities: list[int],
             dim_bud_ranks = ranking.loc[
                 (ranking["dimensions"] == dimension)
                 & (ranking["budget"] == budget)]
-            print(dim_bud_ranks)
 
             # Add points and ranks to csv
             dim_bud_ranks.to_csv(

@@ -7,3 +7,5 @@ data_*/
 *.zip
 plotly*/
 *.pdf
+*.csv
+*.old

@@ -1,9 +1,0 @@
-problem,algorithm,dimensions,budget,seed,instance,status,performance,algo ID,rank,percent loss,log loss
-f11_Discus,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),25,8000,1,10,-4,,5,,,
-f11_Discus,MetaModel,25,10000,1,5,-4,,3,,,
-f11_Discus,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),25,10000,1,23,-4,,5,,,
-f11_Discus,MetaModel,30,9000,1,13,-4,,3,,,
-f11_Discus,MetaModel,30,10000,1,13,-4,,3,,,
-f5_LinearSlope,ParametrizedMetaModel(multivariate_optimizer=CmaFmin2),35,9000,1,2,-4,,5,,,
-f11_Discus,MetaModel,35,9000,1,8,-4,,3,,,
-f11_Discus,MetaModel,35,10000,1,8,-4,,3,,,
