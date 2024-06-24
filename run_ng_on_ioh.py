@@ -558,11 +558,11 @@ if __name__ == "__main__":
         MetaModel_Def,
         MetaModelOnePlusOne_Def,
         MetaModelFmin2_Def,
-        # CMA_Conf,
-        # ChainMetaModelPowell_Conf,
-        # MetaModel_Conf,
-        # MetaModelOnePlusOne_Conf,
-        # MetaModelFmin2_Conf
+        CMA_Conf,
+        ChainMetaModelPowell_Conf,
+        MetaModel_Conf,
+        MetaModelOnePlusOne_Conf,
+        MetaModelFmin2_Conf
     ]
 
     # Directory name

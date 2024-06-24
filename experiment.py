@@ -270,6 +270,8 @@ def assign_points_test(dimensionalities: list[int],
                 & (perf_data["rank"] == 1), "algorithm"].values
 
             algos, counts = np.unique(top_ranks, return_counts=True)
+            print(algos, counts)
+            input()
 
             for algo, count in zip(algos, counts):
                 ranking.loc[(ranking["dimensions"] == dimension)
@@ -298,6 +300,8 @@ def assign_points_test(dimensionalities: list[int],
             dim_bud_ranks = ranking.loc[
                 (ranking["dimensions"] == dimension)
                 & (ranking["budget"] == budget)]
+            
+            print(dim_bud_ranks)
 
             # Add points and ranks to csv
             dim_bud_ranks.to_csv(
@@ -328,6 +332,8 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
             MA-BBOB data.
     """
     file_name = "grid_test"
+
+    plot_top_algorithms(ranking_csv)
 
     if ngopt_vs_data:
         file_name = f"{file_name}_1v1"
@@ -365,6 +371,50 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
                     compare="ngopt", magnitude=magnitude, test_bbob=test_bbob)
 
     return
+
+
+def plot_top_algorithms(ranking_csv: Path):
+    data = pd.read_csv(ranking_csv)
+    dimensions = data['dimensions'].unique()
+    budgets = data['budget'].unique()
+
+    num_dim = len(dimensions)
+    num_bud = len(budgets)
+    
+    fig, axes = plt.subplots(num_dim, num_bud, figsize=(5 * num_bud, 5 * num_dim), squeeze=False)
+    algorithm_colors = const.COLORS
+
+    print("Plotting top algorithms")
+
+    for dim_idx, dimension in enumerate(dimensions):
+        for bud_idx, budget in enumerate(budgets):
+
+            subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
+            
+            # Sort the data by 'points test' in descending order and select the top 5
+            top_algorithms = subset.sort_values(by='points test', ascending=False).head(5)
+            
+            # Create a list of colors based on the algorithm names
+            colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
+            
+            # Create the bar plot in the corresponding subplot with algorithms on the x-axis
+            sns.barplot(ax=axes[dim_idx, bud_idx], x='algorithm', y='points test', data=top_algorithms, palette=colors)
+            
+            axes[dim_idx, bud_idx].set_title(f'Dimension {dimension}, Budget {budget}')
+            axes[dim_idx, bud_idx].set_xlabel('Algorithm')
+            axes[dim_idx, bud_idx].set_ylabel('Points Test')
+            axes[dim_idx, bud_idx].set_xticklabels(axes[dim_idx, bud_idx].get_xticklabels(), rotation=45, ha='right')
+        
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
+    outdir = "plots/bar/top_algorithms.pdf"
+    
+    # Save the plot
+    plt.savefig(outdir)
+    plt.close()
+
+    print("Top algorithms can be found in: ", outdir)
 
 
 def plot_heatmap_data_test(ranking_csv: Path,

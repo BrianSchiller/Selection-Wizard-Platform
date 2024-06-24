@@ -13,7 +13,7 @@ from experiment import test_plot_all
 
 if __name__ == "__main__":
 
-    analyse_test_csvs(Path("Output/20240624_12-43-23"), test_bbob=True)
+    analyse_test_csvs(Path("Output/20240624_15-57-33"), test_bbob=True)
 
     # parser = argparse.ArgumentParser(
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -163,9 +163,9 @@ if __name__ == "__main__":
     #     ngopt.write_unique_ngopt_algos_csv(file_name)
 
         # Load experiment data
-        exp = Experiment(args.data_dir,
-                         args.per_budget_data_dir,
-                         ng_version=nevergrad_version, prob_set="all")
+        # exp = Experiment(args.data_dir,
+        #                  args.per_budget_data_dir,
+        #                  ng_version=nevergrad_version, prob_set="all")
 
     #     # Plot heatmap based on budget-specific BBOB data for all problems
     #     # (Only the algorithms chosen by NGOpt have budget-specific runs.)
@@ -230,8 +230,8 @@ if __name__ == "__main__":
 #    matrix = exp.get_scoring_matrix(ngopt=ngopt)
 #    file_name = f"grid_{nevergrad_version}"
 #    exp.plot_hist_grid(matrix, ngopt, file_name)
-   file_name = f"grid_data_{nevergrad_version}"
-   exp.plot_heatmap_data(matrix, ngopt, file_name)
+#    file_name = f"grid_data_{nevergrad_version}"
+#    exp.plot_heatmap_data(matrix, ngopt, file_name)
 #    file_name = f"best_comparison_{nevergrad_version}"
 #    exp.write_performance_comparison_csv(file_name)
 #    file_name = f"grid_data_budget_specific_{nevergrad_version}"

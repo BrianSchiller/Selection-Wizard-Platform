@@ -98,6 +98,22 @@ tmp = ALGO_COLOURS[21].copy()
 ALGO_COLOURS[21] = ALGO_COLOURS[39]
 ALGO_COLOURS[39] = tmp
 
+COLORS = {
+    'CMA': 'blue',
+    'MetaModel': 'orange',
+    'ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)': 'green',
+    'MetaModelOnePlusOne': 'red',
+    'ChainMetaModelPowell': 'purple',
+    'Cobyla': 'brown',
+    'ConfPortfolio_scale2_NA_ngopt14s_1': 'pink',
+    # Add more algorithms and colors as needed
+    'CMA_Conf': 'gray',
+    'ChainMetaModelPowell_Conf': 'cyan',
+    'MetaModel_Conf': 'magenta',
+    'MetaModelOnePlusOne_Conf': 'yellow',
+    'MetaModelFmin2_Conf': 'lime'
+}
+
 # DIMS_CONSIDERED = [2, 3, 5, 10, 15]
 DIMS_CONSIDERED = [2,3,5]
 BUDGETS_CONSIDERED = [200, 300, 500]
