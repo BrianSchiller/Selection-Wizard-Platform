@@ -26,7 +26,7 @@ ALGS_CONSIDERED = [
     "Cobyla",
     "MetaModel",
     "MetaModelOnePlusOne",
-    "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)",
+    "MetaModelFmin2",
     "ConfPortfolio(optimizers=[NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14], warmup_ratio=0.7)",  # noqa: E501
     "ConfPortfolio(optimizers=[NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14], warmup_ratio=0.7)",  # noqa: E501
     "ConfPortfolio(optimizers=[NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14, NGOpt14], warmup_ratio=0.7)",  # noqa: E501
@@ -99,39 +99,42 @@ ALGO_COLOURS[21] = ALGO_COLOURS[39]
 ALGO_COLOURS[39] = tmp
 
 COLORS = {
-    'CMA': 'blue',
-    'MetaModel': 'orange',
-    'ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)': 'green',
-    'MetaModelOnePlusOne': 'red',
+    'CMA': '#4381e6',
+    'MetaModel': '#d3d3d3',
+    'MetaModelFmin2': '#6fed9c',
+    'MetaModelOnePlusOne': '#e05164',
     'ChainMetaModelPowell': 'purple',
-    'Cobyla': 'brown',
+    'Cobyla': 'gold',
     'ConfPortfolio_scale2_NA_ngopt14s_1': 'pink',
     # Add more algorithms and colors as needed
-    'CMA_Conf': 'gray',
-    'ChainMetaModelPowell_Conf': 'cyan',
-    'MetaModel_Conf': 'magenta',
-    'MetaModelOnePlusOne_Conf': 'yellow',
-    'MetaModelFmin2_Conf': 'lime'
+    'CMA_Conf': '#0a54cc',
+    'ChainMetaModelPowell_Conf': '#c5b0d5',
+    'MetaModel_Conf': '#696969',
+    'MetaModelOnePlusOne_Conf': '#a62133',
+    'MetaModelFmin2_Conf': '#44b36b'
 }
 
-# DIMS_CONSIDERED = [2, 3, 5, 10, 15]
 DIMS_CONSIDERED = [2,3,5]
 BUDGETS_CONSIDERED = [200, 300, 500]
+REPETITIONS = 2
+# TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+#                   18, 19, 20, 21, 22, 23, 24, 25, 26]
+TEST_INSTANCES = [1]
 # PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 #                     18, 19, 20, 21, 22, 23, 24]
-PROBS_CONSIDERED = [1, 2]
+PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 PROB_NAMES = ["f1_Sphere",
               "f2_Ellipsoid",
-            #   "f3_Rastrigin",
-            #   "f4_BuecheRastrigin",
-            #   "f5_LinearSlope",
-            #   "f6_AttractiveSector",
-            #   "f7_StepEllipsoid",
-            #   "f8_Rosenbrock",
-            #   "f9_RosenbrockRotated",
-            #   "f10_EllipsoidRotated",
-            #   "f11_Discus",
-            #   "f12_BentCigar",
+              "f3_Rastrigin",
+              "f4_BuecheRastrigin",
+              "f5_LinearSlope",
+              "f6_AttractiveSector",
+              "f7_StepEllipsoid",
+              "f8_Rosenbrock",
+              "f9_RosenbrockRotated",
+              "f10_EllipsoidRotated",
+              "f11_Discus",
+              "f12_BentCigar",
             #   "f13_SharpRidge",
             #   "f14_DifferentPowers",
             #   "f15_RastriginRotated",
@@ -145,9 +148,6 @@ PROB_NAMES = ["f1_Sphere",
             #   "f23_Katsuura",
             #   "f24_LunacekBiRastrigin"
               ]
-# TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-#                   18, 19, 20, 21, 22, 23, 24, 25, 26]
-TEST_INSTANCES = [1]
 
 # Plotting constants
 FONT_SIZE_ALGO_ID = 9

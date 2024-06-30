@@ -70,7 +70,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         algo_id = algo["ID"]
         perf_data.loc[(perf_data["algorithm"] == algo_name),
                       "algo ID"] = algo_id
-
+        
     # Create variables for all problem-dimension-budget combinations
     dimensionalities = const.DIMS_CONSIDERED
     budgets = const.BUDGETS_CONSIDERED
@@ -79,18 +79,16 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                 if test_bbob else pd.read_csv(probs_csv)["problem"].to_list())
 
     # Create a DataFrame to store points per dimension-budget-algorithm combo
-    ma_algos_csv = csv_dir / "ma_algos.csv"
-    ranking = pd.read_csv(ma_algos_csv)
-    ranking["in data"] = False
+    ranking = perf_data[['algorithm', 'dimensions', 'budget', 'algo ID']].drop_duplicates()
     ranking["points test"] = 0
     ranking["rank test"] = None
 
-    # If we only compare the NGOpt choice and the data choice, remove others
-    if ngopt_vs_data:
-        # The ngopt rank column has 0 for the NGOpt choice, and -1 for the data
-        # choice, if no -1 exists for a dimension-budget combination, the data
-        # choice is the same as the NGOpt choice
-        ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
+    # # If we only compare the NGOpt choice and the data choice, remove others
+    # if ngopt_vs_data:
+    #     # The ngopt rank column has 0 for the NGOpt choice, and -1 for the data
+    #     # choice, if no -1 exists for a dimension-budget combination, the data
+    #     # choice is the same as the NGOpt choice
+    #     ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
 
     # Prepare and check output paths
     failed_csv_path = out_dir / f"ranking{ngopt_v_data}_failed.csv"
@@ -142,33 +140,6 @@ def assign_points_test(dimensionalities: list[int],
     # Assign points per problem on each dimension-budget combination
     for dimension in dimensionalities:
         for budget in budgets:
-            # # Check all algorithms we expect for this dimension-budget
-            # # combination are there; remove extras; report missing ones.
-            # algos_real = perf_data.loc[
-            #     (perf_data["dimensions"] == dimension)
-            #     & (perf_data["budget"] == budget)]
-            # algos_need = ranking.loc[
-            #     (ranking["dimensions"] == dimension)
-            #     & (ranking["budget"] == budget)]
-
-            # for algorithm in algos_real["algorithm"].unique():
-            #     if algorithm in algos_need["algorithm"].values:
-            #         # Set in data column to True
-            #         ranking.loc[(ranking["dimensions"] == dimension)
-            #                     & (ranking["budget"] == budget)
-            #                     & (ranking["algorithm"] == algorithm),
-            #                     "in data"] = True
-            #     else:
-            #         # Remove algorithm from pref_data DataFrame
-            #         print(f"Found unexpected algorithm {algorithm} for "
-            #               f"D{dimension}B{budget}, excluding it from analysis")
-            #         perf_data.drop(
-            #             perf_data[
-            #                 (perf_data["dimensions"] == dimension)
-            #                 & (perf_data["budget"] == budget)
-            #                 & (perf_data["algorithm"] == algorithm)].index,
-            #             inplace=True)
-
             # Check whether any data remains for this dim-bud combination
             perf_algos = perf_data.loc[
                 (perf_data["dimensions"] == dimension)
@@ -270,8 +241,6 @@ def assign_points_test(dimensionalities: list[int],
                 & (perf_data["rank"] == 1), "algorithm"].values
 
             algos, counts = np.unique(top_ranks, return_counts=True)
-            print(algos, counts)
-            input()
 
             for algo, count in zip(algos, counts):
                 ranking.loc[(ranking["dimensions"] == dimension)
@@ -300,8 +269,6 @@ def assign_points_test(dimensionalities: list[int],
             dim_bud_ranks = ranking.loc[
                 (ranking["dimensions"] == dimension)
                 & (ranking["budget"] == budget)]
-            
-            print(dim_bud_ranks)
 
             # Add points and ranks to csv
             dim_bud_ranks.to_csv(
@@ -392,7 +359,7 @@ def plot_top_algorithms(ranking_csv: Path):
             subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
             
             # Sort the data by 'points test' in descending order and select the top 5
-            top_algorithms = subset.sort_values(by='points test', ascending=False).head(5)
+            top_algorithms = subset.sort_values(by='points test', ascending=False).head(11)
             
             # Create a list of colors based on the algorithm names
             colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]

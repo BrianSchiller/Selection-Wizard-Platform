@@ -285,6 +285,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
                                 n_repetitions, eval_budget, n_instances)
 
         logger.close()
+        print(f"Finished: {alg.name}")
 
     return
 
@@ -533,7 +534,6 @@ def pbs_index_to_bbob_test(index: int) -> (
 
 if __name__ == "__main__":
     DEFAULT_EVAL_BUDGET = 100
-    DEFAULT_N_REPETITIONS = 2
     DEFAULT_DIMS = [2]
     DEFAULT_PROBLEMS = list(range(1, 2))
     DEFAULT_INSTANCES = [1]
@@ -543,7 +543,7 @@ if __name__ == "__main__":
     ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ChainMetaModelPowell") 
     MetaModel_Def = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModel") 
     MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelOnePlusOne") 
-    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ParametrizedMetaModel(multivariate_optimizer=CmaFmin2)") 
+    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelFmin2") 
 
     CMA_Conf = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
     ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
@@ -569,7 +569,7 @@ if __name__ == "__main__":
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
 
     for budget in const.BUDGETS_CONSIDERED:
-        run_algos(DEFAULT_ALGS, const.PROBS_CONSIDERED, budget, const.DIMS_CONSIDERED, DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES, True, timestamp)
+        run_algos(DEFAULT_ALGS, const.PROBS_CONSIDERED, budget, const.DIMS_CONSIDERED, const.REPETITIONS, const.TEST_INSTANCES, True, timestamp)
         print(f"Finished Budget: {budget}")
 
     # parser = argparse.ArgumentParser(

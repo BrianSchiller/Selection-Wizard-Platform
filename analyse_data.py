@@ -13,7 +13,7 @@ from experiment import test_plot_all
 
 if __name__ == "__main__":
 
-    analyse_test_csvs(Path("Output/20240624_15-57-33"), test_bbob=True)
+    analyse_test_csvs(Path("Output/20240624_18-12-34"), test_bbob=True)
 
     # parser = argparse.ArgumentParser(
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
