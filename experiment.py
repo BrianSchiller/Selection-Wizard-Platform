@@ -72,8 +72,8 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
                       "algo ID"] = algo_id
         
     # Create variables for all problem-dimension-budget combinations
-    dimensionalities = const.DIMS_CONSIDERED
-    budgets = const.BUDGETS_CONSIDERED
+    dimensionalities = perf_data['dimensions'].unique()
+    budgets = perf_data['budget'].unique()
     probs_csv = csv_dir / "ma_prob_names.csv"
     problems = (const.PROB_NAMES
                 if test_bbob else pd.read_csv(probs_csv)["problem"].to_list())
@@ -82,13 +82,6 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     ranking = perf_data[['algorithm', 'dimensions', 'budget', 'algo ID']].drop_duplicates()
     ranking["points test"] = 0
     ranking["rank test"] = None
-
-    # # If we only compare the NGOpt choice and the data choice, remove others
-    # if ngopt_vs_data:
-    #     # The ngopt rank column has 0 for the NGOpt choice, and -1 for the data
-    #     # choice, if no -1 exists for a dimension-budget combination, the data
-    #     # choice is the same as the NGOpt choice
-    #     ranking.drop(ranking[ranking["ngopt rank"] > 0].index, inplace=True)
 
     # Prepare and check output paths
     failed_csv_path = out_dir / f"ranking{ngopt_v_data}_failed.csv"
@@ -99,8 +92,8 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
     for csv_path in csv_paths:
         new_csv_path = csv_path.with_suffix(".old")
-        print(f"Output file {csv_path} already exists, moving it to "
-              f"{new_csv_path}")
+        # print(f"Output file {csv_path} already exists, moving it to "
+        #       f"{new_csv_path}")
         csv_path.rename(new_csv_path)
 
     assign_points_test(
@@ -108,7 +101,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         perf_csv_path, failed_csv_path, rank_csv_path, test_bbob)
 
     if plot:
-        test_plot_all(rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob)
+        test_plot_all(data_dir, rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob)
 
     return
 
@@ -208,7 +201,7 @@ def assign_points_test(dimensionalities: list[int],
                     # best is 0)
                     if len(perfs) == 0:
                         print('ERROR: Empty performance list. Check that the problem instance settings are correct.')
-                        sys.exit(-1)
+                        break
                     perfs_1 = perfs + 1
                     best = min(perfs_1)
                     loss_percent.extend((perfs_1 - best) / best * 100)
@@ -278,7 +271,7 @@ def assign_points_test(dimensionalities: list[int],
                 index=False)
 
 
-def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
+def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
                   perf_data: Path | pd.DataFrame = None,
                   test_bbob: bool = False) -> None:
     """Generate all plots for test data on MA-BBOB or BBOB.
@@ -300,47 +293,12 @@ def test_plot_all(ranking_csv: Path, ngopt_vs_data: bool,
     """
     file_name = "grid_test"
 
-    plot_top_algorithms(ranking_csv)
-
-    if ngopt_vs_data:
-        file_name = f"{file_name}_1v1"
-
-    plot_heatmap_data_test(ranking_csv, file_name=file_name,
-                           comp_approach=False, test_bbob=test_bbob)
-    plot_heatmap_data_test(ranking_csv, file_name=file_name,
-                           comp_approach=True, test_bbob=test_bbob)
-
-    # In the 1vs1 case, also plot a heatmap version with NGOpt choices blanked
-    if ngopt_vs_data:
-        plot_heatmap_data_test(
-            ranking_csv, file_name=file_name,
-            comp_approach=True, test_bbob=test_bbob, blank_ngopt=True)
-
-    if perf_data is not None:
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=True,
-                                test_bbob=test_bbob)
-#       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=True, grid=False)
-        plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False, grid=True,
-                                test_bbob=test_bbob)
-#       plot_cum_loss_data_test(perf_data, ngopt_vs_data, log=False,
-#                               grid=False)
-
-        # Plot loss/gain heatmaps comparing best on MA-BBOB with NGOpt/Data
-        # choice. Only when not considering the 1v1 case, since we need the
-        # complete data.
-        if not ngopt_vs_data:
-            for magnitude in range(0, 6):
-                plot_loss_gain_heatmap_test(
-                    perf_data, ranking_csv, log=True,
-                    compare="data", magnitude=magnitude, test_bbob=test_bbob)
-                plot_loss_gain_heatmap_test(
-                    perf_data, ranking_csv, log=True,
-                    compare="ngopt", magnitude=magnitude, test_bbob=test_bbob)
+    plot_top_algorithms(ranking_csv, output_dir)
 
     return
 
 
-def plot_top_algorithms(ranking_csv: Path):
+def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     data = pd.read_csv(ranking_csv)
     dimensions = data['dimensions'].unique()
     budgets = data['budget'].unique()
@@ -358,7 +316,7 @@ def plot_top_algorithms(ranking_csv: Path):
 
             subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
             
-            # Sort the data by 'points test' in descending order and select the top 5
+            # Sort the data by 'points test' in descending order and select the top n
             top_algorithms = subset.sort_values(by='points test', ascending=False).head(11)
             
             # Create a list of colors based on the algorithm names
@@ -368,20 +326,20 @@ def plot_top_algorithms(ranking_csv: Path):
             sns.barplot(ax=axes[dim_idx, bud_idx], x='algorithm', y='points test', data=top_algorithms, palette=colors)
             
             axes[dim_idx, bud_idx].set_title(f'Dimension {dimension}, Budget {budget}')
-            axes[dim_idx, bud_idx].set_xlabel('Algorithm')
+            axes[dim_idx, bud_idx].set_xlabel('')
             axes[dim_idx, bud_idx].set_ylabel('Points Test')
             axes[dim_idx, bud_idx].set_xticklabels(axes[dim_idx, bud_idx].get_xticklabels(), rotation=45, ha='right')
         
     # Adjust layout to prevent overlap
     plt.tight_layout()
 
-    outdir = "plots/bar/top_algorithms.pdf"
+    output = output_dir / "top_algorithms.pdf"
     
     # Save the plot
-    plt.savefig(outdir)
+    plt.savefig(output)
     plt.close()
 
-    print("Top algorithms can be found in: ", outdir)
+    print("Top algorithms can be found in: ", output)
 
 
 def plot_heatmap_data_test(ranking_csv: Path,

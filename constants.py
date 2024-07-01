@@ -100,29 +100,29 @@ ALGO_COLOURS[39] = tmp
 
 COLORS = {
     'CMA': '#4381e6',
-    'MetaModel': '#d3d3d3',
-    'MetaModelFmin2': '#6fed9c',
+    'MetaModel': '#fcef74',
+    'MetaModelFmin2': '#b860e0',
     'MetaModelOnePlusOne': '#e05164',
-    'ChainMetaModelPowell': 'purple',
-    'Cobyla': 'gold',
+    'ChainMetaModelPowell': '#4ecf73',
+    'Cobyla': '#999999',
     'ConfPortfolio_scale2_NA_ngopt14s_1': 'pink',
     # Add more algorithms and colors as needed
     'CMA_Conf': '#0a54cc',
-    'ChainMetaModelPowell_Conf': '#c5b0d5',
-    'MetaModel_Conf': '#696969',
+    'ChainMetaModelPowell_Conf': '#248f50',
+    'MetaModel_Conf': 'gold',
     'MetaModelOnePlusOne_Conf': '#a62133',
-    'MetaModelFmin2_Conf': '#44b36b'
+    'MetaModelFmin2_Conf': 'purple'
 }
 
-DIMS_CONSIDERED = [2,3,5]
-BUDGETS_CONSIDERED = [200, 300, 500]
-REPETITIONS = 2
+DIMS_CONSIDERED = [[2],[5]]
+BUDGETS_CONSIDERED = [200]
+REPETITIONS = 1
 # TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 #                   18, 19, 20, 21, 22, 23, 24, 25, 26]
-TEST_INSTANCES = [1]
-# PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-#                     18, 19, 20, 21, 22, 23, 24]
-PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+TEST_INSTANCES = [1,2,3,4,5,6,7,8]
+PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+                    18, 19, 20, 21, 22, 23, 24]
+# PROBS_CONSIDERED = [1, 2, 3, 4]
 PROB_NAMES = ["f1_Sphere",
               "f2_Ellipsoid",
               "f3_Rastrigin",
@@ -135,18 +135,18 @@ PROB_NAMES = ["f1_Sphere",
               "f10_EllipsoidRotated",
               "f11_Discus",
               "f12_BentCigar",
-            #   "f13_SharpRidge",
-            #   "f14_DifferentPowers",
-            #   "f15_RastriginRotated",
-            #   "f16_Weierstrass",
-            #   "f17_Schaffers10",
-            #   "f18_Schaffers1000",
-            #   "f19_GriewankRosenBrock",
-            #   "f20_Schwefel",
-            #   "f21_Gallagher101",
-            #   "f22_Gallagher21",
-            #   "f23_Katsuura",
-            #   "f24_LunacekBiRastrigin"
+              "f13_SharpRidge",
+              "f14_DifferentPowers",
+              "f15_RastriginRotated",
+              "f16_Weierstrass",
+              "f17_Schaffers10",
+              "f18_Schaffers1000",
+              "f19_GriewankRosenBrock",
+              "f20_Schwefel",
+              "f21_Gallagher101",
+              "f22_Gallagher21",
+              "f23_Katsuura",
+              "f24_LunacekBiRastrigin"
               ]
 
 # Plotting constants

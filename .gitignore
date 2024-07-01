@@ -9,3 +9,4 @@ plotly*/
 *.pdf
 *.csv
 *.old
+csvs/

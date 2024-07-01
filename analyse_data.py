@@ -4,6 +4,7 @@
 import argparse
 from pathlib import Path
 import sys
+import os
 
 from experiment import Experiment
 from experiment import NGOptChoice
@@ -12,8 +13,15 @@ from experiment import test_plot_all
 
 
 if __name__ == "__main__":
+    # directory = "Output/Eval_20240701_13-10-50"
 
-    analyse_test_csvs(Path("Output/20240624_18-12-34"), test_bbob=True)
+    # subdirectories = [os.path.join(directory, name) for name in os.listdir(directory)
+    #                   if os.path.isdir(os.path.join(directory, name))]
+
+    # for directory in subdirectories:
+    #     analyse_test_csvs(Path(directory), test_bbob=True)
+
+    analyse_test_csvs(Path("Output/Eval_20240701_13-10-50"), test_bbob=True)
 
     # parser = argparse.ArgumentParser(
     #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)

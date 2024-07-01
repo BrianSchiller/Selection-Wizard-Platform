@@ -10,6 +10,7 @@ import os
 import shutil
 import re
 import datetime
+import json
 
 import numpy as np
 import pandas as pd
@@ -227,7 +228,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
               n_repetitions: int,
               instances: list[int] = None,
               process_intermediate_data: bool = False,
-              output_dir: str = "") -> None:
+              output_dir: Path = None) -> None:
     """Run the given algorithms on the given problem set.
 
     Args:
@@ -253,7 +254,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
         algorithm = NGEvaluator(alg.get_optimizer(), eval_budget)
 
         if not process_intermediate_data:
-            logger = ioh.logger.Analyzer(folder_name=f"Output/{output_dir}/{alg_name}",
+            logger = ioh.logger.Analyzer(folder_name=f"{output_dir}/{alg_name}",
                                          algorithm_name=alg_name)
             logger.add_run_attributes(algorithm,
                                       ["algorithm_seed", "run_success"])
@@ -261,7 +262,7 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
         for problem in problems:
             for dimension in dimensionalities:
                 if process_intermediate_data:
-                    dir_name = f"Output/{output_dir}/{alg_name}_D{dimension}_B{eval_budget}"
+                    dir_name = f"{output_dir}/B{eval_budget}_D{dimension}/{alg_name}"
                     logger = ioh.logger.Analyzer(folder_name=dir_name,
                                                  algorithm_name=alg_name)
                     logger.add_run_attributes(
@@ -531,138 +532,115 @@ def pbs_index_to_bbob_test(index: int) -> (
 
     return dimensionality, budget, algorithm, problems, instances
 
+def write_scenario_file(output_dir):
+    # Check if the file already exists (Prevent slurm creating multiple scenario files)
+    scenario_file_path = os.path.join(output_dir, "scenario.json")
+    if not os.path.isfile(scenario_file_path):
+        data = {
+            "Budget": const.BUDGETS_CONSIDERED,
+            "Dimensions": const.DIMS_CONSIDERED,
+            "Problems": const.PROBS_CONSIDERED,
+            "Repetitions": const.REPETITIONS,
+            "Instances": const.TEST_INSTANCES
+        }
+        os.makedirs(output_dir, exist_ok=True)
+        
+        with open(f"{output_dir}/scenario.json", "w") as json_file:
+            json.dump(data, json_file, indent=4)
+
+def create_job_script(budget, dimensions, name):
+    script_content = f"""#!/bin/bash
+#SBATCH --job-name=K_D{'_'.join(map(str, dimensions))}_B{budget}
+#SBATCH --output={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.out
+#SBATCH --error={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.err
+#SBATCH --time=10:00:00
+#SBATCH --partition=Kathleen
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --mem-per-cpu=3000M
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run the experiment
+python run_ng_on_ioh.py  --name {name} --dimensions {' '.join(map(str, dimensions))} --budget {budget}
+"""
+    return script_content
+
 
 if __name__ == "__main__":
-    DEFAULT_EVAL_BUDGET = 100
-    DEFAULT_DIMS = [2]
-    DEFAULT_PROBLEMS = list(range(1, 2))
-    DEFAULT_INSTANCES = [1]
+    parser = argparse.ArgumentParser(description='Run algorithms on IOH Benchmarks.')
+    parser.add_argument('--name', type=str, help='Name of the result folder', required=False)
+    parser.add_argument('--slurm', type=str, help='Whether to run on Slurm', required=False, default=False)
+    parser.add_argument('--dimensions', type=str, help='Dimensions to run on', required=False, default=None)
+    parser.add_argument('--budget', type=str, help='Budgets to run on', required=False, default=None)
+    args = parser.parse_args()
 
-    Cobyla_Def = Cobyla() 
-    CMA_Def = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "CMA") 
-    ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "ChainMetaModelPowell") 
-    MetaModel_Def = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModel") 
-    MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelOnePlusOne") 
-    MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET, True), "MetaModelFmin2") 
+    if args.dimensions is not None:
+        dimensions = [[int(args.dimensions)]]
+    else:
+        dimensions = const.DIMS_CONSIDERED
 
-    CMA_Conf = CMA(get_config("CMA", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
-    ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
-    MetaModel_Conf = MetaModel(get_config("MetaModel", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
-    MetaModelOnePlusOne_Conf = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
-    MetaModelFmin2_Conf = MetaModelFmin2(get_config("MetaModelFmin2", DEFAULT_DIMS, DEFAULT_EVAL_BUDGET)) 
+    if args.budget is not None:
+        budgets = [int(args.budget)]
+    else:
+        budgets = const.BUDGETS_CONSIDERED
 
-    DEFAULT_ALGS =[
-        Cobyla_Def,
-        CMA_Def,
-        ChainMetaModelPowell_Def,
-        MetaModel_Def,
-        MetaModelOnePlusOne_Def,
-        MetaModelFmin2_Def,
-        CMA_Conf,
-        ChainMetaModelPowell_Conf,
-        MetaModel_Conf,
-        MetaModelOnePlusOne_Conf,
-        MetaModelFmin2_Conf
-    ]
-
-    # Directory name
+    # Prepare Output Directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
+    if args.name is not None:
+        output_dir = Path(args.name)
+        if args.slurm:
+            output_dir = Path(f"Output/{args.name}_{timestamp}")
+    else:
+        output_dir = Path(f"Output/run_{timestamp}")
+    write_scenario_file(output_dir)
 
-    for budget in const.BUDGETS_CONSIDERED:
-        run_algos(DEFAULT_ALGS, const.PROBS_CONSIDERED, budget, const.DIMS_CONSIDERED, const.REPETITIONS, const.TEST_INSTANCES, True, timestamp)
-        print(f"Finished Budget: {budget}")
+    # Default Algorithms
+    if args.slurm == False:
+        Cobyla_Def = Cobyla() 
+        CMA_Def = CMA(get_config("CMA", None, None, True), "CMA") 
+        ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", None, None, True), "ChainMetaModelPowell") 
+        MetaModel_Def = MetaModel(get_config("MetaModel", None, None, True), "MetaModel") 
+        MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", None, None, True), "MetaModelOnePlusOne") 
+        MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", None, None, True), "MetaModelFmin2") 
 
-    # parser = argparse.ArgumentParser(
-    #     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # parser.add_argument(
-    #     "--algorithms",
-    #     default=argparse.SUPPRESS,
-    #     nargs="+",
-    #     type=str,
-    #     help="Algorithms to run.")
-    # parser.add_argument(
-    #     "--eval-budget",
-    #     default=DEFAULT_EVAL_BUDGET,
-    #     type=int,
-    #     help="Budget in function evaluations.")
-    # parser.add_argument(
-    #     "--n-repetitions",
-    #     default=DEFAULT_N_REPETITIONS,
-    #     type=int,
-    #     help=("Number of repetitions for an algorithm-problem-dimension "
-    #           "combination."))
-    # parser.add_argument(
-    #     "--dimensionalities",
-    #     default=DEFAULT_DIMS,
-    #     nargs="+",
-    #     type=int,
-    #     help=("List of variable space dimensionalities to consider for the "
-    #           "problem."))
-    # parser.add_argument(
-    #     "--problems",
-    #     default=DEFAULT_PROBLEMS,
-    #     nargs="+",
-    #     type=int,
-    #     help="List of BBOB problems.")
-    # parser.add_argument(
-    #     "--instances",
-    #     default=DEFAULT_INSTANCES,
-    #     nargs="+",
-    #     type=int,
-    #     help="List of BBOB problem instances.")
-    # parser.add_argument(
-    #     "--pbs-index-all-dims",
-    #     type=int,
-    #     help="PBS index to convert to algorithm and problem IDs.")
-    # parser.add_argument(
-    #     "--pbs-index-ngopt",
-    #     type=int,
-    #     help="PBS index to convert to dimensionality, budget, and algorithm.")
-    # parser.add_argument(
-    #     "--pbs-index-bud-dep",
-    #     type=int,
-    #     help="PBS ID to convert to dimension, budget, algorithm, problem.")
-    # parser.add_argument(
-    #     "--pbs-index-ma",
-    #     type=int,
-    #     help=("PBS ID to convert to experiment settings for algorithms on "
-    #           "MA-BBOB."))
-    # parser.add_argument(
-    #     "--pbs-index-test",
-    #     type=int,
-    #     help=("PBS ID to convert to experiment settings for algorithms on "
-    #           "BBOB test instances."))
-    # args = parser.parse_args()
+    for dimension in dimensions:
+        for budget in budgets:
+            if args.slurm == False:
+                
+                CMA_Conf = CMA(get_config("CMA", dimension, budget)) 
+                ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimension, budget)) 
+                MetaModel_Conf = MetaModel(get_config("MetaModel", dimension, budget)) 
+                MetaModelOnePlusOne_Conf = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", dimension, budget)) 
+                MetaModelFmin2_Conf = MetaModelFmin2(get_config("MetaModelFmin2", dimension, budget)) 
 
-    # if args.pbs_index_all_dims is not None:
-    #     algorithm, problem = (
-    #         pbs_index_to_args_all_dims(args.pbs_index_all_dims))
-    #     run_algos([algorithm], [problem], DEFAULT_EVAL_BUDGET,
-    #               const.DIMS_CONSIDERED,
-    #               DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    # elif args.pbs_index_ngopt is not None:
-    #     dimensionality, budget, algorithm = (
-    #         pbs_index_to_args_ngopt(args.pbs_index_ngopt))
-    #     run_algos([algorithm], const.PROBS_CONSIDERED, budget,
-    #               [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    # elif args.pbs_index_bud_dep is not None:
-    #     dimensionality, budget, algorithm, problem = (
-    #         pbs_index_to_args_bud_dep(args.pbs_index_bud_dep))
-    #     run_algos([algorithm], [problem], budget,
-    #               [dimensionality], DEFAULT_N_REPETITIONS, DEFAULT_INSTANCES)
-    # elif args.pbs_index_ma is not None:
-    #     dimensionality, budget, algorithm, problems, instance = (
-    #         pbs_index_to_ma_combo(args.pbs_index_ma))
-    #     n_repetitions = 1
-    #     run_algos([algorithm], problems, budget, [dimensionality],
-    #               n_repetitions, [instance], process_intermediate_data=True)
-    # elif args.pbs_index_test is not None:
-    #     dimensionality, budget, algorithm, problems, instances = (
-    #         pbs_index_to_bbob_test(args.pbs_index_test))
-    #     n_repetitions = 1
-    #     run_algos([algorithm], problems, budget, [dimensionality],
-    #               n_repetitions, instances, process_intermediate_data=True)
-    # else:
-    #     run_algos(args.algorithms, args.problems, args.eval_budget,
-    #               args.dimensionalities,
-    #               args.n_repetitions, args.instances)
+                Algorithms =[
+                    Cobyla_Def,
+                    CMA_Def,
+                    ChainMetaModelPowell_Def,
+                    MetaModel_Def,
+                    MetaModelOnePlusOne_Def,
+                    MetaModelFmin2_Def,
+                    CMA_Conf,
+                    ChainMetaModelPowell_Conf,
+                    MetaModel_Conf,
+                    MetaModelOnePlusOne_Conf,
+                    MetaModelFmin2_Conf
+                ]
+
+                run_algos(Algorithms, const.PROBS_CONSIDERED, budget, dimension, const.REPETITIONS, const.TEST_INSTANCES, True, output_dir)
+                time = datetime.datetime.now().strftime("%H-%M-%S")
+                print(f"({time}) Finished Budget: {budget}, Dimension: {dimension}")
+
+            else: 
+                job_script = create_job_script(budget, dimension, output_dir)
+                job_script_dir = output_dir / f"B{budget}_D{'_'.join(map(str, dimension))}"
+                os.makedirs(job_script_dir, exist_ok=True)
+                job_script_path = job_script_dir / "slurm.sh"
+
+                with open(job_script_path, 'w') as file:
+                    file.write(job_script)
+                
+                # Submit the job script
+                os.system(f"sbatch {job_script_path}")
