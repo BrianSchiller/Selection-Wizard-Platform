@@ -149,7 +149,7 @@ def assign_points_test(dimensionalities: list[int],
             loss_log = []
 
             for problem in problems:
-                instances = const.TEST_INSTANCES if test_bbob else [1]
+                instances = perf_data['instance'].unique()
 
                 for instance in instances:
                     if instance == 1:
@@ -306,7 +306,7 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     num_dim = len(dimensions)
     num_bud = len(budgets)
     
-    fig, axes = plt.subplots(num_dim, num_bud, figsize=(5 * num_bud, 5 * num_dim), squeeze=False)
+    fig, axes = plt.subplots(num_bud, num_dim, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
     algorithm_colors = const.COLORS
 
     print("Plotting top algorithms")
@@ -323,12 +323,12 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
             colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
             
             # Create the bar plot in the corresponding subplot with algorithms on the x-axis
-            sns.barplot(ax=axes[dim_idx, bud_idx], x='algorithm', y='points test', data=top_algorithms, palette=colors)
+            sns.barplot(ax=axes[bud_idx, dim_idx], y='algorithm', x='points test', data=top_algorithms, palette=colors)
             
-            axes[dim_idx, bud_idx].set_title(f'Dimension {dimension}, Budget {budget}')
-            axes[dim_idx, bud_idx].set_xlabel('')
-            axes[dim_idx, bud_idx].set_ylabel('Points Test')
-            axes[dim_idx, bud_idx].set_xticklabels(axes[dim_idx, bud_idx].get_xticklabels(), rotation=45, ha='right')
+            axes[bud_idx, dim_idx].set_title(f'Dimension {dimension}, Budget {budget}')
+            axes[bud_idx, dim_idx].set_ylabel('')
+            axes[bud_idx, dim_idx].set_xlabel('Points Test')
+            # axes[bud_idx, dim_idx].set_xticklabels(axes[dim_idx, bud_idx].get_xticklabels(), rotation=45, ha='right')
         
     # Adjust layout to prevent overlap
     plt.tight_layout()
