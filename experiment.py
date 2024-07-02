@@ -37,8 +37,6 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
             MA-BBOB data.
     """
     csv_dir = Path("csvs")
-    out_dir = csv_dir / ("bbob_test" if test_bbob else "ma-bbob")
-    out_dir.mkdir(parents=True, exist_ok=True)
     ngopt_v_data = "_1v1" if ngopt_vs_data else ""
 
     # Get all .csv files in the data directory
@@ -84,9 +82,9 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     ranking["rank test"] = None
 
     # Prepare and check output paths
-    failed_csv_path = out_dir / f"ranking{ngopt_v_data}_failed.csv"
-    perf_csv_path = out_dir / f"perf_data{ngopt_v_data}.csv"
-    rank_csv_path = out_dir / f"ranking{ngopt_v_data}.csv"
+    failed_csv_path = data_dir / f"ranking{ngopt_v_data}_failed.csv"
+    perf_csv_path = data_dir / f"perf_data{ngopt_v_data}.csv"
+    rank_csv_path = data_dir / f"ranking{ngopt_v_data}.csv"
     csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path]
     csv_paths = [csv_path for csv_path in csv_paths if csv_path.is_file()]
 
