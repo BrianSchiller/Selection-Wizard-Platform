@@ -328,8 +328,8 @@ def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
 
 def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     data = pd.read_csv(ranking_csv)
-    dimensions = data['dimensions'].unique()
-    budgets = data['budget'].unique()
+    dimensions = np.sort(data['dimensions'].unique())
+    budgets = np.sort(data['budget'].unique())
 
     num_dim = len(dimensions)
     num_bud = len(budgets)

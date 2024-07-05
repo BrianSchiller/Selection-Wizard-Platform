@@ -335,16 +335,18 @@ if __name__ == "__main__":
     # Default Algorithms
     if args.slurm == False:
         Cobyla_Def = Cobyla() 
-        CMA_Def = CMA(get_config("CMA", None, None, True), "CMA") 
-        ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", None, None, True), "ChainMetaModelPowell") 
-        MetaModel_Def = MetaModel(get_config("MetaModel", None, None, True), "MetaModel") 
         MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", None, None, True), "MetaModelOnePlusOne") 
         MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", None, None, True), "MetaModelFmin2") 
 
     for dimension in dimensions:
+        # Popsize of default depends on dimension
+        CMA_Def = CMA(get_config("CMA", dimension, None, True), "CMA") 
+        ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimension, None, True), "ChainMetaModelPowell") 
+        MetaModel_Def = MetaModel(get_config("MetaModel", dimension, None, True), "MetaModel") 
+
         for budget in budgets:
             if args.slurm == False:
-                
+
                 CMA_Conf = CMA(get_config("CMA", dimension, budget)) 
                 ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimension, budget)) 
                 MetaModel_Conf = MetaModel(get_config("MetaModel", dimension, budget)) 
