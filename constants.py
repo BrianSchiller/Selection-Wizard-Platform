@@ -101,7 +101,7 @@ ALGO_COLOURS[39] = tmp
 COLORS = {
     'CMA': '#4381e6',
     'MetaModel': '#fcef74',
-    'MetaModelFmin2': '#b860e0',
+    'MetaModelFmin2': '#cc7ff0',
     'MetaModelOnePlusOne': '#e05164',
     'ChainMetaModelPowell': '#4ecf73',
     'Cobyla': '#999999',
@@ -111,18 +111,17 @@ COLORS = {
     'ChainMetaModelPowell_Conf': '#248f50',
     'MetaModel_Conf': 'gold',
     'MetaModelOnePlusOne_Conf': '#a62133',
-    'MetaModelFmin2_Conf': 'purple'
+    'MetaModelFmin2_Conf': '#8d44bd'
 }
 
-DIMS_CONSIDERED = [[2],[5]]
-BUDGETS_CONSIDERED = [200]
+DIMS_CONSIDERED = [[2], [5]]
+BUDGETS_CONSIDERED = [1000]
 REPETITIONS = 1
 # TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 #                   18, 19, 20, 21, 22, 23, 24, 25, 26]
 TEST_INSTANCES = [1,2,3,4,5,6,7,8]
 PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
                     18, 19, 20, 21, 22, 23, 24]
-# PROBS_CONSIDERED = [1, 2, 3, 4]
 PROB_NAMES = ["f1_Sphere",
               "f2_Ellipsoid",
               "f3_Rastrigin",

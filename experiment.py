@@ -41,13 +41,15 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
     # Get all .csv files in the data directory
     csv_files = data_dir.rglob('*.csv')
+    files_to_remove = {'ranking.csv', 'perf_data.csv'}
 
     # Read the data and collect it into a single DataFrame
     csv_dfs = list()
 
     for csv_file in csv_files:
-        print("Loading:", csv_file)
-        csv_dfs.append(pd.read_csv(csv_file))
+        if csv_file.name not in files_to_remove:
+            print("Loading:", csv_file)
+            csv_dfs.append(pd.read_csv(csv_file))
 
     perf_data = pd.concat(csv_dfs)
     perf_data.reset_index(drop=True, inplace=True)
@@ -80,6 +82,8 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     ranking = perf_data[['algorithm', 'dimensions', 'budget', 'algo ID']].drop_duplicates()
     ranking["points test"] = 0
     ranking["rank test"] = None
+    ranking["points test new"] = 0
+    ranking["rank test new"] = None
 
     # Prepare and check output paths
     failed_csv_path = data_dir / f"ranking{ngopt_v_data}_failed.csv"
@@ -150,17 +154,11 @@ def assign_points_test(dimensionalities: list[int],
                 instances = perf_data['instance'].unique()
 
                 for instance in instances:
-                    if instance == 1:
-                        perf_algos = perf_data.loc[
-                            (perf_data["dimensions"] == dimension)
-                            & (perf_data["budget"] == budget)
-                            & (perf_data["problem"] == problem)]
-                    else:
-                        perf_algos = perf_data.loc[
-                            (perf_data["dimensions"] == dimension)
-                            & (perf_data["budget"] == budget)
-                            & (perf_data["problem"] == problem)
-                            & (perf_data["instance"] == instance)]
+                    perf_algos = perf_data.loc[
+                        (perf_data["dimensions"] == dimension)
+                        & (perf_data["budget"] == budget)
+                        & (perf_data["problem"] == problem)
+                        & (perf_data["instance"] == instance)]
 
                     # Check for each run whether it was successful
                     failed = perf_algos.loc[perf_algos["status"] != 1]
@@ -257,6 +255,38 @@ def assign_points_test(dimensionalities: list[int],
                         & (ranking["budget"] == budget),
                         "rank test"] = ranks
 
+                        ### New Ranking Method, giving points to top 5 algorithms
+            scores = {}
+            for i in range(1,6):
+                new_top_ranks = perf_data.loc[
+                    (perf_data["dimensions"] == dimension)
+                    & (perf_data["budget"] == budget)
+                    & (perf_data["rank"] == i), "algorithm"].values
+                algos, counts = np.unique(new_top_ranks, return_counts=True)
+                scores[i] = {"algos": algos, "counts": counts}
+
+            points = {}
+            for algo in perf_data["algorithm"].unique():
+                points[algo] = 0
+            for i in range(1,6):
+                for algo, count in zip(scores[i]["algos"], scores[i]["counts"]):
+                    points[algo] += (6-i) * count
+
+            for algo in perf_data["algorithm"].unique():
+                ranking.loc[(ranking["dimensions"] == dimension)
+                            & (ranking["budget"] == budget)
+                            & (ranking["algorithm"] == algo),
+                            "points test new"] = points[algo]
+
+            points = ranking.loc[(ranking["dimensions"] == dimension)
+                                 & (ranking["budget"] == budget),
+                                 "points test new"].values
+            neg_points = [-1 * point for point in points]
+            ranks = ss.rankdata(neg_points, method="min")
+            ranking.loc[(ranking["dimensions"] == dimension)
+                        & (ranking["budget"] == budget),
+                        "rank test new"] = ranks
+
             dim_bud_ranks = ranking.loc[
                 (ranking["dimensions"] == dimension)
                 & (ranking["budget"] == budget)]
@@ -304,38 +334,42 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     num_dim = len(dimensions)
     num_bud = len(budgets)
     
-    fig, axes = plt.subplots(num_bud, num_dim, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
     algorithm_colors = const.COLORS
 
     print("Plotting top algorithms")
+    point_sets = ["points test", "points test new"]
+    for points in point_sets:
+        fig, axes = plt.subplots(num_bud, num_dim, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
+        for dim_idx, dimension in enumerate(dimensions):
+            for bud_idx, budget in enumerate(budgets):
 
-    for dim_idx, dimension in enumerate(dimensions):
-        for bud_idx, budget in enumerate(budgets):
-
-            subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
+                subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
+                
+                # Sort the data by 'points test' in descending order and select the top n
+                top_algorithms = subset.sort_values(by=f'{points}', ascending=False).head(11)
+                
+                # Create a list of colors based on the algorithm names
+                colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
+                
+                # Create the bar plot in the corresponding subplot with algorithms on the x-axis
+                sns.barplot(ax=axes[bud_idx, dim_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=colors)
+                for index, value in enumerate(top_algorithms[f'{points}']):
+                    axes[bud_idx, dim_idx].text(value - value * 0.05, index, f'{value}', color='black', va="center", ha="right")
+                
+                axes[bud_idx, dim_idx].set_title(f'Dimension {dimension}, Budget {budget}')
+                axes[bud_idx, dim_idx].set_ylabel('')
+                axes[bud_idx, dim_idx].set_xlabel('Points')
             
-            # Sort the data by 'points test' in descending order and select the top n
-            top_algorithms = subset.sort_values(by='points test', ascending=False).head(11)
-            
-            # Create a list of colors based on the algorithm names
-            colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
-            
-            # Create the bar plot in the corresponding subplot with algorithms on the x-axis
-            sns.barplot(ax=axes[bud_idx, dim_idx], y='algorithm', x='points test', data=top_algorithms, palette=colors)
-            
-            axes[bud_idx, dim_idx].set_title(f'Dimension {dimension}, Budget {budget}')
-            axes[bud_idx, dim_idx].set_ylabel('')
-            axes[bud_idx, dim_idx].set_xlabel('Points Test')
-            # axes[bud_idx, dim_idx].set_xticklabels(axes[dim_idx, bud_idx].get_xticklabels(), rotation=45, ha='right')
-        
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-
-    output = output_dir / "top_algorithms.pdf"
+        # Adjust layout to prevent overlap
+        plt.tight_layout()
+        if points == "points test":
+            output = output_dir / "ranking_old.pdf"
+        else:
+            output = output_dir / "ranking.pdf"
     
-    # Save the plot
-    plt.savefig(output)
-    plt.close()
+        # Save the plot
+        plt.savefig(output)
+        plt.close()
 
     print("Top algorithms can be found in: ", output)
 

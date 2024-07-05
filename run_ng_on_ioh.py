@@ -295,7 +295,8 @@ def create_job_script(budget, dimensions, name):
 #SBATCH --mem-per-cpu=3000M
 
 # Activate virtual environment
-source venv/bin/activate
+module load Python/3.11
+source /storage/work/schiller/venvs/Selection/bin/activate
 
 # Run the experiment
 python run_ng_on_ioh.py  --name {name} --dimensions {' '.join(map(str, dimensions))} --budget {budget}
@@ -307,8 +308,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run algorithms on IOH Benchmarks.')
     parser.add_argument('--name', type=str, help='Name of the result folder', required=False)
     parser.add_argument('--slurm', type=str, help='Whether to run on Slurm', required=False, default=False)
-    parser.add_argument('--dimensions', type=str, help='Dimensions to run on', required=False, default=None)
-    parser.add_argument('--budget', type=str, help='Budgets to run on', required=False, default=None)
+    parser.add_argument('--dimensions', type=str, help='Dimensions to run on (slurm)', required=False, default=None)
+    parser.add_argument('--budget', type=str, help='Budgets to run on (slurm)', required=False, default=None)
     args = parser.parse_args()
 
     if args.dimensions is not None:
