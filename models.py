@@ -31,14 +31,20 @@ class MetaModelOnePlusOne:
             self.name = name
     
     def configure_optimizer(self):
+        if self.config["noise_handling"] == None:
+            noise_handling = None
+        else:
+            noise_handling = (self.config["noise_handling"], self.config["noise_frequency"])
+        
         OnePlusOne = ParametrizedOnePlusOne(
-            noise_handling=(self.config["noise_handling"], self.config["noise_frequency"]) if self.config["noise_handling"] is not None else None,
+            noise_handling = noise_handling,
             mutation=self.config["mutation"], 
             crossover=self.config["crossover"], 
             use_pareto=self.config["use_pareto"],
             sparse=self.config["sparse"], 
             smoother=self.config["smoother"]
         )
+    
         return ParametrizedMetaModel(
             multivariate_optimizer=OnePlusOne,
             algorithm=self.config["algorithm"],

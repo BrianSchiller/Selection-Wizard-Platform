@@ -9,7 +9,8 @@ import sys
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import TwoSlopeNorm, ListedColormap
+import matplotlib.patches as mpatches
 import seaborn as sns
 import numpy as np
 import scipy.stats as ss
@@ -103,7 +104,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         perf_csv_path, failed_csv_path, rank_csv_path, test_bbob)
 
     if plot:
-        test_plot_all(data_dir, rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob)
+        test_plot_all(data_dir, rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob, dimensionalities, budgets)
 
     return
 
@@ -255,7 +256,7 @@ def assign_points_test(dimensionalities: list[int],
                         & (ranking["budget"] == budget),
                         "rank test"] = ranks
 
-                        ### New Ranking Method, giving points to top 5 algorithms
+            ### New Ranking Method, giving points to top 5 algorithms
             scores = {}
             for i in range(1,6):
                 new_top_ranks = perf_data.loc[
@@ -301,7 +302,8 @@ def assign_points_test(dimensionalities: list[int],
 
 def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
                   perf_data: Path | pd.DataFrame = None,
-                  test_bbob: bool = False) -> None:
+                  test_bbob: bool = False, dimensionalities = None,
+                  budgets = None) -> None:
     """Generate all plots for test data on MA-BBOB or BBOB.
 
     Args:
@@ -320,10 +322,127 @@ def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
             MA-BBOB data.
     """
     file_name = "grid_test"
-
     plot_top_algorithms(ranking_csv, output_dir)
-
+    plot_algorithm_heatmap(ranking_csv, output_dir)
+    
+    for dim in dimensionalities:
+        for budget in budgets:
+            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}")
+            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", True)
     return
+
+def plot_points_per_problem(performance_csv: Path, dimension, budget, output_dir: Path, old_ranking = False):
+    df = pd.read_csv(performance_csv)
+    data = df.loc[
+            (df["dimensions"] == dimension)
+            & (df["budget"] == budget)]
+
+    # Initialize the plot
+    fig, axes = plt.subplots(4, 6, figsize=(20, 15))
+    axes = axes.flatten()
+    algorithm_colors = const.COLORS
+
+    # Get unique problems
+    problems = data['problem'].unique()
+    algorithms = data['algorithm'].unique()
+
+    # Plot each problem
+    for i, problem in enumerate(problems):
+        ax = axes[i]
+        problem_data = data[data['problem'] == problem]
+
+        points = []
+        for alg in algorithms:
+            algo_data = problem_data[problem_data["algorithm"] == alg]
+            if old_ranking:
+                count = (algo_data['rank'] == 1).sum()
+                points.append((alg, count))
+            else:
+                scores = {}
+                total_count = 0
+                for index in range(1,6):
+                    count = (algo_data['rank'] == index).sum()
+                    scores[index] = count
+                for index in range(1,6):
+                    total_count += (6 - index) * scores[index]
+                points.append((alg, total_count))
+        points_df = pd.DataFrame(points, columns=['Algorithm', 'Points'])
+        
+        colors = [algorithm_colors.get(algo, 'gray') for algo in points_df['Algorithm']]
+        sns.barplot(data=points_df, x='Points', y='Algorithm', ax=ax, palette=colors)
+        ax.set_title(problem)
+
+    # Adjust layout
+    plt.tight_layout()
+    if old_ranking:
+        output_path = output_dir  / "per-problem_old.pdf"
+    else:
+        output_path = output_dir  / "per-problem.pdf"
+        print(f"Points-per-Problem plot created for D: {dimension}, B: {budget}: {output_path}")
+    plt.savefig(output_path)
+    plt.close()
+
+
+def plot_algorithm_heatmap(ranking_csv: Path, output_dir: Path):
+    # Load data
+    data = pd.read_csv(ranking_csv)
+    config_data = pd.read_csv("csvs/configured_algos.csv")
+
+    dimensions = np.sort(data['dimensions'].unique())
+    budgets = np.sort(data['budget'].unique())
+
+    # Map algorithm names to indices
+    algorithm_index = config_data.set_index('full name')['ID'].to_dict()
+    algorithm_colors = const.COLORS
+
+    num_dim = len(dimensions)
+    num_bud = len(budgets)
+
+    point_sets = ["points test", "points test new"]
+    for points in point_sets:
+        heatmap_data = pd.DataFrame(index=dimensions, columns=budgets, dtype=int)
+
+        # Populate heatmap data
+        for dim_idx, dimension in enumerate(dimensions):
+            for bud_idx, budget in enumerate(budgets):
+                subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
+                if not subset.empty:
+                    top_algorithm = subset.sort_values(by=points, ascending=False).iloc[0]['algorithm']
+                    heatmap_data.at[dimension, budget] = algorithm_index[top_algorithm]
+
+        # Plot heatmap
+        fig, ax = plt.subplots(figsize=(5 * num_bud, 5 * num_dim))
+
+        # Create a colormap where each algorithm has its own color
+        unique_indices = heatmap_data.values.flatten()
+        unique_indices = np.unique([idx for idx in unique_indices if pd.notnull(idx)])
+        colors = [algorithm_colors.get(config_data[config_data['ID'] == idx]['full name'].values[0], 'gray') 
+                for idx in unique_indices]
+        colormap = ListedColormap(colors)
+
+        sns.heatmap(heatmap_data, annot=True, fmt='g', cmap=colormap, cbar=False, ax=ax)
+
+        ax.set_title('Top Algorithm by Dimension and Budget')
+        ax.set_xlabel('Budget')
+        ax.set_ylabel('Dimensions')
+
+        # Create a legend
+        handles = []
+        for idx in unique_indices:
+            algo_name = config_data[config_data['ID'] == idx]['short name'].values[0]
+            color = algorithm_colors.get(config_data[config_data['ID'] == idx]['full name'].values[0], 'gray')
+            handles.append(mpatches.Patch(color=color, label=f'{idx}: {algo_name}'))
+        ax.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+        plt.tight_layout()
+        if points == "points test":
+            output = output_dir / "plots" / "algorithm_heatmap_old.pdf"
+        else:
+            output = output_dir / "plots" / "algorithm_heatmap.pdf"
+            print("Heatmap saved to: ", output)
+        
+        plt.savefig(output)
+        plt.close()
 
 
 def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
@@ -362,10 +481,13 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
             
         # Adjust layout to prevent overlap
         plt.tight_layout()
+        # Create the plots folder
+        output = output_dir / "plots"
+        output.mkdir(parents=True, exist_ok=True)
         if points == "points test":
-            output = output_dir / "ranking_old.pdf"
+            output = output / "ranking_old.pdf"
         else:
-            output = output_dir / "ranking.pdf"
+            output = output / "ranking.pdf"
     
         # Save the plot
         plt.savefig(output)

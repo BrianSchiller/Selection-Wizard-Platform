@@ -21,4 +21,4 @@ if __name__ == "__main__":
     # for directory in subdirectories:
     #     analyse_test_csvs(Path(directory), test_bbob=True)
 
-    analyse_test_csvs(Path("Output/B200_Test"), test_bbob=True)
+    analyse_test_csvs(Path("Output/D3_B200-300-Training_20240708_09-53-40"), test_bbob=True)

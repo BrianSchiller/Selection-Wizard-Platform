@@ -114,8 +114,10 @@ COLORS = {
     'MetaModelFmin2_Conf': '#8d44bd'
 }
 
-DIMS_CONSIDERED = [[2], [5]]
-BUDGETS_CONSIDERED = [1000]
+PARTITION = "Kathleen"
+
+DIMS_CONSIDERED = [[3]]
+BUDGETS_CONSIDERED = [200,300,500]
 REPETITIONS = 1
 # TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
 #                   18, 19, 20, 21, 22, 23, 24, 25, 26]

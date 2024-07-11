@@ -289,7 +289,7 @@ def create_job_script(budget, dimensions, name):
 #SBATCH --output={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.out
 #SBATCH --error={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.err
 #SBATCH --time=10:00:00
-#SBATCH --partition=Kathleen
+#SBATCH --partition={const.PARTITION}
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --mem-per-cpu=3000M
