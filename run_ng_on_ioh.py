@@ -283,12 +283,12 @@ def write_scenario_file(output_dir):
         with open(f"{output_dir}/scenario.json", "w") as json_file:
             json.dump(data, json_file, indent=4)
 
-def create_job_script(budget, dimensions, name):
+def create_job_script(budget, dimensions, instances, repetitions, name):
     script_content = f"""#!/bin/bash
 #SBATCH --job-name=K_D{'_'.join(map(str, dimensions))}_B{budget}
 #SBATCH --output={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.out
 #SBATCH --error={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.err
-#SBATCH --time=10:00:00
+#SBATCH --time={const.TIME}
 #SBATCH --partition={const.PARTITION}
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -299,7 +299,7 @@ module load Python/3.11
 source /storage/work/schiller/venvs/Selection/bin/activate
 
 # Run the experiment
-python run_ng_on_ioh.py  --name {name} --dimensions {' '.join(map(str, dimensions))} --budget {budget}
+python run_ng_on_ioh.py  --name {name} --dimensions "{json.dumps(dimensions)}" --budget {budget} --instances "{json.dumps(instances)}" --repetitions {repetitions}
 """
     return script_content
 
@@ -310,10 +310,12 @@ if __name__ == "__main__":
     parser.add_argument('--slurm', type=str, help='Whether to run on Slurm', required=False, default=False)
     parser.add_argument('--dimensions', type=str, help='Dimensions to run on (slurm)', required=False, default=None)
     parser.add_argument('--budget', type=str, help='Budgets to run on (slurm)', required=False, default=None)
+    parser.add_argument('--instances', type=str, help='Instances to run on (slurm)', required=False, default=None)
+    parser.add_argument('--repetitions', type=str, help='How often to run on each instance', required=False, default=None)
     args = parser.parse_args()
 
     if args.dimensions is not None:
-        dimensions = [[int(args.dimensions)]]
+        dimensions = [json.loads(args.dimensions)]
     else:
         dimensions = const.DIMS_CONSIDERED
 
@@ -321,6 +323,16 @@ if __name__ == "__main__":
         budgets = [int(args.budget)]
     else:
         budgets = const.BUDGETS_CONSIDERED
+
+    if args.instances is not None:
+        instances = json.loads(args.instances)
+    else:
+        instances = const.TEST_INSTANCES
+
+    if args.repetitions is not None:
+        repetitions = int(args.repetitions)
+    else:
+        repetitions = const.REPETITIONS
 
     # Prepare Output Directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
@@ -367,12 +379,12 @@ if __name__ == "__main__":
                     MetaModelFmin2_Conf
                 ]
 
-                run_algos(Algorithms, const.PROBS_CONSIDERED, budget, dimension, const.REPETITIONS, const.TEST_INSTANCES, True, output_dir)
+                run_algos(Algorithms, const.PROBS_CONSIDERED, budget, dimension, repetitions, instances, True, output_dir)
                 time = datetime.datetime.now().strftime("%H-%M-%S")
                 print(f"({time}) Finished Budget: {budget}, Dimension: {dimension}")
 
             else: 
-                job_script = create_job_script(budget, dimension, output_dir)
+                job_script = create_job_script(budget, dimension, instances, repetitions, output_dir)
                 job_script_dir = output_dir / f"B{budget}_D{'_'.join(map(str, dimension))}"
                 os.makedirs(job_script_dir, exist_ok=True)
                 job_script_path = job_script_dir / "slurm.sh"

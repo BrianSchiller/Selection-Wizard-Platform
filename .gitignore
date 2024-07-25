@@ -1,6 +1,6 @@
 __pycache__/
 venv/
-OUTPUT/
+Comparison/
 Output/
 data_*/
 *.swp

@@ -31,7 +31,7 @@ class MetaModelOnePlusOne:
             self.name = name
     
     def configure_optimizer(self):
-        if self.config["noise_handling"] == None:
+        if self.config["noise_handling"] == None or self.config["noise_handling"] == "None":
             noise_handling = None
         else:
             noise_handling = (self.config["noise_handling"], self.config["noise_frequency"])

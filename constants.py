@@ -114,14 +114,15 @@ COLORS = {
     'MetaModelFmin2_Conf': '#8d44bd'
 }
 
-PARTITION = "Kathleen"
+PARTITION = "Test"
+TIME = "00:20:00"
 
-DIMS_CONSIDERED = [[3]]
-BUDGETS_CONSIDERED = [200,300,500]
-REPETITIONS = 1
-# TEST_INSTANCES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
-#                   18, 19, 20, 21, 22, 23, 24, 25, 26]
+DIMS_CONSIDERED = [[2], [3], [5]]
+BUDGETS_CONSIDERED = [200, 300, 500]
+REPETITIONS = 3
 TEST_INSTANCES = [1,2,3,4,5,6,7,8]
+# TEST_INSTANCES = [9, 10, 11, 12, 13, 14, 15, 16, 17,
+                    # 18, 19, 20, 21, 22, 23, 24, 25, 26]
 PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
                     18, 19, 20, 21, 22, 23, 24]
 PROB_NAMES = ["f1_Sphere",
@@ -149,6 +150,8 @@ PROB_NAMES = ["f1_Sphere",
               "f23_Katsuura",
               "f24_LunacekBiRastrigin"
               ]
+
+COMPARE_INSTANCES = [27, 28, 29, 30]
 
 # Plotting constants
 FONT_SIZE_ALGO_ID = 9

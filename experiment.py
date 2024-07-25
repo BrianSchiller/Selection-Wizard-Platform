@@ -6,6 +6,7 @@ from pathlib import PurePath
 import json
 import statistics
 import sys
+import os
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,7 +43,7 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
 
     # Get all .csv files in the data directory
     csv_files = data_dir.rglob('*.csv')
-    files_to_remove = {'ranking.csv', 'perf_data.csv'}
+    files_to_remove = {'ranking.csv', 'perf_data.csv', 'ranking_conf.csv', 'perf_data_conf.csv', 'ranking_def.csv', 'perf_data_def.csv',}
 
     # Read the data and collect it into a single DataFrame
     csv_dfs = list()
@@ -90,21 +91,54 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     failed_csv_path = data_dir / f"ranking{ngopt_v_data}_failed.csv"
     perf_csv_path = data_dir / f"perf_data{ngopt_v_data}.csv"
     rank_csv_path = data_dir / f"ranking{ngopt_v_data}.csv"
-    csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path]
+
+    failed_csv_path_conf = data_dir / f"ranking{ngopt_v_data}_failed_conf.csv"
+    perf_csv_path_conf = data_dir / f"perf_data{ngopt_v_data}_conf.csv"
+    rank_csv_path_conf = data_dir / f"ranking{ngopt_v_data}_conf.csv"
+
+    failed_csv_path_def = data_dir / f"ranking{ngopt_v_data}_failed_def.csv"
+    perf_csv_path_def = data_dir / f"perf_data{ngopt_v_data}_def.csv"
+    rank_csv_path_def = data_dir / f"ranking{ngopt_v_data}_def.csv"
+
+    csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path, failed_csv_path_conf, perf_csv_path_conf, rank_csv_path_conf, failed_csv_path_def, perf_csv_path_def, rank_csv_path_def]
     csv_paths = [csv_path for csv_path in csv_paths if csv_path.is_file()]
 
     for csv_path in csv_paths:
-        new_csv_path = csv_path.with_suffix(".old")
-        # print(f"Output file {csv_path} already exists, moving it to "
-        #       f"{new_csv_path}")
-        csv_path.rename(new_csv_path)
+        csv_path.unlink()
 
+    # Normal experiment, comparing default and configured algorithms
     assign_points_test(
         dimensionalities, budgets, problems, perf_data, ranking,
         perf_csv_path, failed_csv_path, rank_csv_path, test_bbob)
 
+    # Altered experiment, only comparing configured algorithms
+    perf_data_conf = perf_data[perf_data["algorithm"].str.endswith("Conf") | (perf_data["algorithm"] == "Cobyla")]
+    rank_data_conf = ranking[ranking["algorithm"].str.endswith("Conf") | (ranking["algorithm"] == "Cobyla")]
+    assign_points_test(
+        dimensionalities, budgets, problems, perf_data_conf, rank_data_conf,
+        perf_csv_path_conf, failed_csv_path_conf, rank_csv_path_conf, test_bbob)
+    
+    # Altered experiment, only comparing configured algorithms
+    perf_data_def = perf_data[~perf_data["algorithm"].str.endswith("Conf")]
+    rank_data_def = ranking[~ranking["algorithm"].str.endswith("Conf")]
+    assign_points_test(
+        dimensionalities, budgets, problems, perf_data_def, rank_data_def,
+        perf_csv_path_def, failed_csv_path_def, rank_csv_path_def, test_bbob)
+
+
     if plot:
-        test_plot_all(data_dir, rank_csv_path, ngopt_vs_data, perf_csv_path, test_bbob, dimensionalities, budgets)
+        print()
+        print("Plotting regular scenario")
+        print()
+        test_plot_all(data_dir / "plots", rank_csv_path, perf_csv_path, dimensionalities, budgets)
+        print()
+        print("Plotting configured only scenario")
+        print()
+        test_plot_all(data_dir / "plots_conf", rank_csv_path_conf, perf_csv_path_conf, dimensionalities, budgets, "Conf")
+        print()
+        print("Plotting default only scenario")
+        print()
+        test_plot_all(data_dir / "plots_def", rank_csv_path_def, perf_csv_path_def, dimensionalities, budgets, "Def")
 
     return
 
@@ -155,59 +189,64 @@ def assign_points_test(dimensionalities: list[int],
                 instances = perf_data['instance'].unique()
 
                 for instance in instances:
-                    perf_algos = perf_data.loc[
-                        (perf_data["dimensions"] == dimension)
-                        & (perf_data["budget"] == budget)
-                        & (perf_data["problem"] == problem)
-                        & (perf_data["instance"] == instance)]
+                    seeds = perf_data['seed'].unique()
 
-                    # Check for each run whether it was successful
-                    failed = perf_algos.loc[perf_algos["status"] != 1]
+                    for seed in seeds:
 
-                    # Add failed runs to csv
-                    if len(failed.index) > 0:
-                        failed.to_csv(
-                            failed_csv_path, mode="a",
-                            header=not Path(failed_csv_path).exists(),
-                            index=False)
+                        perf_algos = perf_data.loc[
+                            (perf_data["dimensions"] == dimension)
+                            & (perf_data["budget"] == budget)
+                            & (perf_data["problem"] == problem)
+                            & (perf_data["instance"] == instance)
+                            & (perf_data["seed"] == seed)]
 
-                    for _, run in failed.iterrows():
-                        error = run["status"]
-                        err_str = (f"Run FAILED with error code: {error} for "
-                                   f"algorithm {run['algorithm']} on "
-                                   f"D{dimension}B{budget} on problem "
-                                   f"{problem}")
-                        err_str = (f"{err_str}, instance {run['instance']}"
-                                   if test_bbob else err_str)
-                        print(err_str)
+                        # Check for each run whether it was successful
+                        failed = perf_algos.loc[perf_algos["status"] != 1]
 
-                    # Get performance and indices
-                    perfs = perf_algos["performance"].values
-                    indices.extend(list(perf_algos["performance"].index))
+                        # Add failed runs to csv
+                        if len(failed.index) > 0:
+                            failed.to_csv(
+                                failed_csv_path, mode="a",
+                                header=not Path(failed_csv_path).exists(),
+                                index=False)
 
-                    # Rank the algorithms by performance on this
-                    # dimension-budget-problem combination
-                    # The "min" method resolves ties by assigning the
-                    # minimum of the ranks of all tied methods. E.g., if
-                    # the best two are tied, they get the minimum of rank 1
-                    # and 2 = 1.
-                    ranks.extend(
-                        ss.rankdata(perfs, method="min", nan_policy="omit"))
+                        for _, run in failed.iterrows():
+                            error = run["status"]
+                            err_str = (f"Run FAILED with error code: {error} for "
+                                    f"algorithm {run['algorithm']} on "
+                                    f"D{dimension}B{budget} on problem "
+                                    f"{problem}")
+                            err_str = (f"{err_str}, instance {run['instance']}"
+                                    if test_bbob else err_str)
+                            print(err_str)
 
-                    # Compute percentage loss to best (and handle case where
-                    # best is 0)
-                    if len(perfs) == 0:
-                        print('ERROR: Empty performance list. Check that the problem instance settings are correct.')
-                        break
-                    perfs_1 = perfs + 1
-                    best = min(perfs_1)
-                    loss_percent.extend((perfs_1 - best) / best * 100)
+                        # Get performance and indices
+                        perfs = perf_algos["performance"].values
+                        indices.extend(list(perf_algos["performance"].index))
 
-                    # Compute log loss to best
-                    minimum = 0.00000000001
-                    perfs_min = np.maximum(perfs, minimum)
-                    best = min(perfs_min)
-                    loss_log.extend(np.log10(perfs_min) - np.log10(best))
+                        # Rank the algorithms by performance on this
+                        # dimension-budget-problem combination
+                        # The "min" method resolves ties by assigning the
+                        # minimum of the ranks of all tied methods. E.g., if
+                        # the best two are tied, they get the minimum of rank 1
+                        # and 2 = 1.
+                        ranks.extend(
+                            ss.rankdata(perfs, method="min", nan_policy="omit"))
+
+                        # Compute percentage loss to best (and handle case where
+                        # best is 0)
+                        if len(perfs) == 0:
+                            print('ERROR: Empty performance list. Check that the problem instance settings are correct.')
+                            break
+                        perfs_1 = perfs + 1
+                        best = min(perfs_1)
+                        loss_percent.extend((perfs_1 - best) / best * 100)
+
+                        # Compute log loss to best
+                        minimum = 0.00000000001
+                        perfs_min = np.maximum(perfs, minimum)
+                        best = min(perfs_min)
+                        loss_log.extend(np.log10(perfs_min) - np.log10(best))
 
             # Update DataFrame for this dimension-budget combination
             perf_data.loc[indices, "rank"] = ranks
@@ -300,10 +339,10 @@ def assign_points_test(dimensionalities: list[int],
                 index=False)
 
 
-def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
+def test_plot_all(output_dir: Path, ranking_csv: Path,
                   perf_data: Path | pd.DataFrame = None,
-                  test_bbob: bool = False, dimensionalities = None,
-                  budgets = None) -> None:
+                  dimensionalities = None,
+                  budgets = None, scenario = None) -> None:
     """Generate all plots for test data on MA-BBOB or BBOB.
 
     Args:
@@ -321,17 +360,18 @@ def test_plot_all(output_dir: Path, ranking_csv: Path, ngopt_vs_data: bool,
             data from BBOB test instances. If False, handle everything as
             MA-BBOB data.
     """
-    file_name = "grid_test"
     plot_top_algorithms(ranking_csv, output_dir)
     plot_algorithm_heatmap(ranking_csv, output_dir)
+
+    output_dir = Path(os.path.dirname(output_dir))
     
     for dim in dimensionalities:
         for budget in budgets:
-            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}")
-            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", True)
+            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", False, scenario)
+            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", True, scenario)
     return
 
-def plot_points_per_problem(performance_csv: Path, dimension, budget, output_dir: Path, old_ranking = False):
+def plot_points_per_problem(performance_csv: Path, dimension, budget, output_dir: Path, old_ranking = False, scenario: str = None):
     df = pd.read_csv(performance_csv)
     data = df.loc[
             (df["dimensions"] == dimension)
@@ -375,9 +415,19 @@ def plot_points_per_problem(performance_csv: Path, dimension, budget, output_dir
     # Adjust layout
     plt.tight_layout()
     if old_ranking:
-        output_path = output_dir  / "per-problem_old.pdf"
+        if scenario == "Conf":
+            output_path = output_dir  / "per-problem_old__conf.pdf"
+        elif scenario == "Def":
+            output_path = output_dir  / "per-problem_old__def.pdf"
+        else:
+            output_path = output_dir  / "per-problem_old.pdf"
     else:
-        output_path = output_dir  / "per-problem.pdf"
+        if scenario == "Conf":
+            output_path = output_dir  / "per-problem__conf.pdf"
+        elif scenario == "Def":
+            output_path = output_dir  / "per-problem__def.pdf"
+        else:
+            output_path = output_dir  / "per-problem.pdf"
         print(f"Points-per-Problem plot created for D: {dimension}, B: {budget}: {output_path}")
     plt.savefig(output_path)
     plt.close()
@@ -411,7 +461,7 @@ def plot_algorithm_heatmap(ranking_csv: Path, output_dir: Path):
                     heatmap_data.at[dimension, budget] = algorithm_index[top_algorithm]
 
         # Plot heatmap
-        fig, ax = plt.subplots(figsize=(5 * num_bud, 5 * num_dim))
+        fig, ax = plt.subplots(figsize=(3 * num_bud, 2 * num_dim))
 
         # Create a colormap where each algorithm has its own color
         unique_indices = heatmap_data.values.flatten()
@@ -420,7 +470,9 @@ def plot_algorithm_heatmap(ranking_csv: Path, output_dir: Path):
                 for idx in unique_indices]
         colormap = ListedColormap(colors)
 
-        sns.heatmap(heatmap_data, annot=True, fmt='g', cmap=colormap, cbar=False, ax=ax)
+        index_to_color_idx = {idx: color_idx for color_idx, idx in enumerate(unique_indices)}
+        heatmap_mapped_data = heatmap_data.applymap(lambda x: index_to_color_idx[x])
+        sns.heatmap(heatmap_mapped_data, annot=heatmap_data, fmt='g', cmap=colormap, cbar=False, ax=ax)
 
         ax.set_title('Top Algorithm by Dimension and Budget')
         ax.set_xlabel('Budget')
@@ -436,9 +488,9 @@ def plot_algorithm_heatmap(ranking_csv: Path, output_dir: Path):
 
         plt.tight_layout()
         if points == "points test":
-            output = output_dir / "plots" / "algorithm_heatmap_old.pdf"
+            output = output_dir / "algorithm_heatmap_old.pdf"
         else:
-            output = output_dir / "plots" / "algorithm_heatmap.pdf"
+            output = output_dir / "algorithm_heatmap.pdf"
             print("Heatmap saved to: ", output)
         
         plt.savefig(output)
@@ -458,36 +510,36 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     print("Plotting top algorithms")
     point_sets = ["points test", "points test new"]
     for points in point_sets:
-        fig, axes = plt.subplots(num_bud, num_dim, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
+        fig, axes = plt.subplots(num_dim, num_bud, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
         for dim_idx, dimension in enumerate(dimensions):
             for bud_idx, budget in enumerate(budgets):
 
                 subset = data[(data['dimensions'] == dimension) & (data['budget'] == budget)]
                 
                 # Sort the data by 'points test' in descending order and select the top n
-                top_algorithms = subset.sort_values(by=f'{points}', ascending=False).head(11)
+                algorithms = len(data['algorithm'].unique())
+                top_algorithms = subset.sort_values(by=f'{points}', ascending=False).head(algorithms)
                 
                 # Create a list of colors based on the algorithm names
                 colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
                 
                 # Create the bar plot in the corresponding subplot with algorithms on the x-axis
-                sns.barplot(ax=axes[bud_idx, dim_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=colors)
+                sns.barplot(ax=axes[dim_idx, bud_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=colors)
                 for index, value in enumerate(top_algorithms[f'{points}']):
-                    axes[bud_idx, dim_idx].text(value - value * 0.05, index, f'{value}', color='black', va="center", ha="right")
+                    axes[dim_idx, bud_idx].text(value - value * 0.05, index, f'{value}', color='black', va="center", ha="right")
                 
-                axes[bud_idx, dim_idx].set_title(f'Dimension {dimension}, Budget {budget}')
-                axes[bud_idx, dim_idx].set_ylabel('')
-                axes[bud_idx, dim_idx].set_xlabel('Points')
+                axes[dim_idx, bud_idx].set_title(f'Dimension {dimension}, Budget {budget}')
+                axes[dim_idx, bud_idx].set_ylabel('')
+                axes[dim_idx, bud_idx].set_xlabel('Points')
             
         # Adjust layout to prevent overlap
         plt.tight_layout()
         # Create the plots folder
-        output = output_dir / "plots"
-        output.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
         if points == "points test":
-            output = output / "ranking_old.pdf"
+            output = output_dir / "ranking_old.pdf"
         else:
-            output = output / "ranking.pdf"
+            output = output_dir / "ranking.pdf"
     
         # Save the plot
         plt.savefig(output)
