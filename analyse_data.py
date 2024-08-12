@@ -13,12 +13,8 @@ from experiment import test_plot_all
 
 
 if __name__ == "__main__":
-    # directory = "Output/Eval_20240701_13-10-50"
+    parser = argparse.ArgumentParser(description='Run algorithms on IOH Benchmarks.')
+    parser.add_argument('--general', type=str, help='Whether to run on Slurm', required=False, default=False)
+    args = parser.parse_args()
 
-    # subdirectories = [os.path.join(directory, name) for name in os.listdir(directory)
-    #                   if os.path.isdir(os.path.join(directory, name))]
-
-    # for directory in subdirectories:
-    #     analyse_test_csvs(Path(directory), test_bbob=True)
-
-    analyse_test_csvs(Path("Output/D3_B200-300-Training_20240708_09-53-40"), test_bbob=True)
+    analyse_test_csvs(Path("Output/Final_Train"), test_bbob=True, general=args.general)

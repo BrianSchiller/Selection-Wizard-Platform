@@ -21,7 +21,8 @@ import constants as const
 
 
 def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
-                      plot: bool = True, test_bbob: bool = False) -> None:
+                      plot: bool = True, test_bbob: bool = False,
+                      general: bool = False) -> None:
     """Read and analyse preprocessed .csv files with performance data.
 
     Args:
@@ -99,8 +100,12 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
     failed_csv_path_def = data_dir / f"ranking{ngopt_v_data}_failed_def.csv"
     perf_csv_path_def = data_dir / f"perf_data{ngopt_v_data}_def.csv"
     rank_csv_path_def = data_dir / f"ranking{ngopt_v_data}_def.csv"
+    
+    failed_csv_path_gen = data_dir / f"ranking{ngopt_v_data}_failed_gen.csv"
+    perf_csv_path_gen = data_dir / f"perf_data{ngopt_v_data}_gen.csv"
+    rank_csv_path_gen = data_dir / f"ranking{ngopt_v_data}_gen.csv"
 
-    csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path, failed_csv_path_conf, perf_csv_path_conf, rank_csv_path_conf, failed_csv_path_def, perf_csv_path_def, rank_csv_path_def]
+    csv_paths = [failed_csv_path, perf_csv_path, rank_csv_path, failed_csv_path_conf, perf_csv_path_conf, rank_csv_path_conf, failed_csv_path_def, perf_csv_path_def, rank_csv_path_def, failed_csv_path_gen, perf_csv_path_gen, rank_csv_path_gen]
     csv_paths = [csv_path for csv_path in csv_paths if csv_path.is_file()]
 
     for csv_path in csv_paths:
@@ -118,12 +123,20 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         dimensionalities, budgets, problems, perf_data_conf, rank_data_conf,
         perf_csv_path_conf, failed_csv_path_conf, rank_csv_path_conf, test_bbob)
     
-    # Altered experiment, only comparing configured algorithms
-    perf_data_def = perf_data[~perf_data["algorithm"].str.endswith("Conf")]
-    rank_data_def = ranking[~ranking["algorithm"].str.endswith("Conf")]
+    # Altered experiment, only comparing default algorithms
+    perf_data_def = perf_data[~perf_data["algorithm"].str.endswith(("Conf", "Gen"))]
+    rank_data_def = ranking[~ranking["algorithm"].str.endswith(("Conf", "Gen"))]
     assign_points_test(
         dimensionalities, budgets, problems, perf_data_def, rank_data_def,
         perf_csv_path_def, failed_csv_path_def, rank_csv_path_def, test_bbob)
+
+    # If general is set, compare general configured algorithms
+    if general:
+        perf_data_gen = perf_data[perf_data["algorithm"].str.endswith("Gen") | (perf_data["algorithm"] == "Cobyla")]
+        rank_data_gen = ranking[ranking["algorithm"].str.endswith("Gen") | (ranking["algorithm"] == "Cobyla")]
+        assign_points_test(
+            dimensionalities, budgets, problems, perf_data_gen, rank_data_gen,
+            perf_csv_path_gen, failed_csv_path_gen, rank_csv_path_gen, test_bbob)
 
 
     if plot:
@@ -139,6 +152,14 @@ def analyse_test_csvs(data_dir: Path, ngopt_vs_data: bool = False,
         print("Plotting default only scenario")
         print()
         test_plot_all(data_dir / "plots_def", rank_csv_path_def, perf_csv_path_def, dimensionalities, budgets, "Def")
+        if general:
+            print()
+            print("Plotting general only scenario")
+            print()
+            test_plot_all(data_dir / "plots_gen", rank_csv_path_gen, perf_csv_path_gen, dimensionalities, budgets, "Gen")
+
+
+
 
     return
 
@@ -365,10 +386,11 @@ def test_plot_all(output_dir: Path, ranking_csv: Path,
 
     output_dir = Path(os.path.dirname(output_dir))
     
-    for dim in dimensionalities:
-        for budget in budgets:
-            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", False, scenario)
-            plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", True, scenario)
+    if not scenario == "Gen":
+        for dim in dimensionalities:
+            for budget in budgets:
+                plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", False, scenario)
+                plot_points_per_problem(perf_data, dim, budget, output_dir / f"B{budget}_D{dim}", True, scenario)
     return
 
 def plot_points_per_problem(performance_csv: Path, dimension, budget, output_dir: Path, old_ranking = False, scenario: str = None):
@@ -510,7 +532,7 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
     print("Plotting top algorithms")
     point_sets = ["points test", "points test new"]
     for points in point_sets:
-        fig, axes = plt.subplots(num_dim, num_bud, figsize=(5 * num_dim, 5 * num_bud), squeeze=False)
+        fig, axes = plt.subplots(num_dim, num_bud, figsize=(5 * num_bud, 5 * num_dim), squeeze=False)
         for dim_idx, dimension in enumerate(dimensions):
             for bud_idx, budget in enumerate(budgets):
 
@@ -519,9 +541,11 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
                 # Sort the data by 'points test' in descending order and select the top n
                 algorithms = len(data['algorithm'].unique())
                 top_algorithms = subset.sort_values(by=f'{points}', ascending=False).head(algorithms)
+                top_algorithms['color_algorithm'] = top_algorithms['algorithm'].str.replace('Gen', 'Conf')
+
                 
                 # Create a list of colors based on the algorithm names
-                colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['algorithm']]
+                colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['color_algorithm']]
                 
                 # Create the bar plot in the corresponding subplot with algorithms on the x-axis
                 sns.barplot(ax=axes[dim_idx, bud_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=colors)

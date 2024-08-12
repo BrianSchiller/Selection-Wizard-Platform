@@ -23,34 +23,54 @@ def get_optimiser(setting: tuple[int, int], optimiser: str) -> ConfiguredOptimiz
     if optimiser.endswith("Conf"):
         optimiser = optimiser.replace("_Conf", "")
         config = get_config(optimiser, [setting[0]], setting[1])
+        version = "_Conf"
+    elif optimiser.endswith("Gen"):
+        optimiser = optimiser.replace("_Gen", "")
+        print(setting)
+        if setting[0] == 235:
+            config = get_config(optimiser, [2,3,5], setting[1])
+        elif setting[0] == 1015:
+            config = get_config(optimiser, [10,15], setting[1])
+        elif setting[0] == 2351015:
+            config = get_config(optimiser, [2,3,5,10,15], setting[1])
+        else:
+            print(f"Cant find config for {optimiser} with dimensions {setting[0]}")
+        version = "_Gen"
     else:
-        config = get_config(optimiser, None, None, True)
+        config = get_config(optimiser, [setting[0]], None, True)
+        version = ""
 
     if optimiser == "CMA":
-        return CMA(config, "CMA")
+        return CMA(config, f"CMA{version}")
     if optimiser == "MetaModelOnePlusOne":
-        return MetaModelOnePlusOne(config, "MetaModelOnePlusOne")
+        return MetaModelOnePlusOne(config, f"MetaModelOnePlusOne{version}")
     if optimiser == "MetaModelFmin2":
-        return MetaModelFmin2(config, "MetaModelFmin2")
+        return MetaModelFmin2(config, f"MetaModelFmin2{version}")
     if optimiser == "ChainMetaModelPowell":
-        return ChainMetaModelPowell(config, "ChainMetaModelPowell")
+        return ChainMetaModelPowell(config, f"ChainMetaModelPowell{version}")
     if optimiser == "MetaModel":
-        return MetaModel(config, "MetaModel")
+        return MetaModel(config, f"MetaModel{version}")
     if optimiser == "Cobyla":
         return Cobyla()
     return None
 
-def run_optimiser(def_alg: str, conf_alg: str, dim: int, bud: int, output: Path):
+def run_optimiser(def_alg: str, conf_alg: str, dim: int, bud: int, output: Path, gen_alg: str = None):
     def_alg = get_optimiser((dim, bud), def_alg)
     conf_alg = get_optimiser((dim, bud), conf_alg)
     algs = [def_alg, conf_alg]
+    
+    if gen_alg is not None:
+        alg, _dim = gen_alg.split(".")
+        gen_alg = get_optimiser((int(_dim), bud), alg)
+        algs.append(gen_alg)
 
-    run_algos(algs, const.PROBS_CONSIDERED, bud, [dim], 1, const.COMPARE_INSTANCES, True, output)
+    run_algos(algs, const.PROBS_CONSIDERED, bud, dim, 1, const.COMPARE_INSTANCES, True, output)
 
     print("Finished!")
     
 
-def create_job_script(budget, dimension, def_alg, conf_alg, output):
+def create_job_script(budget, dimension, def_alg, conf_alg, output, gen_alg = None):
+    gen_alg_param = f" --gen_alg {gen_alg}" if gen_alg else ""
     script_content = f"""#!/bin/bash
 #SBATCH --job-name=C_{dimension}_{budget}
 #SBATCH --output={output}/B{budget}_D{dimension}/slurm.out
@@ -66,12 +86,13 @@ module load Python/3.11
 source /storage/work/schiller/venvs/Selection/bin/activate
 
 # Run the experiment
-python compare.py  --slurm True --dimension {dimension} --budget {budget} --def_alg {def_alg} --conf_alg {conf_alg} --output {output}
+python compare.py  --slurm True --dimension {dimension} --budget {budget} --def_alg {def_alg} --conf_alg {conf_alg} --output {output} {gen_alg_param}
 """
+
     return script_content
 
 
-def compare_selectors(dir: Path, eval: bool = False):
+def compare_selectors(dir: Path, eval: bool = False, general: bool = False):
     # Construct default selector
     df = pd.read_csv(dir / "ranking_def.csv")
     df_def = df[df['rank test new'] == 1]
@@ -81,12 +102,20 @@ def compare_selectors(dir: Path, eval: bool = False):
     df_conf = df[df['rank test new'] == 1]
     conf_selector = {(row['budget'], row['dimensions']): row['algorithm'] for index, row in df_conf.iterrows()}
 
+    if general:
+        df = pd.read_csv(dir / "ranking_gen.csv")
+        df_gen = df[df['rank test new'] == 1]
+        gen_selector = {(row['budget'], row['dimensions']): row['algorithm'] for index, row in df_gen.iterrows()}
+
     output = Path(f"Comparison/{dir.name}")
 
     if eval == False:
     # Run Selectors
         for key in def_selector:
-            job_script = create_job_script(key[0], key[1], def_selector[key], conf_selector[key], output)
+            if not general:
+                job_script = create_job_script(key[0], key[1], def_selector[key], conf_selector[key], output)
+            else:
+                job_script = create_job_script(key[0], key[1], def_selector[key], conf_selector[key], output, gen_selector[key])
             job_script_dir = output / f"B{key[0]}_D{key[1]}"
             os.makedirs(job_script_dir, exist_ok=True)
             job_script_path = job_script_dir / "slurm.sh"
@@ -95,25 +124,34 @@ def compare_selectors(dir: Path, eval: bool = False):
             
             os.system(f"sbatch {job_script_path}")
     else:
-        analyse_result(def_selector, conf_selector, output)
+        analyse_result(def_selector, conf_selector, output, gen_selector)
 
 def transform_performance(performance):
     performance = np.where(performance < 1e-10, 1e-10, performance)
     return np.log10(performance)
 
-def analyse_result(def_selector, conf_selector, output):
+def analyse_result(def_selector, conf_selector, output, gen_selector = None):
     performance = {}
     points = {}
     for key in def_selector:
         df_def = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{def_selector[key]}_processed/data.csv")
-
-        conf_alg = conf_selector[key].replace("_Conf", "")
-        df_conf = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{conf_alg}_processed/data.csv")
+        df_conf = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{conf_selector[key]}_processed/data.csv")
         
         # Calculate points
-        points_def = (df_conf['performance'] >= df_def['performance']).sum()
-        points_conf = (df_def['performance'] >= df_conf['performance']).sum()
-        points[key] = {"Def": points_def, "Conf": points_conf}
+        if gen_selector is None:
+            points_def = (df_def['performance'] <= df_conf['performance']).sum()
+            points_conf = (df_conf['performance'] <= df_def['performance']).sum()
+            points[key] = {"Def": points_def, "Conf": points_conf}
+        else:
+            df_gen = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{gen_selector[key]}_processed/data.csv")
+            points_def = ((df_def['performance'] <= df_conf['performance']) & 
+                      (df_def['performance'] <= df_gen['performance'])).sum()
+            points_conf = ((df_conf['performance'] <= df_def['performance']) & 
+                        (df_conf['performance'] <= df_gen['performance'])).sum()
+            points_gen = ((df_gen['performance'] <= df_def['performance']) & 
+                        (df_gen['performance'] <= df_conf['performance'])).sum()
+            points[key] = {"Def": points_def, "Gen": points_gen, "Conf": points_conf}
+
 
         # Calculate performance
         df_def["performance_trans"] = transform_performance(df_def["performance"])
@@ -121,6 +159,12 @@ def analyse_result(def_selector, conf_selector, output):
         perf_def = df_def["performance_trans"].sum()
         perf_conf = df_conf["performance_trans"].sum()
         performance[key] = {"Def": perf_def, "Conf": perf_conf}
+
+        if gen_selector is not None:
+            df_gen["performance_trans"] = transform_performance(df_gen["performance"])
+            perf_gen = df_gen["performance_trans"].sum()
+            performance[key] = {"Def": perf_def, "Conf": perf_conf, "Gen": perf_gen}
+            
     
     plot_heatmap(points, performance, output)
     plot_bar_graphs(points, performance, output)
@@ -157,12 +201,16 @@ def plot_bar_graphs(points, performance, output):
     points_data = [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Def', 'Points': v['Def']} 
                    for k, v in points.items()] + \
                   [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Conf', 'Points': v['Conf']} 
-                   for k, v in points.items()]
+                   for k, v in points.items()] + \
+                  [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Gen', 'Points': v['Gen']} 
+                   for k, v in points.items() if 'Gen' in v]
     
     performance_data = [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Def', 'Performance': v['Def']} 
                         for k, v in performance.items()] + \
                        [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Conf', 'Performance': v['Conf']} 
-                        for k, v in performance.items()]
+                        for k, v in performance.items()] + \
+                       [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Gen', 'Performance': v.get('Gen', 0)} 
+                        for k, v in performance.items() if 'Gen' in v]
 
     points_df = pd.DataFrame(points_data)
     performance_df = pd.DataFrame(performance_data)
@@ -176,7 +224,7 @@ def plot_bar_graphs(points, performance, output):
         
         fig, axes = plt.subplots(num_dimensions, num_budgets, figsize=(5*num_budgets, 5*num_dimensions), sharey=True, squeeze=False)
         bar_width = 0.8
-        colors = sns.color_palette('Set1', 2)
+        colors = sns.color_palette('Set1', 3)
 
         for dim_idx, dimension in enumerate(dimensions):
             for bud_idx, budget in enumerate(budgets):
@@ -186,7 +234,7 @@ def plot_bar_graphs(points, performance, output):
                 bar_positions = [i - bar_width/2 for i in range(len(subset))]
                 bars = ax.bar(bar_positions, subset[value_col], 
                               width=bar_width, label=subset['Algorithm'], 
-                              color=[colors[i] for i in subset['Algorithm'].map({'Conf': 0, 'Def': 1})])
+                              color=[colors[i] for i in subset['Algorithm'].map({'Conf': 0, 'Def': 1, "Gen": 2})])
                 
                 # Display values on top of bars
                 for bar in bars:
@@ -218,18 +266,31 @@ def plot_bar_graphs(points, performance, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run algorithms on IOH Benchmarks.')
-    parser.add_argument('--slurm', type=str, help='Whether to run on Slurm', required=False, default=False)
+    parser.add_argument('--general', type=str, help='Whether to include general configs', required=False, default=None)
     parser.add_argument('--eval', type=str, help='Whether to evaluate the results', required=False, default=False)
+    # Not to be set by users
+    # (Here slurm means that it was called by slurm, not that it calls slurm)
+    parser.add_argument('--slurm', type=str, help='Whether to run on Slurm', required=False, default=False)
     parser.add_argument('--dimension', type=int, help='Dimensions to run on (slurm)', required=False, default=None)
     parser.add_argument('--budget', type=int, help='Budgets to run on (slurm)', required=False, default=None)
     parser.add_argument('--def_alg', type=str, help='Default alg to run', required=False, default=None)
     parser.add_argument('--conf_alg', type=str, help='Conf alg to run', required=False, default=None)
     parser.add_argument('--output', type=str, help='Output directory', required=False, default=None)
+    parser.add_argument('--gen_alg', type=str, help='Output directory', required=False, default=None)
     args = parser.parse_args()
 
     if args.slurm == False:
-        compare_selectors(Path("Output/Final_Train"), args.eval)
+        compare_selectors(Path("Output/Final_Test"), args.eval, args.general)
     else:
-        run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output)
+        if args.gen_alg is None:
+            run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output)
+        else:
+            #TODO: A way to run the algorithm generalised for dim 2, 3, 5, 10, 15
+            if args.dimension < 10:
+                dim = "235"
+            else:
+                dim = "1015"
+            gen_alg = f"{args.gen_alg}.{dim}"
+            run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output, gen_alg)
 
 

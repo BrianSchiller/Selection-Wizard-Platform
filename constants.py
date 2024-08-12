@@ -72,7 +72,12 @@ ALGS_CONSIDERED = [
     "ChainMetaModelPowell_Conf",
     "MetaModel_Conf",
     "MetaModelOnePlusOne_Conf",
-    "MetaModelFmin2_Conf"
+    "MetaModelFmin2_Conf",
+    "CMA_Gen",
+    "ChainMetaModelPowell_Gen",
+    "MetaModel_Gen",
+    "MetaModelOnePlusOne_Gen",
+    "MetaModelFmin2_Gen"
     ]
 # Get 39 colours for the 39 algorithms
 ALGO_COLOURS = cm.batlowS.colors[:len(ALGS_CONSIDERED)]
@@ -114,15 +119,15 @@ COLORS = {
     'MetaModelFmin2_Conf': '#8d44bd'
 }
 
-PARTITION = "Test"
-TIME = "00:20:00"
+PARTITION = "Kathleen"
+TIME = "24:00:00"
 
-DIMS_CONSIDERED = [[2], [3], [5]]
+DIMS_CONSIDERED = [[2, 3, 5], [10, 15]]
 BUDGETS_CONSIDERED = [200, 300, 500]
-REPETITIONS = 3
-TEST_INSTANCES = [1,2,3,4,5,6,7,8]
-# TEST_INSTANCES = [9, 10, 11, 12, 13, 14, 15, 16, 17,
-                    # 18, 19, 20, 21, 22, 23, 24, 25, 26]
+REPETITIONS = 2
+# TEST_INSTANCES = [1,2,3,4,5,6,7,8]
+TEST_INSTANCES = [9, 10, 11, 12, 13, 14, 15, 16, 17,
+                    18, 19, 20, 21, 22, 23, 24, 25, 26]
 PROBS_CONSIDERED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
                     18, 19, 20, 21, 22, 23, 24]
 PROB_NAMES = ["f1_Sphere",
@@ -151,7 +156,8 @@ PROB_NAMES = ["f1_Sphere",
               "f24_LunacekBiRastrigin"
               ]
 
-COMPARE_INSTANCES = [27, 28, 29, 30]
+COMPARE_INSTANCES = [27, 28, 29, 30, 31, 32, 33]
+# COMPARE_INSTANCES = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62]
 
 # Plotting constants
 FONT_SIZE_ALGO_ID = 9

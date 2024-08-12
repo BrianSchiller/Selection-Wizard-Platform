@@ -124,7 +124,7 @@ class NGEvaluator:
 def run_algos(algorithms: list[str | ConfiguredOptimizer],
               problems: list[int],
               eval_budget: int,
-              dimensionalities: list[int],
+              dimension: int,
               n_repetitions: int,
               instances: list[int] = None,
               process_intermediate_data: bool = False,
@@ -160,30 +160,29 @@ def run_algos(algorithms: list[str | ConfiguredOptimizer],
                                       ["algorithm_seed", "run_success"])
 
         for problem in problems:
-            for dimension in dimensionalities:
-                if process_intermediate_data:
-                    dir_name = f"{output_dir}/B{eval_budget}_D{dimension}/{alg_name}"
-                    logger = ioh.logger.Analyzer(folder_name=dir_name,
-                                                 algorithm_name=alg_name)
-                    logger.add_run_attributes(
-                        algorithm, ["algorithm_seed", "run_success"])
+            if process_intermediate_data:
+                dir_name = f"{output_dir}/B{eval_budget}_D{dimension}/{alg_name}"
+                logger = ioh.logger.Analyzer(folder_name=dir_name,
+                                            algorithm_name=alg_name)
+                logger.add_run_attributes(
+                    algorithm, ["algorithm_seed", "run_success"])
 
-                for instance in instances:
-                    function = ioh.get_problem(problem, instance=instance,
-                                               dimension=dimension,
-                                               problem_class=problem_class)
-                    function.attach_logger(logger)
+            for instance in instances:
+                function = ioh.get_problem(problem, instance=instance,
+                                        dimension=dimension,
+                                        problem_class=problem_class)
+                function.attach_logger(logger)
 
-                    for seed in range(1, n_repetitions + 1):
-                        algorithm(function, seed)
-                        function.reset()
+                for seed in range(1, n_repetitions + 1):
+                    algorithm(function, seed)
+                    function.reset()
 
-                # Process all .json files in the output directory
-                if process_intermediate_data:
-                    # Flush the logger to ensure files exist before processing
-                    logger.close()
-                    process_data(Path(dir_name), problem, alg_name, dimension,
-                                n_repetitions, eval_budget, n_instances)
+            # Process all .json files in the output directory
+            if process_intermediate_data:
+                # Flush the logger to ensure files exist before processing
+                logger.close()
+                process_data(Path(dir_name), problem, alg_name, dimension,
+                            n_repetitions, eval_budget, n_instances)
 
         logger.close()
         print(f"Finished: {alg.name}")
@@ -283,7 +282,7 @@ def write_scenario_file(output_dir):
         with open(f"{output_dir}/scenario.json", "w") as json_file:
             json.dump(data, json_file, indent=4)
 
-def create_job_script(budget, dimensions, instances, repetitions, name):
+def create_job_script(budget, dimensions, instances, repetitions, name, general):
     script_content = f"""#!/bin/bash
 #SBATCH --job-name=K_D{'_'.join(map(str, dimensions))}_B{budget}
 #SBATCH --output={name}/B{budget}_D{'_'.join(map(str, dimensions))}/slurm.out
@@ -299,7 +298,7 @@ module load Python/3.11
 source /storage/work/schiller/venvs/Selection/bin/activate
 
 # Run the experiment
-python run_ng_on_ioh.py  --name {name} --dimensions "{json.dumps(dimensions)}" --budget {budget} --instances "{json.dumps(instances)}" --repetitions {repetitions}
+python run_ng_on_ioh.py  --name {name} --dimensions "{json.dumps(dimensions)}" --budget {budget} --instances "{json.dumps(instances)}" --repetitions {repetitions} --general {general}
 """
     return script_content
 
@@ -312,12 +311,13 @@ if __name__ == "__main__":
     parser.add_argument('--budget', type=str, help='Budgets to run on (slurm)', required=False, default=None)
     parser.add_argument('--instances', type=str, help='Instances to run on (slurm)', required=False, default=None)
     parser.add_argument('--repetitions', type=str, help='How often to run on each instance', required=False, default=None)
+    parser.add_argument('--general', type=str, help='Whether to run general configs instead of specific ones', required=False, default=False)
     args = parser.parse_args()
 
     if args.dimensions is not None:
-        dimensions = [json.loads(args.dimensions)]
+        dimensionalities = [json.loads(args.dimensions)]
     else:
-        dimensions = const.DIMS_CONSIDERED
+        dimensionalities = const.DIMS_CONSIDERED
 
     if args.budget is not None:
         budgets = [int(args.budget)]
@@ -333,6 +333,13 @@ if __name__ == "__main__":
         repetitions = int(args.repetitions)
     else:
         repetitions = const.REPETITIONS
+
+    # Basically, when general is set we only test generalised algorithms over multiple dimensions
+    # Ugly implementation, but this is how it is
+    if args.general == "True":
+        general = True
+    else:
+        general = False
 
     # Prepare Output Directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S")
@@ -350,42 +357,60 @@ if __name__ == "__main__":
         MetaModelOnePlusOne_Def = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", None, None, True), "MetaModelOnePlusOne") 
         MetaModelFmin2_Def = MetaModelFmin2(get_config("MetaModelFmin2", None, None, True), "MetaModelFmin2") 
 
-    for dimension in dimensions:
+    for dimensions in dimensionalities:
         # Popsize of default depends on dimension
-        CMA_Def = CMA(get_config("CMA", dimension, None, True), "CMA") 
-        ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimension, None, True), "ChainMetaModelPowell") 
-        MetaModel_Def = MetaModel(get_config("MetaModel", dimension, None, True), "MetaModel") 
+        # No need if only running general algorithms
+        if not general:
+            CMA_Def = CMA(get_config("CMA", dimensions, None, True), "CMA") 
+            ChainMetaModelPowell_Def = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimensions, None, True), "ChainMetaModelPowell") 
+            MetaModel_Def = MetaModel(get_config("MetaModel", dimensions, None, True), "MetaModel") 
 
         for budget in budgets:
             if args.slurm == False:
 
-                CMA_Conf = CMA(get_config("CMA", dimension, budget)) 
-                ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimension, budget)) 
-                MetaModel_Conf = MetaModel(get_config("MetaModel", dimension, budget)) 
-                MetaModelOnePlusOne_Conf = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", dimension, budget)) 
-                MetaModelFmin2_Conf = MetaModelFmin2(get_config("MetaModelFmin2", dimension, budget)) 
+                CMA_Conf = CMA(get_config("CMA", dimensions, budget), "CMA_Conf") 
+                ChainMetaModelPowell_Conf = ChainMetaModelPowell(get_config("ChainMetaModelPowell", dimensions, budget), "ChainMetaModelPowell_Conf") 
+                MetaModel_Conf = MetaModel(get_config("MetaModel", dimensions, budget), "MetaModel_Conf") 
+                MetaModelOnePlusOne_Conf = MetaModelOnePlusOne(get_config("MetaModelOnePlusOne", dimensions, budget), "MetaModelOnePlusOne_Conf") 
+                MetaModelFmin2_Conf = MetaModelFmin2(get_config("MetaModelFmin2", dimensions, budget), "MetaModelFmin2_Conf") 
 
-                Algorithms =[
-                    Cobyla_Def,
-                    CMA_Def,
-                    ChainMetaModelPowell_Def,
-                    MetaModel_Def,
-                    MetaModelOnePlusOne_Def,
-                    MetaModelFmin2_Def,
-                    CMA_Conf,
-                    ChainMetaModelPowell_Conf,
-                    MetaModel_Conf,
-                    MetaModelOnePlusOne_Conf,
-                    MetaModelFmin2_Conf
-                ]
+                if not general:
+                    Algorithms =[
+                        Cobyla_Def,
+                        CMA_Def,
+                        ChainMetaModelPowell_Def,
+                        MetaModel_Def,
+                        MetaModelOnePlusOne_Def,
+                        MetaModelFmin2_Def,
+                        CMA_Conf,
+                        ChainMetaModelPowell_Conf,
+                        MetaModel_Conf,
+                        MetaModelOnePlusOne_Conf,
+                        MetaModelFmin2_Conf
+                    ]
 
-                run_algos(Algorithms, const.PROBS_CONSIDERED, budget, dimension, repetitions, instances, True, output_dir)
-                time = datetime.datetime.now().strftime("%H-%M-%S")
-                print(f"({time}) Finished Budget: {budget}, Dimension: {dimension}")
+                if general:
+                    CMA_Conf.name = "CMA_Gen"
+                    ChainMetaModelPowell_Conf.name = "ChainMetaModelPowell_Gen"
+                    MetaModel_Conf.name = "MetaModel_Gen"
+                    MetaModelOnePlusOne_Conf.name = "MetaModelOnePlusOne_Gen"
+                    MetaModelFmin2_Conf.name = "MetaModelFmin2_Gen"
+                    Algorithms =[
+                        CMA_Conf,
+                        ChainMetaModelPowell_Conf,
+                        MetaModel_Conf,
+                        MetaModelOnePlusOne_Conf,
+                        MetaModelFmin2_Conf
+                    ]
+
+                for dimension in dimensions:
+                    run_algos(Algorithms, const.PROBS_CONSIDERED, budget, dimension, repetitions, instances, True, output_dir)
+                    time = datetime.datetime.now().strftime("%H-%M-%S")
+                    print(f"({time}) Finished Budget: {budget}, Dimension: {dimension}")
 
             else: 
-                job_script = create_job_script(budget, dimension, instances, repetitions, output_dir)
-                job_script_dir = output_dir / f"B{budget}_D{'_'.join(map(str, dimension))}"
+                job_script = create_job_script(budget, dimensions, instances, repetitions, output_dir, general)
+                job_script_dir = output_dir / f"B{budget}_D{'_'.join(map(str, dimensions))}"
                 os.makedirs(job_script_dir, exist_ok=True)
                 job_script_path = job_script_dir / "slurm.sh"
 
