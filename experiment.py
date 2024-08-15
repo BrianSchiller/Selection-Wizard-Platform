@@ -541,14 +541,14 @@ def plot_top_algorithms(ranking_csv: Path, output_dir: Path):
                 # Sort the data by 'points test' in descending order and select the top n
                 algorithms = len(data['algorithm'].unique())
                 top_algorithms = subset.sort_values(by=f'{points}', ascending=False).head(algorithms)
-                top_algorithms['color_algorithm'] = top_algorithms['algorithm'].str.replace('Gen', 'Conf')
+                top_algorithms['color_algorithm'] = top_algorithms['algorithm']
 
-                
                 # Create a list of colors based on the algorithm names
                 colors = [algorithm_colors.get(algo, 'gray') for algo in top_algorithms['color_algorithm']]
+                palette_dict = dict(zip(top_algorithms['color_algorithm'], colors))
                 
                 # Create the bar plot in the corresponding subplot with algorithms on the x-axis
-                sns.barplot(ax=axes[dim_idx, bud_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=colors)
+                sns.barplot(ax=axes[dim_idx, bud_idx], y='algorithm', x=f'{points}', data=top_algorithms, palette=palette_dict)
                 for index, value in enumerate(top_algorithms[f'{points}']):
                     axes[dim_idx, bud_idx].text(value - value * 0.05, index, f'{value}', color='black', va="center", ha="right")
                 

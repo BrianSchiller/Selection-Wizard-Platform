@@ -102,6 +102,7 @@ def compare_selectors(dir: Path, eval: bool = False, general: bool = False):
     df_conf = df[df['rank test new'] == 1]
     conf_selector = {(row['budget'], row['dimensions']): row['algorithm'] for index, row in df_conf.iterrows()}
 
+    gen_selector = None
     if general:
         df = pd.read_csv(dir / "ranking_gen.csv")
         df_gen = df[df['rank test new'] == 1]
@@ -280,7 +281,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.slurm == False:
-        compare_selectors(Path("Output/Final_Test"), args.eval, args.general)
+        compare_selectors(Path("Output/_Compare"), args.eval, args.general)
     else:
         if args.gen_alg is None:
             run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output)
