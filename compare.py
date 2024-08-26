@@ -33,6 +33,7 @@ def get_optimiser(setting: tuple[int, int], optimiser: str) -> ConfiguredOptimiz
             config = get_config(optimiser, [10,15], setting[1])
         elif setting[0] == 2351015:
             config = get_config(optimiser, [2,3,5,10,15], setting[1])
+            print(config)
         else:
             print(f"Cant find config for {optimiser} with dimensions {setting[0]}")
         version = "_Gen"
@@ -105,7 +106,7 @@ def compare_selectors(dir: Path, eval: bool = False, general: bool = False):
     gen_selector = None
     if general:
         df = pd.read_csv(dir / "ranking_gen.csv")
-        df_gen = df[df['rank test new'] == 1]
+        df_gen = df[df['rank'] == 1]
         gen_selector = {(row['budget'], row['dimensions']): row['algorithm'] for index, row in df_gen.iterrows()}
 
     output = Path(f"Comparison/{dir.name}")
@@ -135,8 +136,15 @@ def analyse_result(def_selector, conf_selector, output, gen_selector = None):
     performance = {}
     points = {}
     for key in def_selector:
-        df_def = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{def_selector[key]}_processed/data.csv")
-        df_conf = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{conf_selector[key]}_processed/data.csv")
+        def_file_path = output / f"B{key[0]}_D{key[1]}/{def_selector[key]}_processed/data.csv"
+        conf_file_path = output / f"B{key[0]}_D{key[1]}/{conf_selector[key]}_processed/data.csv"
+
+        if not Path(def_file_path).exists() or not Path(conf_file_path).exists():
+            continue
+
+        # Read the CSV files if both exist
+        df_def = pd.read_csv(def_file_path)
+        df_conf = pd.read_csv(conf_file_path)
         
         # Calculate points
         if gen_selector is None:
@@ -146,7 +154,7 @@ def analyse_result(def_selector, conf_selector, output, gen_selector = None):
         else:
             df_gen = pd.read_csv(output / f"B{key[0]}_D{key[1]}/{gen_selector[key]}_processed/data.csv")
             points_def = ((df_def['performance'] <= df_conf['performance']) & 
-                      (df_def['performance'] <= df_gen['performance'])).sum()
+                    (df_def['performance'] <= df_gen['performance'])).sum()
             points_conf = ((df_conf['performance'] <= df_def['performance']) & 
                         (df_conf['performance'] <= df_gen['performance'])).sum()
             points_gen = ((df_gen['performance'] <= df_def['performance']) & 
@@ -165,7 +173,6 @@ def analyse_result(def_selector, conf_selector, output, gen_selector = None):
             df_gen["performance_trans"] = transform_performance(df_gen["performance"])
             perf_gen = df_gen["performance_trans"].sum()
             performance[key] = {"Def": perf_def, "Conf": perf_conf, "Gen": perf_gen}
-            
     
     plot_heatmap(points, performance, output)
     plot_bar_graphs(points, performance, output)
@@ -206,11 +213,11 @@ def plot_bar_graphs(points, performance, output):
                   [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Gen', 'Points': v['Gen']} 
                    for k, v in points.items() if 'Gen' in v]
     
-    performance_data = [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Def', 'Performance': v['Def']} 
+    performance_data = [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Def', 'Performance': v['Def'] / 864} 
                         for k, v in performance.items()] + \
-                       [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Conf', 'Performance': v['Conf']} 
+                       [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Conf', 'Performance': v['Conf'] / 864} 
                         for k, v in performance.items()] + \
-                       [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Gen', 'Performance': v.get('Gen', 0)} 
+                       [{'Budget': k[0], 'Dimension': k[1], 'Algorithm': 'Gen', 'Performance': v.get('Gen', 0) / 864} 
                         for k, v in performance.items() if 'Gen' in v]
 
     points_df = pd.DataFrame(points_data)
@@ -281,17 +288,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.slurm == False:
-        compare_selectors(Path("Output/_Compare"), args.eval, args.general)
+        compare_selectors(Path("Comparison/_Test_Total_Max"), args.eval, args.general)
     else:
         if args.gen_alg is None:
             run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output)
         else:
             #TODO: A way to run the algorithm generalised for dim 2, 3, 5, 10, 15
-            if args.dimension < 10:
-                dim = "235"
-            else:
-                dim = "1015"
-            gen_alg = f"{args.gen_alg}.{dim}"
+            # if args.dimension < 10:
+            #     dim = "235"
+            # else:
+            #     dim = "1015"
+            gen_alg = f"{args.gen_alg}.{2351015}"
             run_optimiser(args.def_alg, args.conf_alg, args.dimension, args.budget, args.output, gen_alg)
 
 
