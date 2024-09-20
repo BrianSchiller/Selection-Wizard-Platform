@@ -173,35 +173,75 @@ def analyse_result(def_selector, conf_selector, output, gen_selector = None):
             df_gen["performance_trans"] = transform_performance(df_gen["performance"])
             perf_gen = df_gen["performance_trans"].sum()
             performance[key] = {"Def": perf_def, "Conf": perf_conf, "Gen": perf_gen}
+
+    def_sum = 0
+    conf_sum = 0
+    gen_sum = 0
+    def_sum_low = 0
+    conf_sum_low = 0
+    gen_sum_low = 0
+    def_sum_high = 0
+    conf_sum_high = 0
+    gen_sum_high = 0
+    for point in points:
+        def_sum += points[point]["Def"]
+        conf_sum += points[point]["Conf"]
+        gen_sum += points[point]["Gen"]
+        if point[1] < 10:
+            def_sum_low += points[point]["Def"]
+            conf_sum_low += points[point]["Conf"]
+            gen_sum_low += points[point]["Gen"]
+        else:
+            def_sum_high += points[point]["Def"]
+            conf_sum_high += points[point]["Conf"]
+            gen_sum_high += points[point]["Gen"]
+
+    print(def_sum / len(points))
+    print(conf_sum / len(points))
+    print(gen_sum / len(points))
+    print(def_sum_low / 9)
+    print(conf_sum_low / 9)
+    print(gen_sum_low / 9)
+    print(def_sum_high / 6)
+    print(conf_sum_high / 6)
+    print(gen_sum_high / 6)
+
+    def_sum = 0
+    conf_sum = 0
+    gen_sum = 0
+    def_sum_low = 0
+    conf_sum_low = 0
+    gen_sum_low = 0
+    def_sum_high = 0
+    conf_sum_high = 0
+    gen_sum_high = 0
+    for point in performance:
+        def_sum += performance[point]["Def"] / 864
+        conf_sum += performance[point]["Conf"] / 864
+        gen_sum += performance[point]["Gen"] / 864
+        if point[1] < 10:
+            def_sum_low += performance[point]["Def"] / 864
+            conf_sum_low += performance[point]["Conf"] / 864
+            gen_sum_low += performance[point]["Gen"] / 864
+        else:
+            def_sum_high += performance[point]["Def"] / 864
+            conf_sum_high += performance[point]["Conf"] / 864
+            gen_sum_high += performance[point]["Gen"] / 864
+
+    print()
+    print("Performance")
+    print(def_sum / len(performance))
+    print(conf_sum / len(performance))
+    print(gen_sum / len(performance))
+    print("Difference: ", ((conf_sum / len(performance)) - (def_sum / len(performance))))
+    print(def_sum_low / 9)
+    print(conf_sum_low / 9)
+    print(gen_sum_low / 9)
+    print(def_sum_high / 6)
+    print(conf_sum_high / 6)
+    print(gen_sum_high / 6)
     
-    plot_heatmap(points, performance, output)
     plot_bar_graphs(points, performance, output)
-
-    
-def plot_heatmap(points, performance, output):
-    points_diff = {key: val['Conf'] - val['Def'] for key, val in points.items()}
-    performance_diff = {key: val['Conf'] - val['Def'] for key, val in performance.items()}
-
-    # Convert dictionaries to DataFrames
-    points_diff_df = pd.DataFrame.from_dict(points_diff, orient='index', columns=['Difference'])
-    performance_diff_df = pd.DataFrame.from_dict(performance_diff, orient='index', columns=['Difference'])
-
-    # Pivot the DataFrame for heatmap
-    points_diff_pivot = points_diff_df.pivot_table(index=points_diff_df.index.map(lambda x: x[0]), columns=points_diff_df.index.map(lambda x: x[1]), values='Difference')
-    performance_diff_pivot = performance_diff_df.pivot_table(index=performance_diff_df.index.map(lambda x: x[0]), columns=performance_diff_df.index.map(lambda x: x[1]), values='Difference')
-
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
-
-    # Heatmap for Points Difference
-    sns.heatmap(points_diff_pivot, annot=True, fmt='d', cmap='coolwarm', center=0, cbar_kws={'label': 'Points Difference'}, ax=axes[0])
-    axes[0].set_title('Points Difference Heatmap')
-
-    # Heatmap for Performance Difference
-    sns.heatmap(performance_diff_pivot, annot=True, fmt='.2f', cmap='coolwarm', center=0, cbar_kws={'label': 'Performance Difference'}, ax=axes[1])
-    axes[1].set_title('Performance Difference Heatmap')
-
-    plt.tight_layout()
-    plt.savefig(output / "heatmap.pdf")
 
 
 def plot_bar_graphs(points, performance, output):
@@ -230,7 +270,7 @@ def plot_bar_graphs(points, performance, output):
         num_dimensions = len(dimensions)
         num_budgets = len(budgets)
         
-        fig, axes = plt.subplots(num_dimensions, num_budgets, figsize=(5*num_budgets, 5*num_dimensions), sharey=True, squeeze=False)
+        fig, axes = plt.subplots(num_dimensions, num_budgets, figsize=(3.5*num_budgets, 3.5*num_dimensions), sharey=True, squeeze=False)
         bar_width = 0.8
         colors = sns.color_palette('Set1', 3)
 
